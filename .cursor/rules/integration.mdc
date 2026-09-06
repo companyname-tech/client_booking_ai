@@ -1,0 +1,46 @@
+---
+description: Rules for integrating this UI with a backend or merging into another app
+globs:
+  - src/**/*
+  - docs/**/*
+alwaysApply: false
+---
+
+# Integration Rules
+
+## Data access
+
+- UI components and pages MUST import `repo` from `@/api/repository` (or `@/data/repository` shim).
+- NEVER import from `@/api/adapters/mock/*` in pages or components.
+- Backend work goes in `src/api/adapters/http/repository.ts` and `src/api/adapters/http/auth.ts`.
+- Use `apiClient` from `src/api/adapters/http/client.ts` for HTTP calls.
+
+## Types
+
+- Domain types live in `src/types/`. API responses must match these shapes.
+- Transform API payloads in the HTTP adapter if backend shape differs.
+
+## Auth
+
+- Use `authService` from `@/api/auth`.
+- Session zones: `client` | `admin`. Enforced by `RequireAuth`.
+- Demo credentials in `src/config/demo-users.ts`.
+
+## Routing
+
+- Routes defined in `src/app/router.tsx` and `src/app/routes/*`.
+- When merging into another app, import `clientRoutes` and `adminRoutes` — do not duplicate route trees.
+
+## Styling
+
+- Design tokens in `src/styles/globals.css`. Do not hardcode colors outside the token system.
+- Use existing `components/ui/*` primitives before creating new ones.
+
+## Environment
+
+- `VITE_USE_MOCK_DATA=true` → mock adapters (default)
+- `VITE_USE_MOCK_DATA=false` → HTTP adapters (requires implementation)
+
+## Documentation
+
+Read `AGENTS.md` and `docs/INTEGRATION.md` before large integration changes.
