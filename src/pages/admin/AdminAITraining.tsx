@@ -15,6 +15,7 @@ export default function AdminAITraining() {
   const [campaigns, setCampaigns] = useState<TrainingCampaignRow[]>([])
   const [agents, setAgents] = useState<PronunciationAgentOption[]>([])
   const [suggestions, setSuggestions] = useState<TrainingSuggestion[]>([])
+  const [errors, setErrors] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
   const [refreshToken, setRefreshToken] = useState(0)
 
@@ -24,20 +25,33 @@ export default function AdminAITraining() {
 
   useEffect(() => {
     let cancelled = false
-    void Promise.all([repo.getTrainingCampaigns(), repo.listPronunciationAgents(), repo.getTrainingSuggestions('pending')])
-      .then(([c, a, s]) => {
-        if (cancelled) return
-        setCampaigns(c)
-        setAgents(a)
-        setSuggestions(s)
-      })
-      .catch(() => {
-        if (cancelled) return
-        // Screens show the empty/error state; the talk console explains what is missing.
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false)
-      })
+    setLoading(true)
+    setErrors([])
+    // Each section loads independently so one failing endpoint (e.g. a
+    // mid-deploy backend) never blanks the campaigns/agents selectors or the
+    // whole workspace. Failures are surfaced in the banner below the header.
+    const loadSection = async <T,>(
+      fetchFn: () => Promise<T>,
+      apply: (value: T) => void,
+      label: string,
+    ) => {
+      try {
+        const data = await fetchFn()
+        if (!cancelled) apply(data)
+      } catch (e) {
+        if (!cancelled) {
+          const detail = e instanceof Error ? e.message : String(e)
+          setErrors((prev) => [...prev, `${label}: ${detail}`])
+        }
+      }
+    }
+    void Promise.all([
+      loadSection(() => repo.getTrainingCampaigns(), setCampaigns, 'Campaign list'),
+      loadSection(() => repo.listPronunciationAgents(), setAgents, 'Agents'),
+      loadSection(() => repo.getTrainingSuggestions('pending'), setSuggestions, 'Pronunciation suggestions'),
+    ]).finally(() => {
+      if (!cancelled) setLoading(false)
+    })
     return () => {
       cancelled = true
     }
@@ -51,6 +65,26 @@ export default function AdminAITraining() {
           title="AI training workspace"
           description="Talk to the agent live — the real conversation updates its training state, and new names and words land in the pronunciation lexicon for your review."
         />
+
+        {errors.length > 0 ? (
+          <div
+            className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-danger/30 bg-danger/10 px-3 py-2.5 text-xs text-danger"
+            role="alert"
+          >
+            <div>
+              <p className="font-semibold">Some training data failed to load</p>
+              <ul className="mt-0.5 list-inside list-disc space-y-0.5 opacity-90">
+                {errors.map((err) => (
+                  <li key={err}>{err}</li>
+                ))}
+              </ul>
+              <p className="mt-1 text-fg-muted">The sections below that loaded are still usable.</p>
+            </div>
+            <Button variant="ghost" size="sm" onClick={reload} leadingIcon={<RefreshCw className="size-3.5" />}>
+              Retry
+            </Button>
+          </div>
+        ) : null}
 
         <Reveal>
           <TrainingTalkConsole
