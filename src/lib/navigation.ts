@@ -36,7 +36,7 @@ export const clientNavigation: NavSection[] = [
     label: 'Command Center',
     items: [
       { label: 'Overview', to: '/client/overview', icon: LayoutGrid },
-      { label: 'Campaigns', to: '/client/campaigns', icon: Megaphone, badge: 3, badgeTone: 'accent' },
+      { label: 'Campaigns', to: '/client/campaigns', icon: Megaphone },
     ],
   },
   {
@@ -74,7 +74,7 @@ export const adminNavigation: NavSection[] = [
     items: [
       { label: 'Overview', to: '/admin/overview', icon: LayoutGrid },
       { label: 'Clients', to: '/admin/clients', icon: Building2 },
-      { label: 'Campaigns', to: '/admin/campaigns', icon: Megaphone, badge: 8, badgeTone: 'warning' },
+      { label: 'Campaigns', to: '/admin/campaigns', icon: Megaphone },
       { label: 'AI Training', to: '/admin/ai-training', icon: GraduationCap },
     ],
   },

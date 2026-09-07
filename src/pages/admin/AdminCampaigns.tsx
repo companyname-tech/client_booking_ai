@@ -31,7 +31,7 @@ export default function AdminCampaigns() {
   const { data, loading, error, reload } = useAsyncData(() =>
     Promise.all([repo.getCampaigns(), repo.getAllAdminMeta()]),
   )
-  const { data: clientsData } = useAsyncData(() => repo.getClients({ pageSize: 200 }), [])
+  const { data: clientsData } = useAsyncData(() => repo.getClients({ pageSize: 100 }), [])
   const campaigns = data?.[0] ?? []
   const metas = data?.[1] ?? []
   const clients = clientsData?.items ?? []

@@ -219,6 +219,27 @@ function UserMenu({ collapsed, zone }: { collapsed: boolean; zone: Zone }) {
 export const SidebarContent = memo(function SidebarContent({ collapsed, zone }: { collapsed: boolean; zone: Zone }) {
   const { toggleCollapsed, isDesktop, setMobileOpen } = useShell()
   const sections = navigationFor(zone)
+  const { data: stats } = useAsyncData(async () => {
+    const [client, campaigns, agents] = await Promise.all([
+      repo.getCurrentClient().catch(() => null),
+      repo.getCampaigns().catch(() => []),
+      repo.listPronunciationAgents().catch(() => []),
+    ])
+    const all = campaigns ?? []
+    const scoped = client ? all.filter((c) => c.clientId === client.id) : all
+    return {
+      campaigns: zone === 'admin' ? all.length : scoped.length,
+      agents: (agents ?? []).length,
+    }
+  }, [zone])
+  const liveSections = sections.map((section) => ({
+    ...section,
+    items: section.items.map((item) =>
+      item.to.endsWith('/campaigns') && stats != null
+        ? { ...item, badge: stats.campaigns, badgeTone: zone === 'admin' ? ('warning' as const) : ('accent' as const) }
+        : item,
+    ),
+  }))
 
   return (
     <div className="flex h-full flex-col">
@@ -253,7 +274,7 @@ export const SidebarContent = memo(function SidebarContent({ collapsed, zone }: 
 
       {/* Nav */}
       <nav aria-label="Primary" className={cn('flex-1 overflow-y-auto scrollbar-none', collapsed ? 'px-2.5' : 'px-3')}>
-        {sections.map((section, i) => (
+        {liveSections.map((section, i) => (
           <div key={section.label} className={cn(i > 0 && 'mt-4')}>
             {collapsed ? (
               i > 0 && <div className="mx-2 mb-2 border-t border-line" aria-hidden />
@@ -275,8 +296,8 @@ export const SidebarContent = memo(function SidebarContent({ collapsed, zone }: 
           <div className="mb-2 flex items-center gap-2 rounded-md bg-gradient-to-br from-violet-soft to-accent-soft px-2.5 py-2 ring-1 ring-inset ring-white/[0.06]">
             <Sparkles className="size-3.5 shrink-0 text-violet" />
             <p className="text-2xs leading-tight text-fg-secondary">
-              <span className="font-medium text-fg">3 agents</span> operating across{' '}
-              <span className="font-medium text-fg">5 campaigns</span>
+              <span className="font-medium text-fg">{stats?.agents ?? '…'} agents</span> operating across{' '}
+              <span className="font-medium text-fg">{stats?.campaigns ?? '…'} campaigns</span>
             </p>
           </div>
         )}
