@@ -44,11 +44,15 @@ class ApiClient {
     })
 
     if (!res.ok) {
+      // Read the body ONCE as text, then try to parse JSON — calling res.json()
+      // followed by res.text() on the same stream throws
+      // "Failed to execute 'text' on 'Response': body stream already read".
       let payload: unknown
+      const raw = await res.text()
       try {
-        payload = await res.json()
+        payload = raw ? JSON.parse(raw) : ''
       } catch {
-        payload = await res.text()
+        payload = raw
       }
       throw new ApiError(`API ${res.status}: ${describeError(payload, res.statusText)}`, res.status, payload)
     }
@@ -87,11 +91,13 @@ class ApiClient {
       body: form,
     })
     if (!res.ok) {
+      // Same single-read rule as request() — no res.json() then res.text() on one stream.
       let payload: unknown
+      const raw = await res.text()
       try {
-        payload = await res.json()
+        payload = raw ? JSON.parse(raw) : ''
       } catch {
-        payload = await res.text()
+        payload = raw
       }
       throw new ApiError(`API ${res.status}: ${describeError(payload, res.statusText)}`, res.status, payload)
     }

@@ -76,7 +76,7 @@ export default function CampaignAnalytics() {
       ) : (
         <>
           <AnalyticsSummary overview={analytics.overview} />
-          <AnalyticsPerformanceChart data={analytics.timeseries[filters.dateRange]} />
+          <AnalyticsPerformanceChart data={analytics.timeseries?.[filters.dateRange] ?? []} />
           <div className="grid gap-6 lg:grid-cols-2">
             <PerformanceComparison rows={analytics.comparison} />
             <AnalyticsFunnel stages={analytics.funnel} />
