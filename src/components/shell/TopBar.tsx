@@ -1,5 +1,5 @@
-import { Link, useLocation } from 'react-router-dom'
-import { ChevronRight, Menu, Search } from 'lucide-react'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { ChevronRight, LogOut, Menu, Search } from 'lucide-react'
 import { navigationFor } from '@/lib/navigation'
 import { cn, isMac } from '@/lib/utils'
 import { Button } from '@/components/ui/Button'
@@ -8,6 +8,7 @@ import { StatusDot } from '@/components/ui/StatusDot'
 import { BrandLogo } from './BrandLogo'
 import { NotificationButton } from './NotificationButton'
 import { useShell } from './ShellContext'
+import { useAuth } from '@/contexts/AuthContext'
 
 function useBreadcrumb() {
   const { pathname } = useLocation()
@@ -25,6 +26,8 @@ function useBreadcrumb() {
 
 export function TopBar() {
   const { setMobileOpen, setCommandOpen, zone } = useShell()
+  const { logout } = useAuth()
+  const navigate = useNavigate()
   const crumb = useBreadcrumb()
 
   return (
@@ -92,6 +95,17 @@ export function TopBar() {
       </button>
 
       <NotificationButton />
+
+      {/* Sign out */}
+      <Button
+        variant="ghost"
+        size="icon"
+        aria-label="Sign out"
+        title="Sign out"
+        onClick={() => { void logout(); navigate('/login') }}
+      >
+        <LogOut className="size-4" strokeWidth={1.75} />
+      </Button>
     </header>
   )
 }

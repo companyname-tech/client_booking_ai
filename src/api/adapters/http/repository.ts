@@ -391,6 +391,18 @@ export const httpRepository = {
     })
     return toCampaign(created)
   },
+  async createCampaign(input: { name: string; offerName?: string; description?: string; category?: string; company?: string; clientId?: string }): Promise<OfferCampaign> {
+    const created = await apiClient.post<OfferWire>('/offers', {
+      title: input.name,
+      description: input.description ?? '',
+      value_proposition: input.offerName ?? input.name,
+      category: input.category ?? '',
+      company: input.company ?? '',
+      client_id: input.clientId ?? '',
+      agent_id: '',
+    })
+    return toCampaign(created)
+  },
 
   // --- Leads / calls ------------------------------------------------------
   async getLeads(offerCampaignId?: string): Promise<Lead[]> {
@@ -843,6 +855,28 @@ export const httpRepository = {
   },
   async updateLead(id: string, patch: Partial<Lead>): Promise<Lead> {
     return apiClient.put<Lead>(`/leads/${id}`, patch)
+  },
+  async addLead(input: {
+    leadName: string
+    offerId?: string
+    industry?: string
+    email?: string
+    phone?: string
+    contactName?: string
+    notes?: string
+  }): Promise<void> {
+    await apiClient.post('/leads', {
+      lead_name: input.leadName,
+      offer_id: input.offerId ?? '',
+      offer: '',
+      industry: input.industry ?? '',
+      emails: input.email ? [{ email: input.email }] : [],
+      phone_numbers: input.phone ? [{ phone_number: input.phone }] : [],
+      whatsapp_phone: '',
+      contact_name: input.contactName ?? '',
+      notes: input.notes ?? '',
+      lead_status: 'NEW',
+    })
   },
   async deleteLeadNote(leadId: string, noteId: string): Promise<void> {
     await apiClient.delete(`/leads/${leadId}/notes/${noteId}`)

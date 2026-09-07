@@ -1,5 +1,5 @@
 import { useMemo, useState, type ChangeEvent } from 'react'
-import { ArrowDown, ArrowUp, ArrowUpDown, Check, Phone, RefreshCw, Search, Trash2, X } from 'lucide-react'
+import { ArrowDown, ArrowUp, ArrowUpDown, Check, Phone, Plus, RefreshCw, Search, Trash2, X } from 'lucide-react'
 import { repo } from '@/api/repository'
 import type { AdminLead } from '@/types/admin'
 import type { LeadStatus } from '@/types'
@@ -15,6 +15,7 @@ import { DetailDrawer } from '@/components/ui/DetailDrawer'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { LeadScore } from '@/components/leads/LeadScore'
 import { LeadStatusBadge } from '@/components/leads/LeadStatusBadge'
+import { AddLeadModal } from '@/components/leads/AddLeadModal'
 import { NOW } from '@/data/time'
 import { formatRelativeCompact, initials } from '@/lib/utils'
 
@@ -388,6 +389,7 @@ export default function AdminLeads() {
   const [sort, setSort] = useState<{ key: SortKey; dir: SortDir }>({ key: 'lastActivity', dir: 'desc' })
   const [page, setPage] = useState(1)
   const [preview, setPreview] = useState<AdminLead | null>(null)
+  const [adding, setAdding] = useState(false)
   const [actionMsg, setActionMsg] = useState('')
   const [busyId, setBusyId] = useState<string | null>(null)
 
@@ -470,18 +472,23 @@ export default function AdminLeads() {
           description="Platform-wide lead inventory — every lead across every campaign."
         />
 
-        <div className="relative">
-          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-fg-muted" />
-          <Input
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value)
-              setPage(1)
-            }}
-            placeholder="Search lead, company, campaign, email, phone…"
-            className="pl-9"
-            aria-label="Search leads"
-          />
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <div className="relative flex-1">
+            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-fg-muted" />
+            <Input
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value)
+                setPage(1)
+              }}
+              placeholder="Search lead, company, campaign, email, phone…"
+              className="pl-9"
+              aria-label="Search leads"
+            />
+          </div>
+          <Button variant="primary" size="sm" leadingIcon={<Plus className="size-3.5" />} onClick={() => setAdding(true)}>
+            Add lead
+          </Button>
         </div>
 
         {loading ? (
@@ -603,6 +610,7 @@ export default function AdminLeads() {
           </>
         )}
 
+        <AddLeadModal open={adding} onClose={() => setAdding(false)} onAdded={reload} />
         <LeadExtraDrawer lead={preview} open={!!preview} onClose={() => setPreview(null)} onUpdate={reload} />
       </PageContainer>
     </PageTransition>

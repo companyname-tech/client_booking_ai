@@ -12,6 +12,16 @@ export class ApiError extends Error {
   }
 }
 
+/** Pull the BE's `detail` out of a JSON error body so it shows in the UI. */
+function describeError(payload: unknown, fallback: string): string {
+  if (typeof payload === 'object' && payload !== null) {
+    const detail = (payload as { detail?: unknown }).detail
+    if (typeof detail === 'string' && detail) return detail
+    if (typeof detail === 'object' && detail !== null) return JSON.stringify(detail)
+  }
+  return fallback
+}
+
 type RequestOptions = Omit<RequestInit, 'body'> & { body?: unknown }
 
 class ApiClient {
@@ -40,7 +50,7 @@ class ApiClient {
       } catch {
         payload = await res.text()
       }
-      throw new ApiError(`API ${res.status}: ${res.statusText}`, res.status, payload)
+      throw new ApiError(`API ${res.status}: ${describeError(payload, res.statusText)}`, res.status, payload)
     }
 
     if (res.status === 204) return undefined as T
@@ -83,7 +93,7 @@ class ApiClient {
       } catch {
         payload = await res.text()
       }
-      throw new ApiError(`API ${res.status}: ${res.statusText}`, res.status, payload)
+      throw new ApiError(`API ${res.status}: ${describeError(payload, res.statusText)}`, res.status, payload)
     }
     return res.json() as Promise<T>
   }

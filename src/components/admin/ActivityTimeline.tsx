@@ -22,7 +22,7 @@ function formatTimestamp(iso: string): string {
 }
 
 const Item = memo(function Item({ entry }: { entry: ActivityLogEntry }) {
-  const meta = ACTIVITY_SOURCE_META[entry.source]
+  const meta = ACTIVITY_SOURCE_META[entry.source] ?? ACTIVITY_SOURCE_META.audit
   const Icon = meta.icon
   const label = formatTimestamp(entry.timestamp)
 

@@ -9,12 +9,14 @@ import { PageContainer, PageHeader, WorkspaceEyebrow } from '@/components/layout
 import { Tabs } from '@/components/ui/Tabs'
 import AgentTab from '@/components/settings/AgentTab'
 import { ConnectionSettings } from '@/components/settings/ConnectionSettings'
+import { TwilioTab } from '@/components/settings/TwilioTab'
+import { SocialMediaTab } from '@/components/settings/SocialMediaTab'
 import { FishVoicesTab } from '@/components/settings/FishVoicesTab'
 import { TemplatesTab } from '@/components/settings/TemplatesTab'
 import { ApplicationTab } from '@/components/settings/ApplicationTab'
 import { AutoHangupToggle } from '@/components/settings/AutoHangupToggle'
 
-type Section = 'agent' | 'connection' | 'fish' | 'templates' | 'application'
+type Section = 'agent' | 'connection' | 'twilio' | 'fish' | 'templates' | 'social' | 'application'
 
 export default function AdminSettings() {
   const {
@@ -56,8 +58,10 @@ export default function AdminSettings() {
             items={[
               { id: 'agent', label: 'Agent' },
               { id: 'connection', label: 'Connection' },
+              { id: 'twilio', label: 'Twilio' },
               { id: 'fish', label: 'Fish voices' },
               { id: 'templates', label: 'Templates' },
+              { id: 'social', label: 'Social media' },
               { id: 'application', label: 'Application' },
             ]}
           />
@@ -65,8 +69,10 @@ export default function AdminSettings() {
 
         {section === 'agent' && <AgentTab />}
         {section === 'connection' && <ConnectionSettings />}
+        {section === 'twilio' && <TwilioTab />}
         {section === 'fish' && <FishVoicesTab />}
         {section === 'templates' && <TemplatesTab />}
+        {section === 'social' && <SocialMediaTab />}
         {section === 'application' && <ApplicationTab />}
       </PageContainer>
     </PageTransition>

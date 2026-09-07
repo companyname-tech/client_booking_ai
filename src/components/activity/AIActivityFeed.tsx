@@ -28,7 +28,7 @@ const toneText: Record<Tone, string> = {
 }
 
 const Item = memo(function Item({ activity, isLatest, isLast }: { activity: Activity; isLatest: boolean; isLast: boolean }) {
-  const Icon = kindIcon[activity.kind]
+  const Icon = kindIcon[activity.kind] ?? Bot
   const inner = (
     <>
       <span className={cn('relative flex size-7 shrink-0 items-center justify-center rounded-md ring-1', toneText[activity.tone])}>

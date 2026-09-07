@@ -275,6 +275,28 @@ export default function AgentTab() {
                         </select>
                       </div>
                       <div>
+                        <label className="mb-1.5 block text-sm font-medium text-fg">Language</label>
+                        <select
+                          className={selectClass}
+                          value={draft.language}
+                          onChange={(e) => patchDraft(agent.id, { language: e.target.value })}
+                        >
+                          <option value="he">Hebrew</option>
+                          <option value="en">English</option>
+                          <option value="ar">Arabic</option>
+                          <option value="ru">Russian</option>
+                          <option value="es">Spanish</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="mb-1.5 block text-sm font-medium text-fg">Agent model</label>
+                        <Input
+                          value={draft.agent_model ?? ''}
+                          onChange={(e) => patchDraft(agent.id, { agent_model: e.target.value })}
+                          placeholder="e.g. gpt-4o-mini — conversation brain"
+                        />
+                      </div>
+                      <div>
                         <label className="mb-1.5 block text-sm font-medium text-fg">Role</label>
                         <select
                           className={selectClass}
