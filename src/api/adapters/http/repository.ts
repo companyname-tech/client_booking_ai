@@ -390,12 +390,6 @@ export const httpRepository = {
     const res = await apiClient.get<{ leads?: LeadWire[]; total?: number }>('/leads?limit=10000')
     return (res?.leads ?? []).map(toAdminLead)
   },
-  async generateLeads(request: LeadGenerateRequest): Promise<LeadImportResult> {
-    return apiClient.post<LeadImportResult>('/leads/generate', request)
-  },
-  async smartSearch(request: SmartSearchRequest): Promise<SmartSearchResponse> {
-    return apiClient.post<SmartSearchResponse>('/leads/smart-search', request)
-  },
   async getCalls(_offerCampaignId?: string): Promise<Call[]> {
     const calls = await apiClient.get<CallWire[]>('/calls')
     return (calls ?? []).map(toCall)
