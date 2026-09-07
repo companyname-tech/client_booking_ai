@@ -64,6 +64,53 @@ export const callSentimentMeta: Record<import('@/types').CallSentiment, StatusMe
   low_intent: { label: 'Low intent', tone: 'neutral' },
 }
 
+/**
+ * Raw `PostCallOutcome` → label, mirroring the old `leads_to_conversion_fe`
+ * call-history screen (`call-history.js` / `CallHistoryScreen` OUTCOME_MAP)
+ * plus the remaining enum members from `state.js` OUTCOME_LABEL.
+ */
+const callHistoryOutcomeLabels: Record<string, string> = {
+  BOOKED: 'Booked',
+  BOOKED_NO_EMAIL: 'Booked (no email)',
+  NOT_INTERESTED: 'Not interested',
+  NOT_ANSWERED: 'Not answered',
+  CALLBACK_REQUESTED: 'Callback requested',
+  WRONG_NUMBER: 'Wrong number',
+  VOICEMAIL: 'Voicemail',
+  DETAILS_EMAIL: 'Details (email)',
+  DETAILS_WHATSAPP: 'Details (WhatsApp)',
+  UNKNOWN: 'Unknown',
+  ANSWERED: 'Answered',
+  CALL_SCHEDULED: 'Scheduled Call',
+  DO_NOT_CALL: 'Do Not Call',
+}
+
+const callHistoryOutcomeTones: Record<string, Tone> = {
+  BOOKED: 'success',
+  BOOKED_NO_EMAIL: 'warning',
+  DETAILS_EMAIL: 'info',
+  DETAILS_WHATSAPP: 'info',
+  CALLBACK_REQUESTED: 'info',
+  CALL_SCHEDULED: 'info',
+  ANSWERED: 'violet',
+  NOT_INTERESTED: 'neutral',
+  DO_NOT_CALL: 'danger',
+  NOT_ANSWERED: 'neutral',
+  VOICEMAIL: 'neutral',
+  WRONG_NUMBER: 'danger',
+  UNKNOWN: 'neutral',
+}
+
+export function callHistoryOutcomeLabel(outcome: string | undefined): string {
+  if (!outcome) return '—'
+  return callHistoryOutcomeLabels[outcome] ?? outcome
+}
+
+export function callHistoryOutcomeTone(outcome: string | undefined): Tone {
+  if (!outcome) return 'neutral'
+  return callHistoryOutcomeTones[outcome] ?? 'neutral'
+}
+
 export const agentStatusMeta: Record<AgentStatus, StatusMeta> = {
   training: { label: 'Training', tone: 'violet', live: true },
   ready: { label: 'Ready', tone: 'info' },

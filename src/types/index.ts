@@ -220,6 +220,27 @@ export interface LeadDetail extends Lead {
 export interface Recording extends CallDetail {
   leadName: string
   leadCompany: string
+  phone?: string
+}
+
+/**
+ * One row of the Super Admin call-history screen. Mirrors the enriched
+ * `GET /recordings` response — lead/phone/duration/audio plus the RAW
+ * `PostCallOutcome` value (not collapsed into the FE `CallOutcome` enum),
+ * so the exact old-FE outcome labels can be rendered.
+ */
+export interface CallHistoryEntry {
+  id: ID // recording_id
+  leadId: ID
+  agentId: ID
+  leadName: string
+  phone: string
+  /** Raw PostCallOutcome value (e.g. "BOOKED", "NOT_ANSWERED"); "" = none. */
+  outcome: string
+  durationSec: number
+  /** Playable recording URL (already prefixed with the API base path). */
+  audioUrl: string
+  startedAt: string
 }
 
 export interface CampaignFunnelStage {

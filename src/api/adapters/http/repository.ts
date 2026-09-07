@@ -11,8 +11,9 @@
  * See the data-contract map (t_17cd0499) for the full tier split.
  */
 import { apiClient } from './client'
+import { env } from '@/config/environment'
 import { ensureEntryIds, stripEntryIds } from '@/lib/pronunciation'
-import type { Agent, OfferCampaign, User, Client, Lead, Call, Booking, CallDetail, LeadDetail, Recording, CampaignFunnelStage, CampaignInsight, CampaignAttentionAlert, CampaignPerformancePoint, CampaignHealthSnapshot, CampaignHealth, Analytics, Activity, AttentionItem, Integration, LeadStatus } from '@/types'
+import type { Agent, OfferCampaign, User, Client, Lead, Call, Booking, CallDetail, LeadDetail, Recording, CallHistoryEntry, CampaignFunnelStage, CampaignInsight, CampaignAttentionAlert, CampaignPerformancePoint, CampaignHealthSnapshot, CampaignHealth, Analytics, Activity, AttentionItem, Integration, LeadStatus } from '@/types'
 import type { AppSettings, ConnectionsState, ConnectionKey, TwilioNumber, FishVoice, SettingsSchemaField, AgentModels, AgentVoiceOption, AgentRole } from '@/types/settings'
 import type { AdminCampaignMeta, AdminLead, CampaignReviewData, AuditEvent, AdminNotification, TrainingStatus } from '@/types/admin'
 import type { CampaignAnalyticsData, AnalyticsFilters } from '@/types/campaignAnalytics'
@@ -123,9 +124,11 @@ interface RecordingWire {
   offer_id?: string
   agent_id?: string
   created_at?: string
+  started_at?: string
   duration?: number
   duration_sec?: number
   outcome?: string
+  call_outcome?: string
   summary?: string
   audio_url?: string
   lead_name?: string
@@ -374,8 +377,12 @@ export const httpRepository = {
     return apiClient.get<Booking[]>('/bookings')
   },
   async getRecordings(offerCampaignId: string): Promise<Recording[]> {
-    const recordings = await apiClient.get<RecordingWire[]>('/recordings')
-    return (recordings ?? []).map((r) => toRecording(r, offerCampaignId))
+    const res = await apiClient.get<{ recordings?: RecordingWire[] }>('/recordings')
+    return (res?.recordings ?? []).map((r) => toRecording(r, offerCampaignId))
+  },
+  async getCallHistory(): Promise<CallHistoryEntry[]> {
+    const res = await apiClient.get<{ recordings?: RecordingWire[] }>('/recordings')
+    return (res?.recordings ?? []).map(toCallHistoryEntry)
   },
   async getCampaignFunnel(_offerCampaignId: string): Promise<CampaignFunnelStage[]> {
     return apiClient.get<CampaignFunnelStage[]>(`/offers/${_offerCampaignId}/funnel`)
@@ -798,18 +805,34 @@ function toRecording(wire: RecordingWire, offerCampaignId: string): Recording {
     offerCampaignId: wire.offer_id ?? offerCampaignId,
     leadId: wire.lead_id ?? '',
     agentId: wire.agent_id ?? '',
-    startedAt: wire.created_at ?? '',
+    startedAt: wire.started_at ?? wire.created_at ?? '',
     durationSec: wire.duration_sec ?? wire.duration ?? 0,
-    outcome: mapCallOutcome(wire.outcome),
+    outcome: mapCallOutcome(wire.call_outcome ?? wire.outcome),
     sentiment: 'neutral',
     recordingUrl: wire.audio_url,
     summary: wire.summary ?? '',
     leadName: wire.lead_name ?? '',
     leadCompany: wire.lead_company ?? '',
+    phone: wire.phone ?? '',
     keyMoments: [],
     signals: [],
     confidence: 0,
     transcript: [],
+  }
+}
+
+function toCallHistoryEntry(wire: RecordingWire): CallHistoryEntry {
+  const id = String(wire.recording_id ?? wire.id ?? '')
+  return {
+    id,
+    leadId: wire.lead_id ?? '',
+    agentId: wire.agent_id ?? '',
+    leadName: wire.lead_name ?? '',
+    phone: wire.phone ?? '',
+    outcome: wire.call_outcome ?? wire.outcome ?? '',
+    durationSec: wire.duration_sec ?? wire.duration ?? 0,
+    audioUrl: wire.audio_url ? `${env.apiBaseUrl}${wire.audio_url}` : '',
+    startedAt: wire.started_at ?? wire.created_at ?? '',
   }
 }
 
