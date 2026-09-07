@@ -4,7 +4,6 @@ import {
   Activity,
   Disc3,
   Phone,
-  Settings,
   Users,
 } from 'lucide-react'
 import PlaceholderPage from '@/pages/PlaceholderPage'
@@ -18,6 +17,7 @@ const AdminAITraining = lazy(() => import('@/pages/admin/AdminAITraining'))
 const AdminCompliance = lazy(() => import('@/pages/admin/AdminCompliance'))
 const AdminClients = lazy(() => import('@/pages/admin/AdminClients'))
 const AdminClientDetail = lazy(() => import('@/pages/admin/AdminClientDetail'))
+const AdminSettings = lazy(() => import('@/pages/admin/AdminSettings'))
 const CampaignDetailLayout = lazy(() => import('@/pages/client/CampaignDetailLayout'))
 const CampaignDetailOverview = lazy(() => import('@/pages/client/CampaignDetailOverview'))
 
@@ -43,5 +43,5 @@ export const adminRoutes = [
   { path: 'leads', element: <PlaceholderPage zone="admin" title="Leads" description="Platform-wide lead inventory." icon={<Users />} /> },
   { path: 'calls', element: <PlaceholderPage zone="admin" title="Calls" description="Monitor live and historical calls across agents." icon={<Phone />} /> },
   { path: 'recordings', element: <PlaceholderPage zone="admin" title="Recordings" description="QA review of call recordings." icon={<Disc3 />} /> },
-  { path: 'settings', element: <PlaceholderPage zone="admin" title="Settings" description="Console configuration." icon={<Settings />} /> },
+  { path: 'settings', element: <AdminSettings /> },
 ]
