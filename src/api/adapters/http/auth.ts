@@ -30,7 +30,9 @@ function persist(session: AuthSession): AuthSession {
  *
  * The backend is single-tenant: there is one account (`admin`). Both FE zones
  * ("client" and "super admin") resolve to that single admin until a real
- * multi-tenant user model exists (see the data-contract map §1.3).
+ * multi-tenant user model exists (see the data-contract map §1.3). The
+ * session additionally mirrors the principal's role + effective permissions
+ * (returned by /auth/login) so the UI can gate console areas per user.
  */
 export const httpAuthService: AuthService = {
   readSession: readStoredSession,
@@ -54,7 +56,13 @@ export const httpAuthService: AuthService = {
     // loginWithCredentials.
     const me = await apiClient.get<{ user?: { username?: string } }>('/auth/me')
     const username = me?.user?.username ?? 'admin'
-    return persist({ zone: 'admin', email: username, name: username })
+    return persist({
+      zone: 'admin',
+      email: username,
+      name: username,
+      role: 'super_admin',
+      permissions: [],
+    })
   },
 
   async loginWithCredentials(username: string, password: string): Promise<LoginResult> {
@@ -63,12 +71,21 @@ export const httpAuthService: AuthService = {
       return { ok: false, error: 'Enter your username and password.' }
     }
     try {
-      const res = await apiClient.post<{ user?: { username?: string } }>('/auth/login', {
+      const res = await apiClient.post<{
+        user?: { username?: string; role?: string; permissions?: string[] }
+      }>('/auth/login', {
         username: u,
         password,
       })
       const name = res?.user?.username ?? u
-      const session = persist({ zone: 'admin', email: name, name })
+      const role = res?.user?.role === 'admin' ? 'admin' : res?.user?.role === 'super_admin' ? 'super_admin' : 'client_user'
+      const session = persist({
+        zone: 'admin',
+        email: name,
+        name,
+        role,
+        permissions: Array.isArray(res?.user?.permissions) ? res.user.permissions : [],
+      })
       return { ok: true, session }
     } catch (err) {
       const message =

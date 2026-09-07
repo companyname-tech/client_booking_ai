@@ -197,7 +197,7 @@ export function workflowToCampaignStatus(wf: AdminWorkflowStatus): CampaignStatu
 // Admin users (M-0017) — mirrors GET/POST/PUT/DELETE /admin/users.
 // ---------------------------------------------------------------------------
 
-export type AdminUserRole = 'super_admin' | 'client_user'
+export type AdminUserRole = 'super_admin' | 'admin' | 'client_user'
 
 /** A platform user as returned by GET /admin/users. */
 export interface AdminUser {
@@ -207,6 +207,8 @@ export interface AdminUser {
   role: AdminUserRole
   /** Client workspaces a client_user is scoped to; [] for super_admin. */
   clientIds: string[]
+  /** Console grants for role "admin" (catalog keys; [] for other roles). */
+  permissions: string[]
   active: boolean
   tokenVersion: number
   createdAt: string
@@ -219,6 +221,8 @@ export interface AdminUserCreateInput {
   password: string
   role: AdminUserRole
   clientIds: string[]
+  /** Optional console grants for role "admin". */
+  permissions?: string[]
 }
 
 /** PUT /admin/users/{id} partial body — only provided fields are sent. */
@@ -229,6 +233,36 @@ export interface AdminUserUpdateInput {
   password?: string
   role?: AdminUserRole
   clientIds?: string[]
+  /** Replace the whole console grant set (role "admin" only). */
+  permissions?: string[]
   /** false soft-disables the user and revokes their JWTs. */
   active?: boolean
+}
+
+// ---------------------------------------------------------------------------
+// Permission catalog (Super Admin → Permissions) — mirrors GET /admin/permissions.
+// ---------------------------------------------------------------------------
+
+export type PermissionKind = 'section' | 'action'
+
+export interface PermissionDescriptor {
+  key: string
+  label: string
+  description: string
+  group: string
+  groupLabel: string
+  kind: PermissionKind
+  /** Section key this action requires (and implies); null for sections. */
+  requires: string | null
+}
+
+export interface PermissionRoleDescriptor {
+  value: AdminUserRole
+  label: string
+  description: string
+}
+
+export interface PermissionCatalog {
+  roles: PermissionRoleDescriptor[]
+  permissions: PermissionDescriptor[]
 }

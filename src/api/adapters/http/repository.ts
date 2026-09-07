@@ -24,7 +24,7 @@ import type { PronunciationAgentOption, PronunciationConfigDto, PronunciationLex
 import type { AcceptTrainingSuggestionInput, AcceptTrainingSuggestionResult, TrainingCampaignRow, TrainingSuggestion, TrainingTalkCompleteResult, TrainingTalkTurn } from '@/types/training'
 import type { LeadGenerateRequest, LeadImportResult, SmartSearchRequest, SmartSearchResponse } from '@/types/leadGeneration'
 import type { CostBalance, CostEvent, CostPricing, CostSummary } from '@/types/costs'
-import type { AdminUser, AdminUserCreateInput, AdminUserUpdateInput } from '@/types/admin'
+import type { AdminUser, AdminUserCreateInput, AdminUserUpdateInput, PermissionCatalog, PermissionDescriptor, PermissionRoleDescriptor } from '@/types/admin'
 
 // ---------------------------------------------------------------------------
 // Wire DTOs (snake_case) for the Tier B domains.
@@ -874,6 +874,7 @@ export const httpRepository = {
       password: input.password,
       role: input.role,
       client_ids: input.clientIds,
+      permissions: input.permissions ?? [],
     })
     return toUser(wire)
   },
@@ -884,12 +885,25 @@ export const httpRepository = {
     if (patch.password !== undefined) body.password = patch.password
     if (patch.role !== undefined) body.role = patch.role
     if (patch.clientIds !== undefined) body.client_ids = patch.clientIds
+    if (patch.permissions !== undefined) body.permissions = patch.permissions
     if (patch.active !== undefined) body.active = patch.active
     const wire = await apiClient.put<AdminUserWire>(`/admin/users/${id}`, body)
     return toUser(wire)
   },
   async deleteUser(id: string): Promise<void> {
     await apiClient.delete(`/admin/users/${id}`)
+  },
+
+  // --- Permission catalog (Super Admin → Permissions) ------------------------
+  async listPermissions(): Promise<PermissionCatalog> {
+    const wire = await apiClient.get<{
+      roles?: PermissionRoleDescriptor[]
+      permissions?: PermissionDescriptor[]
+    }>('/admin/permissions')
+    return {
+      roles: wire?.roles ?? [],
+      permissions: wire?.permissions ?? [],
+    }
   },
 
   // --- AI Command Center ------------------------------------------------------
@@ -1132,18 +1146,21 @@ interface AdminUserWire {
   email: string
   role: string
   client_ids?: string[]
+  permissions?: string[]
   active?: boolean
   token_version?: number
   created_at?: string
 }
 
 function toUser(w: AdminUserWire): AdminUser {
+  const role = w.role === 'super_admin' ? 'super_admin' : w.role === 'admin' ? 'admin' : 'client_user'
   return {
     id: w.id,
     name: w.name,
     email: w.email,
-    role: w.role === 'super_admin' ? 'super_admin' : 'client_user',
+    role,
     clientIds: w.client_ids ?? [],
+    permissions: role === 'admin' ? (w.permissions ?? []) : [],
     active: w.active ?? true,
     tokenVersion: w.token_version ?? 0,
     createdAt: w.created_at ?? '',

@@ -218,7 +218,8 @@ function UserMenu({ collapsed, zone }: { collapsed: boolean; zone: Zone }) {
 /** Shared between the desktop rail and the mobile drawer. */
 export const SidebarContent = memo(function SidebarContent({ collapsed, zone }: { collapsed: boolean; zone: Zone }) {
   const { toggleCollapsed, isDesktop, setMobileOpen } = useShell()
-  const sections = navigationFor(zone)
+  const { session } = useAuth()
+  const sections = navigationFor(zone, session)
   const { data: stats } = useAsyncData(async () => {
     const [client, campaigns, agents] = await Promise.all([
       repo.getCurrentClient().catch(() => null),

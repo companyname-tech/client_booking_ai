@@ -1,5 +1,6 @@
 import { lazy } from 'react'
 import { Navigate } from 'react-router-dom'
+import { PermGate } from '@/components/auth/PermGate'
 import { campaignSubRoutes } from './client.routes'
 
 const AdminOverview = lazy(() => import('@/pages/admin/AdminOverview'))
@@ -14,28 +15,34 @@ const AdminLeads = lazy(() => import('@/pages/admin/AdminLeads'))
 const AdminCalls = lazy(() => import('@/pages/admin/AdminCalls'))
 const AdminCosts = lazy(() => import('@/pages/admin/AdminCosts'))
 const AdminUsers = lazy(() => import('@/pages/admin/AdminUsers'))
+const AdminPermissions = lazy(() => import('@/pages/admin/AdminPermissions'))
 const CampaignDetailLayout = lazy(() => import('@/pages/client/CampaignDetailLayout'))
 const CampaignDetailOverview = lazy(() => import('@/pages/client/CampaignDetailOverview'))
 
 export const adminRoutes = [
   { index: true, element: <Navigate to="/admin/overview" replace /> },
-  { path: 'overview', element: <AdminOverview /> },
-  { path: 'campaigns', element: <AdminCampaigns /> },
-  { path: 'campaigns/:id/review', element: <AdminCampaignReview /> },
+  { path: 'overview', element: <PermGate><AdminOverview /></PermGate> },
+  { path: 'campaigns', element: <PermGate perm="campaigns.view"><AdminCampaigns /></PermGate> },
+  { path: 'campaigns/:id/review', element: <PermGate perm="campaigns.view"><AdminCampaignReview /></PermGate> },
   {
     path: 'campaigns/:id',
-    element: <CampaignDetailLayout zone="admin" />,
+    element: (
+      <PermGate perm="campaigns.view">
+        <CampaignDetailLayout zone="admin" />
+      </PermGate>
+    ),
     children: [{ index: true, element: <CampaignDetailOverview /> }, ...campaignSubRoutes],
   },
   { path: 'approvals', element: <Navigate to="/admin/campaigns" replace /> },
-  { path: 'ai-training', element: <AdminAITraining /> },
-  { path: 'clients', element: <AdminClients /> },
-  { path: 'clients/:id', element: <AdminClientDetail /> },
-  { path: 'activity', element: <AdminActivity /> },
-  { path: 'leads', element: <AdminLeads /> },
-  { path: 'calls', element: <AdminCalls /> },
-  { path: 'costs', element: <AdminCosts /> },
-  { path: 'users', element: <AdminUsers /> },
+  { path: 'ai-training', element: <PermGate perm="ai_training.view"><AdminAITraining /></PermGate> },
+  { path: 'clients', element: <PermGate perm="clients.view"><AdminClients /></PermGate> },
+  { path: 'clients/:id', element: <PermGate perm="clients.view"><AdminClientDetail /></PermGate> },
+  { path: 'activity', element: <PermGate perm="activity.view"><AdminActivity /></PermGate> },
+  { path: 'leads', element: <PermGate perm="leads.view"><AdminLeads /></PermGate> },
+  { path: 'calls', element: <PermGate perm="calls.view"><AdminCalls /></PermGate> },
+  { path: 'costs', element: <PermGate perm="costs.view"><AdminCosts /></PermGate> },
+  { path: 'users', element: <PermGate perm="users.manage"><AdminUsers /></PermGate> },
+  { path: 'permissions', element: <PermGate perm="users.manage"><AdminPermissions /></PermGate> },
   { path: 'recordings', element: <Navigate to="/admin/calls" replace /> },
-  { path: 'settings', element: <AdminSettings /> },
+  { path: 'settings', element: <PermGate perm="settings.view"><AdminSettings /></PermGate> },
 ]

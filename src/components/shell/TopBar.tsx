@@ -13,7 +13,8 @@ import { useAuth } from '@/contexts/AuthContext'
 function useBreadcrumb() {
   const { pathname } = useLocation()
   const { zone } = useShell()
-  const sections = navigationFor(zone)
+  const { session } = useAuth()
+  const sections = navigationFor(zone, session)
   for (const section of sections) {
     for (const item of section.items) {
       if (pathname === item.to || pathname.startsWith(item.to + '/')) {

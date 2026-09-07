@@ -16,9 +16,10 @@ interface UserFormModalProps {
   onSaved: (user: AdminUser) => void
 }
 
-const ROLES: { value: AdminUserRole; label: string }[] = [
-  { value: 'client_user', label: 'Client user' },
-  { value: 'super_admin', label: 'Super admin' },
+const ROLES: { value: AdminUserRole; label: string; hint?: string }[] = [
+  { value: 'client_user', label: 'Client user', hint: 'Client workspace account — scoped to the assigned clients.' },
+  { value: 'admin', label: 'Admin', hint: 'Console staff — gets access per the Permissions tab grants.' },
+  { value: 'super_admin', label: 'Super admin', hint: 'Full access to every area, including Users & Permissions.' },
 ]
 
 export function UserFormModal({ open, onClose, user, onSaved }: UserFormModalProps) {
@@ -77,6 +78,7 @@ export function UserFormModal({ open, onClose, user, onSaved }: UserFormModalPro
           password,
           role,
           clientIds: role === 'client_user' ? clientIds : [],
+          permissions: [],
         })
         onSaved(saved)
       }
@@ -133,6 +135,7 @@ export function UserFormModal({ open, onClose, user, onSaved }: UserFormModalPro
               options={ROLES}
               className="w-full"
             />
+            <p className="text-2xs text-fg-muted">{ROLES.find((r) => r.value === role)?.hint}</p>
           </FieldGroup>
         </div>
 

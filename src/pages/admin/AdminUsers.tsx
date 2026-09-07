@@ -1,7 +1,8 @@
 import { useState } from 'react'
-import { Pencil, Plus, ShieldCheck, Trash2, UserRound, Power } from 'lucide-react'
+import { KeyRound, Pencil, Plus, ShieldCheck, Trash2, UserRound, Power } from 'lucide-react'
 import { repo } from '@/api/repository'
 import { useAsyncData } from '@/hooks/useAsyncData'
+import { roleLabel } from '@/lib/permissions'
 import { PageTransition } from '@/components/motion/PageTransition'
 import { PageContainer, PageHeader, WorkspaceEyebrow } from '@/components/layout/PageHeader'
 import { LoadingState } from '@/components/ui/LoadingState'
@@ -14,18 +15,32 @@ import { cn } from '@/lib/utils'
 import type { AdminUser } from '@/types/admin'
 import type { Client } from '@/types'
 
-function RoleBadge({ role }: { role: AdminUser['role'] }) {
+function RoleBadge({ role, grants }: { role: AdminUser['role']; grants?: number }) {
   const isSuper = role === 'super_admin'
+  const isAdmin = role === 'admin'
   return (
-    <span
-      className={cn(
-        'inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-2xs font-medium capitalize',
-        isSuper ? 'border-violet/25 bg-violet-soft/40 text-violet' : 'border-line-strong bg-surface-2 text-fg-secondary',
+    <div className="flex flex-col items-start gap-1">
+      <span
+        className={cn(
+          'inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-2xs font-medium capitalize',
+          isSuper
+            ? 'border-violet/25 bg-violet-soft/40 text-violet'
+            : isAdmin
+              ? 'border-accent/25 bg-accent-soft/40 text-accent'
+              : 'border-line-strong bg-surface-2 text-fg-secondary',
+        )}
+      >
+        {isSuper ? <ShieldCheck className="size-3" /> : isAdmin ? <KeyRound className="size-3" /> : <UserRound className="size-3" />}
+        {roleLabel(role)}
+      </span>
+      {isAdmin && (
+        <span className="text-2xs text-fg-faint">
+          {grants !== undefined && grants > 0
+            ? `${grants} grant${grants === 1 ? '' : 's'}`
+            : 'No grants yet'}
+        </span>
       )}
-    >
-      {isSuper ? <ShieldCheck className="size-3" /> : <UserRound className="size-3" />}
-      {role === 'super_admin' ? 'Super admin' : 'Client user'}
-    </span>
+    </div>
   )
 }
 
@@ -113,11 +128,13 @@ export default function AdminUsers() {
                         <div className="text-xs text-fg-muted">{u.email}</div>
                       </td>
                       <td className="px-3 py-3">
-                        <RoleBadge role={u.role} />
+                        <RoleBadge role={u.role} grants={u.permissions?.length} />
                       </td>
                       <td className="px-3 py-3">
                         {u.role === 'super_admin' ? (
                           <span className="text-xs text-fg-faint">All clients</span>
+                        ) : u.role === 'admin' ? (
+                          <span className="text-xs text-fg-faint">Console-wide (grants right)</span>
                         ) : u.clientIds.length === 0 ? (
                           <span className="text-xs text-fg-muted">No clients</span>
                         ) : (
