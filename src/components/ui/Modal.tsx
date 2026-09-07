@@ -25,22 +25,36 @@ const sizeClasses = { sm: 'max-w-sm', md: 'max-w-lg', lg: 'max-w-2xl' }
 export function Modal({ open, onClose, title, description, children, footer, size = 'md', bare, className }: ModalProps) {
   const id = useId()
   const panelRef = useRef<HTMLDivElement>(null)
+  const onCloseRef = useRef(onClose)
   useScrollLock(open)
+
+  // Keep the latest onClose for the Escape handler without re-running the
+  // focus effect below (an inline onClose changes identity every parent
+  // render — re-running it would yank focus back to the dialog's first
+  // button, the Close X, after every keystroke).
+  useEffect(() => {
+    onCloseRef.current = onClose
+  })
 
   useEffect(() => {
     if (!open) return
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onCloseRef.current()
     document.addEventListener('keydown', onKey)
-    // Move focus into the dialog for keyboard users.
+    // Move focus into the dialog for keyboard users. Prefer the form field
+    // or [data-autofocus] element; fall back to the first button so bare
+    // confirm dialogs still get a focused target.
     const t = window.setTimeout(() => {
-      const el = panelRef.current?.querySelector<HTMLElement>('[data-autofocus], input, button')
+      const panel = panelRef.current
+      if (!panel) return
+      const field = panel.querySelector<HTMLElement>('[data-autofocus], input:not([type="hidden"]), textarea, select')
+      const el = field ?? panel.querySelector<HTMLElement>('button')
       el?.focus()
     }, 20)
     return () => {
       document.removeEventListener('keydown', onKey)
       window.clearTimeout(t)
     }
-  }, [open, onClose])
+  }, [open])
 
   return createPortal(
     <AnimatePresence>
