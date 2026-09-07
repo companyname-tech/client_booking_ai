@@ -10,6 +10,7 @@ import { AISummary } from '@/components/recordings/AISummary'
 import { RecordingPlayer } from '@/components/recordings/RecordingPlayer'
 import { BookingCard } from '@/components/recordings/BookingCard'
 import { Button } from '@/components/ui/Button'
+import { formatDuration } from '@/lib/utils'
 
 const LEAD_STATUSES: LeadStatus[] = [
   'new',
@@ -226,10 +227,13 @@ export function LeadDrawer({
               <section>
                 <h4 className="text-sm font-semibold text-fg">Latest call</h4>
                 <p className="mt-1 text-xs text-fg-muted">
-                  Duration: {Math.floor(lead.latestCall.durationSec / 60)}m{' '}
-                  {lead.latestCall.durationSec % 60}s · Outcome: {lead.latestCall.outcome}
+                  Duration: {formatDuration(lead.latestCall.durationSec)} · Outcome: {lead.latestCall.outcome}
                 </p>
-                <RecordingPlayer durationSec={lead.latestCall.durationSec} className="mt-3" />
+                <RecordingPlayer
+                  audioUrl={lead.latestCall.recordingUrl}
+                  durationSec={lead.latestCall.durationSec}
+                  className="mt-3"
+                />
                 <AISummary
                   summary={lead.latestCall.summary}
                   signals={lead.latestCall.signals}

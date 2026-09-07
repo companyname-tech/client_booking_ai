@@ -81,7 +81,7 @@ export function RecordingList({ recordings }: { recordings: Recording[] }) {
       >
         {selected && (
           <div className="space-y-6">
-            <RecordingPlayer durationSec={selected.durationSec} />
+            <RecordingPlayer audioUrl={selected.recordingUrl} durationSec={selected.durationSec} />
             <AISummary summary={selected.summary} signals={selected.signals} confidence={selected.confidence} />
             <section>
               <h4 className="mb-3 text-sm font-semibold text-fg">Transcript</h4>

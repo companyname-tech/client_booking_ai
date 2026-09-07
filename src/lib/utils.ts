@@ -59,14 +59,16 @@ export function formatRelativeCompact(iso: string, now = Date.now()) {
 }
 
 export function formatDuration(sec: number) {
-  const m = Math.floor(sec / 60)
-  const s = sec % 60
+  const total = Math.max(0, Math.round(sec || 0))
+  const m = Math.floor(total / 60)
+  const s = total % 60
   return `${m}m ${String(s).padStart(2, '0')}s`
 }
 
 export function formatDurationShort(sec: number) {
-  const m = Math.floor(sec / 60)
-  const s = sec % 60
+  const total = Math.max(0, Math.round(sec || 0))
+  const m = Math.floor(total / 60)
+  const s = total % 60
   return `${m}:${String(s).padStart(2, '0')}`
 }
 

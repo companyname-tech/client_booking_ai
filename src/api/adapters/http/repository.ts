@@ -1012,6 +1012,17 @@ async function bulkDelete(path: string, ids: string[]): Promise<{ affected: numb
   return { affected: deleted, failed: ids.length - deleted }
 }
 
+/**
+ * Prefix a BE media path ("/audio/x.wav") with the API base so the <audio>
+ * src is same-origin (/api/audio/x.wav) and carries the session cookie.
+ * Raw relative paths must never reach an <audio> element (they would resolve
+ * against the FE origin root and 404).
+ */
+function mediaUrl(path: string | undefined): string {
+  if (!path) return ''
+  return path.startsWith('http') ? path : `${env.apiBaseUrl}${path}`
+}
+
 function agentPatch(patch: Partial<Agent>): Record<string, unknown> {
   const out: Record<string, unknown> = {}
   if (patch.name !== undefined) out.name = patch.name
@@ -1035,7 +1046,7 @@ function toCall(wire: CallWire): Call {
     durationSec: wire.duration_sec ?? wire.duration ?? 0,
     outcome: mapCallOutcome(wire.last_call_outcome ?? wire.outcome),
     sentiment: 'neutral',
-    recordingUrl: wire.recording_url ?? wire.audio_url,
+    recordingUrl: mediaUrl(wire.recording_url ?? wire.audio_url),
     summary: wire.last_call_summary ?? wire.summary ?? '',
   }
 }
@@ -1092,7 +1103,7 @@ function toRecording(wire: RecordingWire, offerCampaignId: string): Recording {
     durationSec: wire.duration_sec ?? wire.duration ?? 0,
     outcome: mapCallOutcome(wire.call_outcome ?? wire.outcome),
     sentiment: 'neutral',
-    recordingUrl: wire.audio_url,
+    recordingUrl: mediaUrl(wire.audio_url),
     summary: wire.summary ?? '',
     leadName: wire.lead_name ?? '',
     leadCompany: wire.lead_company ?? '',
@@ -1114,7 +1125,7 @@ function toCallHistoryEntry(wire: RecordingWire): CallHistoryEntry {
     phone: wire.phone ?? '',
     outcome: wire.call_outcome ?? wire.outcome ?? '',
     durationSec: wire.duration_sec ?? wire.duration ?? 0,
-    audioUrl: wire.audio_url ? `${env.apiBaseUrl}${wire.audio_url}` : '',
+    audioUrl: mediaUrl(wire.audio_url),
     transcript: wire.transcript ?? '',
     startedAt: wire.started_at ?? wire.created_at ?? '',
   }
