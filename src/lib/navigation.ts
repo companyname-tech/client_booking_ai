@@ -65,6 +65,7 @@ export const clientNavigation: NavSection[] = [
     label: 'Operations',
     items: [
       { label: 'Calls & Recordings', to: '/client/recordings', icon: Phone },
+      { label: 'Calendar', to: '/client/calendar', icon: Calendar },
       { label: 'Bookings', to: '/client/bookings', icon: Calendar },
       { label: 'Downloads', to: '/client/downloads', icon: Download },
     ],

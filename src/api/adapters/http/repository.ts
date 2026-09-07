@@ -25,6 +25,7 @@ import type { AcceptTrainingSuggestionInput, AcceptTrainingSuggestionResult, Tra
 import type { LeadGenerateRequest, LeadImportResult, SmartSearchRequest, SmartSearchResponse } from '@/types/leadGeneration'
 import type { CostBalance, CostEvent, CostPricing, CostSummary } from '@/types/costs'
 import type { AdminUser, AdminUserCreateInput, AdminUserUpdateInput, PermissionCatalog, PermissionDescriptor, PermissionRoleDescriptor } from '@/types/admin'
+import type { AvailabilityInstance, AvailabilityKind, AvailabilityRule, CalendarMeeting, GoogleIntegrationState, MeetingStatus as CalendarMeetingStatus } from '@/types/calendar'
 
 // ---------------------------------------------------------------------------
 // Wire DTOs (snake_case) for the Tier B domains.
@@ -918,6 +919,88 @@ export const httpRepository = {
     await apiClient.delete(`/admin/users/${id}`)
   },
 
+  // --- Calendar (Phase 3, pinned §3.3) ----------------------------------------
+  async getCalendarMeetings(p: { clientId?: string; from: string; to: string; status?: CalendarMeetingStatus }): Promise<CalendarMeeting[]> {
+    const qs = new URLSearchParams()
+    if (p.clientId) qs.set('client_id', p.clientId)
+    qs.set('from', p.from)
+    qs.set('to', p.to)
+    if (p.status) qs.set('status', p.status)
+    const res = await apiClient.get<{ items?: CalendarMeetingWire[] }>(`/calendar/meetings?${qs.toString()}`)
+    return (res?.items ?? []).map(toCalendarMeeting)
+  },
+  async createCalendarMeeting(i: { leadId: string; scheduledFor: string; durationMin?: number; title?: string; notes?: string }): Promise<CalendarMeeting> {
+    const wire = await apiClient.post<CalendarMeetingWire>('/calendar/meetings', {
+      lead_id: i.leadId,
+      scheduled_for: i.scheduledFor,
+      duration_min: i.durationMin,
+      title: i.title,
+      notes: i.notes,
+    })
+    return toCalendarMeeting(wire)
+  },
+  async updateCalendarMeeting(id: string, p: { scheduledFor?: string; durationMin?: number; title?: string; status?: CalendarMeetingStatus }): Promise<CalendarMeeting> {
+    const body: Record<string, unknown> = {}
+    if (p.scheduledFor !== undefined) body.scheduled_for = p.scheduledFor
+    if (p.durationMin !== undefined) body.duration_min = p.durationMin
+    if (p.title !== undefined) body.title = p.title
+    if (p.status !== undefined) body.status = p.status
+    const wire = await apiClient.patch<CalendarMeetingWire>(`/calendar/meetings/${id}`, body)
+    return toCalendarMeeting(wire)
+  },
+  async syncCalendarMeeting(id: string): Promise<{ state: 'synced' | 'error'; meetingLink?: string; error?: string }> {
+    const res = await apiClient.post<{ state?: 'synced' | 'error'; meeting_link?: string; error?: string }>(`/calendar/meetings/${id}/sync`)
+    return { state: res?.state ?? 'error', meetingLink: res?.meeting_link, error: res?.error }
+  },
+  async getAvailability(p: { clientId?: string; from: string; to: string }): Promise<AvailabilityInstance[]> {
+    const qs = new URLSearchParams()
+    if (p.clientId) qs.set('client_id', p.clientId)
+    qs.set('from', p.from)
+    qs.set('to', p.to)
+    const res = await apiClient.get<{ items?: AvailabilityInstanceWire[] }>(`/calendar/availability?${qs.toString()}`)
+    return (res?.items ?? []).map(toAvailabilityInstance)
+  },
+  async upsertAvailability(i: { id?: string; clientId?: string; kind: AvailabilityKind; start: string; end: string; daysOfWeek?: number[]; timezone: string; note?: string }): Promise<AvailabilityRule> {
+    const body: Record<string, unknown> = {
+      kind: i.kind,
+      start_datetime: i.start,
+      end_datetime: i.end,
+      timezone: i.timezone,
+    }
+    if (i.id !== undefined) body.availability_id = i.id
+    if (i.daysOfWeek !== undefined && i.daysOfWeek.length > 0) body.days_of_week = i.daysOfWeek
+    if (i.note !== undefined) body.note = i.note
+    const wire = await apiClient.put<AvailabilityRuleWire>(`/calendar/availability?client_id=${encodeURIComponent(i.clientId ?? '')}`, body)
+    return toAvailabilityRule(wire)
+  },
+  async deleteAvailability(id: string): Promise<void> {
+    await apiClient.delete(`/calendar/availability/${id}`)
+  },
+  async getSlots(p: { clientId?: string; from: string; to: string; durationMin?: number }): Promise<string[]> {
+    const qs = new URLSearchParams()
+    if (p.clientId) qs.set('client_id', p.clientId)
+    qs.set('from', p.from)
+    qs.set('to', p.to)
+    if (p.durationMin) qs.set('duration_min', String(p.durationMin))
+    const res = await apiClient.get<{ items?: string[] }>(`/calendar/slots?${qs.toString()}`)
+    return res?.items ?? []
+  },
+  async getGoogleIntegration(clientId?: string): Promise<GoogleIntegrationState> {
+    const qs = clientId ? `?client_id=${encodeURIComponent(clientId)}` : ''
+    const res = await apiClient.get<GoogleIntegrationWire>(`/calendar/integration${qs}`)
+    return toGoogleIntegration(res)
+  },
+  googleAuthUrl(p: { clientId?: string; returnTo?: string }): string {
+    const qs = new URLSearchParams()
+    if (p.clientId) qs.set('client_id', p.clientId)
+    qs.set('return_to', p.returnTo ?? '/client/calendar')
+    return `${env.apiBaseUrl}/calendar/integration/google/auth?${qs.toString()}`
+  },
+  async disconnectGoogle(clientId?: string): Promise<void> {
+    const body = clientId ? { client_id: clientId } : {}
+    await apiClient.post('/calendar/integration/google/disconnect', body)
+  },
+
   // --- Permission catalog (Super Admin → Permissions) ------------------------
   async listPermissions(): Promise<PermissionCatalog> {
     const wire = await apiClient.get<{
@@ -1188,6 +1271,119 @@ function toUser(w: AdminUserWire): AdminUser {
     active: w.active ?? true,
     tokenVersion: w.token_version ?? 0,
     createdAt: w.created_at ?? '',
+  }
+}
+
+// --- Calendar wire types + mappers (Phase 3, pinned §3.3) ---------------------
+
+interface CalendarMeetingWire {
+  booking_id: string
+  lead: { lead_id: string; name: string; company: string }
+  offer: { offer_id: string; title: string }
+  scheduled_for: string
+  end: string
+  timezone: string
+  duration_min: number
+  title: string
+  status: string
+  source: string
+  meeting_link?: string
+  google?: { state?: string; event_id?: string; calendar_id?: string; error?: string }
+  notes?: string
+  created_at?: string
+}
+
+function toCalendarMeeting(w: CalendarMeetingWire): CalendarMeeting {
+  const isStatus = (s: string): s is CalendarMeeting['status'] =>
+    s === 'confirmed' || s === 'pending' || s === 'cancelled' || s === 'completed'
+  const isSource = (s: string): s is CalendarMeeting['source'] =>
+    s === 'call' || s === 'manual' || s === 'client' || s === 'landing'
+  return {
+    bookingId: w.booking_id,
+    lead: { id: w.lead?.lead_id ?? '', name: w.lead?.name ?? '', company: w.lead?.company ?? '' },
+    offer: { id: w.offer?.offer_id ?? '', title: w.offer?.title ?? '' },
+    scheduledFor: w.scheduled_for,
+    end: w.end,
+    timezone: w.timezone,
+    durationMin: w.duration_min ?? 60,
+    title: w.title,
+    status: isStatus(w.status) ? w.status : 'pending',
+    source: isSource(w.source) ? w.source : 'manual',
+    meetingLink: w.meeting_link ?? undefined,
+    google: w.google
+      ? {
+          state: w.google.state === 'synced' || w.google.state === 'error' ? w.google.state : 'none',
+          eventId: w.google.event_id,
+          calendarId: w.google.calendar_id,
+          error: w.google.error,
+        }
+      : undefined,
+    notes: w.notes ?? undefined,
+    createdAt: w.created_at ?? '',
+  }
+}
+
+interface AvailabilityInstanceWire {
+  availability_id: string
+  kind: string
+  start: string
+  end: string
+  timezone: string
+  note?: string
+  recurring?: boolean
+}
+
+function toAvailabilityInstance(w: AvailabilityInstanceWire): AvailabilityInstance {
+  return {
+    id: w.availability_id,
+    kind: w.kind === 'range' || w.kind === 'recurring_weekly' ? w.kind : 'single',
+    start: w.start,
+    end: w.end,
+    timezone: w.timezone,
+    note: w.note,
+    recurring: w.recurring ? { daysOfWeek: undefined } : undefined,
+  }
+}
+
+interface AvailabilityRuleWire {
+  id: string
+  kind: string
+  start: string
+  end: string
+  timezone: string
+  days_of_week?: number[]
+  note?: string
+}
+
+function toAvailabilityRule(w: AvailabilityRuleWire): AvailabilityRule {
+  return {
+    id: w.id,
+    kind: w.kind === 'range' || w.kind === 'recurring_weekly' ? w.kind : 'single',
+    start: w.start,
+    end: w.end,
+    timezone: w.timezone,
+    daysOfWeek: w.days_of_week,
+    note: w.note,
+  }
+}
+
+interface GoogleIntegrationWire {
+  connected?: boolean
+  account_email?: string
+  calendar_id?: string
+  scopes?: string[]
+  connected_at?: string
+  needs_reconnect?: boolean
+}
+
+function toGoogleIntegration(w: GoogleIntegrationWire): GoogleIntegrationState {
+  return {
+    connected: w.connected ?? false,
+    accountEmail: w.account_email ?? undefined,
+    calendarId: w.calendar_id ?? undefined,
+    scopes: w.scopes,
+    connectedAt: w.connected_at ?? undefined,
+    needsReconnect: w.needs_reconnect ?? false,
   }
 }
 

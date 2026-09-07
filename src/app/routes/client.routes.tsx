@@ -27,6 +27,7 @@ const AIAgents = lazy(() => import('@/pages/client/ai/AIAgents'))
 const AIAgentDetail = lazy(() => import('@/pages/client/ai/AIAgentDetail'))
 const ClientRecordings = lazy(() => import('@/pages/client/ClientRecordings'))
 const ClientBookings = lazy(() => import('@/pages/client/ClientBookings'))
+const CalendarScreen = lazy(() => import('@/pages/client/CalendarScreen'))
 const ClientDownloads = lazy(() => import('@/pages/client/ClientDownloads'))
 const ClientAnalytics = lazy(() => import('@/pages/client/ClientAnalytics'))
 
@@ -67,6 +68,7 @@ export const clientRoutes = [
   { path: 'messages', element: <PlaceholderPage title="Messages" description="Email and WhatsApp follow-ups sent by the AI." icon={<MessageSquare />} /> },
   { path: 'recordings', element: <ClientRecordings /> },
   { path: 'bookings', element: <ClientBookings /> },
+  { path: 'calendar', element: <CalendarScreen /> },
   { path: 'integrations', element: <Navigate to="/client/settings?tab=connection" replace /> },
   { path: 'downloads', element: <ClientDownloads /> },
   { path: 'team', element: <PlaceholderPage title="Team" description="Invite teammates and manage roles." icon={<UsersRound />} /> },
