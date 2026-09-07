@@ -192,3 +192,43 @@ export function workflowToCampaignStatus(wf: AdminWorkflowStatus): CampaignStatu
   }
   return map[wf]
 }
+
+// ---------------------------------------------------------------------------
+// Admin users (M-0017) — mirrors GET/POST/PUT/DELETE /admin/users.
+// ---------------------------------------------------------------------------
+
+export type AdminUserRole = 'super_admin' | 'client_user'
+
+/** A platform user as returned by GET /admin/users. */
+export interface AdminUser {
+  id: string
+  name: string
+  email: string
+  role: AdminUserRole
+  /** Client workspaces a client_user is scoped to; [] for super_admin. */
+  clientIds: string[]
+  active: boolean
+  tokenVersion: number
+  createdAt: string
+}
+
+/** POST /admin/users body (name/email/password required). */
+export interface AdminUserCreateInput {
+  name: string
+  email: string
+  password: string
+  role: AdminUserRole
+  clientIds: string[]
+}
+
+/** PUT /admin/users/{id} partial body — only provided fields are sent. */
+export interface AdminUserUpdateInput {
+  name?: string
+  email?: string
+  /** Provide to reset the password. */
+  password?: string
+  role?: AdminUserRole
+  clientIds?: string[]
+  /** false soft-disables the user and revokes their JWTs. */
+  active?: boolean
+}

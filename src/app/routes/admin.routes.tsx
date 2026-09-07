@@ -13,6 +13,7 @@ const AdminActivity = lazy(() => import('@/pages/admin/AdminActivity'))
 const AdminLeads = lazy(() => import('@/pages/admin/AdminLeads'))
 const AdminCalls = lazy(() => import('@/pages/admin/AdminCalls'))
 const AdminCosts = lazy(() => import('@/pages/admin/AdminCosts'))
+const AdminUsers = lazy(() => import('@/pages/admin/AdminUsers'))
 const CampaignDetailLayout = lazy(() => import('@/pages/client/CampaignDetailLayout'))
 const CampaignDetailOverview = lazy(() => import('@/pages/client/CampaignDetailOverview'))
 
@@ -34,6 +35,7 @@ export const adminRoutes = [
   { path: 'leads', element: <AdminLeads /> },
   { path: 'calls', element: <AdminCalls /> },
   { path: 'costs', element: <AdminCosts /> },
+  { path: 'users', element: <AdminUsers /> },
   { path: 'recordings', element: <Navigate to="/admin/calls" replace /> },
   { path: 'settings', element: <AdminSettings /> },
 ]

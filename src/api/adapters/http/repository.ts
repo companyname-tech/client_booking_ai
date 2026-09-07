@@ -24,6 +24,7 @@ import type { PronunciationAgentOption, PronunciationConfigDto, PronunciationLex
 import type { AcceptTrainingSuggestionInput, AcceptTrainingSuggestionResult, TrainingCampaignRow, TrainingSuggestion, TrainingTalkCompleteResult, TrainingTalkTurn } from '@/types/training'
 import type { LeadGenerateRequest, LeadImportResult, SmartSearchRequest, SmartSearchResponse } from '@/types/leadGeneration'
 import type { CostBalance, CostEvent, CostPricing, CostSummary } from '@/types/costs'
+import type { AdminUser, AdminUserCreateInput, AdminUserUpdateInput } from '@/types/admin'
 
 // ---------------------------------------------------------------------------
 // Wire DTOs (snake_case) for the Tier B domains.
@@ -808,6 +809,12 @@ export const httpRepository = {
       `/admin/training/suggestions/${suggestionId}/dismiss`,
     )
   },
+  async setTrainingSuggestionTimestamp(suggestionId: string, seconds: number): Promise<{ timestampS: number }> {
+    return apiClient.post<{ timestampS: number }>(
+      `/admin/training/suggestions/${suggestionId}/timestamp`,
+      { seconds },
+    )
+  },
   async updateCampaign(id: string, patch: Partial<OfferCampaign>): Promise<OfferCampaign> {
     const wire = await apiClient.put<OfferWire>(`/offers/${id}`, {
       title: patch.offerName ?? patch.name,
@@ -853,6 +860,36 @@ export const httpRepository = {
   },
   async updateClient(id: string, payload: Partial<ClientInput>): Promise<Client> {
     return apiClient.put<Client>(`/admin/clients/${id}`, payload)
+  },
+
+  // --- Admin users (M-0017) ----------------------------------------------------
+  async listUsers(): Promise<AdminUser[]> {
+    const res = await apiClient.get<AdminUserWire[]>('/admin/users')
+    return (res ?? []).map(toUser)
+  },
+  async createUser(input: AdminUserCreateInput): Promise<AdminUser> {
+    const wire = await apiClient.post<AdminUserWire>('/admin/users', {
+      name: input.name,
+      email: input.email,
+      password: input.password,
+      role: input.role,
+      client_ids: input.clientIds,
+    })
+    return toUser(wire)
+  },
+  async updateUser(id: string, patch: AdminUserUpdateInput): Promise<AdminUser> {
+    const body: Record<string, unknown> = {}
+    if (patch.name !== undefined) body.name = patch.name
+    if (patch.email !== undefined) body.email = patch.email
+    if (patch.password !== undefined) body.password = patch.password
+    if (patch.role !== undefined) body.role = patch.role
+    if (patch.clientIds !== undefined) body.client_ids = patch.clientIds
+    if (patch.active !== undefined) body.active = patch.active
+    const wire = await apiClient.put<AdminUserWire>(`/admin/users/${id}`, body)
+    return toUser(wire)
+  },
+  async deleteUser(id: string): Promise<void> {
+    await apiClient.delete(`/admin/users/${id}`)
   },
 
   // --- AI Command Center ------------------------------------------------------
@@ -1086,6 +1123,31 @@ async function bulkDelete(path: string, ids: string[]): Promise<{ affected: numb
 function mediaUrl(path: string | undefined): string {
   if (!path) return ''
   return path.startsWith('http') ? path : `${env.apiBaseUrl}${path}`
+}
+
+/** GET/POST/PUT /admin/users element (snake_case wire). */
+interface AdminUserWire {
+  id: string
+  name: string
+  email: string
+  role: string
+  client_ids?: string[]
+  active?: boolean
+  token_version?: number
+  created_at?: string
+}
+
+function toUser(w: AdminUserWire): AdminUser {
+  return {
+    id: w.id,
+    name: w.name,
+    email: w.email,
+    role: w.role === 'super_admin' ? 'super_admin' : 'client_user',
+    clientIds: w.client_ids ?? [],
+    active: w.active ?? true,
+    tokenVersion: w.token_version ?? 0,
+    createdAt: w.created_at ?? '',
+  }
 }
 
 function agentPatch(patch: Partial<Agent>): Record<string, unknown> {
