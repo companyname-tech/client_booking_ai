@@ -93,24 +93,40 @@ export function LeadsTable({
 
       <div className="space-y-2 p-3 md:hidden">
         {slice.map((lead) => (
-          <button
-            key={lead.id}
-            type="button"
-            onClick={() => onSelect(lead)}
-            className="interactive w-full rounded-md border border-line bg-surface-1 p-3 text-left"
-          >
-            <div className="flex items-start justify-between">
-              <div>
-                <div className="font-medium text-fg">{lead.name}</div>
-                <div className="text-xs text-fg-muted">{lead.company}</div>
+          <div key={lead.id} className="rounded-md border border-line bg-surface-1">
+            <button
+              type="button"
+              onClick={() => onSelect(lead)}
+              className="interactive w-full rounded-t-md p-3 text-left"
+            >
+              <div className="flex items-start justify-between">
+                <div>
+                  <div className="font-medium text-fg">{lead.name}</div>
+                  <div className="text-xs text-fg-muted">{lead.company}</div>
+                </div>
+                <LeadScore score={lead.score} compact />
               </div>
-              <LeadScore score={lead.score} compact />
+              <div className="mt-2 flex items-center justify-between">
+                <LeadStatusBadge status={lead.status} size="sm" />
+                <span className="text-2xs text-fg-muted">{lead.location}</span>
+              </div>
+            </button>
+            <div className="flex items-center justify-end gap-1 border-t border-line px-2 py-1.5">
+              {onDial && (
+                <Button variant="secondary" size="sm" leadingIcon={<Phone className="size-3.5" />} onClick={() => onDial(lead)}>
+                  Call
+                </Button>
+              )}
+              {onEdit && (
+                <Button variant="ghost" size="sm" leadingIcon={<Pencil className="size-3.5" />} onClick={() => onEdit(lead)}>
+                  Edit
+                </Button>
+              )}
+              <Button variant="ghost" size="sm" onClick={() => onSelect(lead)}>
+                View
+              </Button>
             </div>
-            <div className="mt-2 flex items-center justify-between">
-              <LeadStatusBadge status={lead.status} size="sm" />
-              <span className="text-2xs text-fg-muted">{lead.location}</span>
-            </div>
-          </button>
+          </div>
         ))}
       </div>
 

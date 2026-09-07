@@ -4,7 +4,7 @@ import { formatCurrency, formatRelativeTime } from '@/lib/utils'
 import { NOW } from '@/data/time'
 import { CampaignStatus as CampaignStatusBadge } from '@/components/campaigns/CampaignStatus'
 import { Button } from '@/components/ui/Button'
-import { MoreHorizontal, Pause, Play, ArrowRight } from 'lucide-react'
+import { Pause, Play, ArrowRight, Trash2 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
 export function CampaignHeader({
@@ -12,12 +12,14 @@ export function CampaignHeader({
   effectiveStatus,
   onPause,
   onResume,
+  onDelete,
   zone,
 }: {
   campaign: OfferCampaign
   effectiveStatus: CampaignStatus
   onPause?: () => void
   onResume?: () => void
+  onDelete?: () => void
   zone: 'client' | 'admin'
 }) {
   const meta = campaignStatusMeta[effectiveStatus]
@@ -72,9 +74,17 @@ export function CampaignHeader({
       </div>
       <div className="flex items-center gap-2 pt-2">
         {primaryAction()}
-        <Button variant="ghost" size="sm" aria-label="More options">
-          <MoreHorizontal className="size-4" />
-        </Button>
+        {onDelete && (
+          <Button
+            variant="ghost"
+            size="sm"
+            aria-label="Delete campaign"
+            onClick={onDelete}
+            className="text-danger hover:bg-danger-soft/30 hover:text-danger"
+          >
+            <Trash2 className="size-4" />
+          </Button>
+        )}
       </div>
     </div>
   )

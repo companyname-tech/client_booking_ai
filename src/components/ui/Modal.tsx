@@ -78,10 +78,14 @@ export function Modal({ open, onClose, title, description, children, footer, siz
             initial="initial"
             animate="animate"
             exit="exit"
-            className={cn('surface-overlay relative w-full overflow-hidden', sizeClasses[size], className)}
+            className={cn(
+              'surface-overlay relative flex max-h-[calc(100dvh-12vh-16px)] w-full flex-col overflow-hidden sm:max-h-[calc(100dvh-16vh-16px)]',
+              sizeClasses[size],
+              className,
+            )}
           >
             {!bare && (
-              <div className="flex items-start justify-between gap-4 border-b border-line px-5 py-4">
+              <div className="flex shrink-0 items-start justify-between gap-4 border-b border-line px-5 py-4">
                 <div className="min-w-0">
                   {title && (
                     <h2 id={`${id}-title`} className="text-md font-semibold text-fg">
@@ -99,8 +103,12 @@ export function Modal({ open, onClose, title, description, children, footer, siz
                 </Button>
               </div>
             )}
-            {children}
-            {footer && <div className="flex items-center justify-end gap-2 border-t border-line px-5 py-3">{footer}</div>}
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">{children}</div>
+            {footer && (
+              <div className="flex shrink-0 items-center justify-end gap-2 border-t border-line px-5 py-3">
+                {footer}
+              </div>
+            )}
           </motion.div>
         </div>
       )}

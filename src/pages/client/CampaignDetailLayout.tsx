@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { NavLink, Outlet, useParams } from 'react-router-dom'
+import { NavLink, Outlet, useNavigate, useParams } from 'react-router-dom'
 import { motion } from 'motion/react'
 import { ArrowLeft } from 'lucide-react'
 import type { CampaignStatus } from '@/types'
@@ -14,6 +14,7 @@ import { Reveal } from '@/components/motion/Reveal'
 import { PageContainer, WorkspaceEyebrow } from '@/components/layout/PageHeader'
 import { Button } from '@/components/ui/Button'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { CampaignStatus as CampaignStatusBadge } from '@/components/campaigns/CampaignStatus'
 import { CampaignHeader } from '@/components/campaign/CampaignHeader'
 
@@ -33,7 +34,11 @@ const clientTabs: Tab[] = [
 
 export default function CampaignDetailLayout({ zone = 'client' }: { zone?: 'client' | 'admin' }) {
   const { id } = useParams()
+  const navigate = useNavigate()
   const [statusOverride, setStatusOverride] = useState<CampaignStatus | null>(null)
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const [deleteBusy, setDeleteBusy] = useState(false)
+  const [deleteError, setDeleteError] = useState('')
 
   const { data, loading, error, reload } = useAsyncData(
     () => Promise.all([id ? repo.getCampaign(id) : Promise.resolve(undefined), repo.getCurrentClient()]),
@@ -88,6 +93,18 @@ export default function CampaignDetailLayout({ zone = 'client' }: { zone?: 'clie
   const pauseCampaign = () => setStatusOverride('paused')
   const resumeCampaign = () => setStatusOverride('active')
 
+  const runDelete = async () => {
+    setDeleteBusy(true)
+    setDeleteError('')
+    try {
+      await repo.bulkDeleteCampaigns([campaign.id])
+      navigate(`/${zone}/campaigns`)
+    } catch (e) {
+      setDeleteError(e instanceof Error ? e.message : 'Delete failed')
+      setDeleteBusy(false)
+    }
+  }
+
   // Both zones show the same data tabs — the lifecycle stage is conveyed by the
   // CampaignLifecycle progress in Overview, not by separate lifecycle tab pages.
   const visibleTabs = clientTabs
@@ -115,6 +132,7 @@ export default function CampaignDetailLayout({ zone = 'client' }: { zone?: 'clie
                   effectiveStatus={effectiveStatus}
                   onPause={pauseCampaign}
                   onResume={resumeCampaign}
+                  onDelete={() => setConfirmDelete(true)}
                   zone={zone}
                 />
               </div>
@@ -154,6 +172,17 @@ export default function CampaignDetailLayout({ zone = 'client' }: { zone?: 'clie
 
         <Outlet context={{ campaign, zone, effectiveStatus, pauseCampaign, resumeCampaign }} />
       </PageContainer>
+      <ConfirmDialog
+        open={confirmDelete}
+        onClose={() => !deleteBusy && setConfirmDelete(false)}
+        title={`Delete ${campaign.name}?`}
+        body={
+          deleteError ||
+          'This permanently deletes the campaign and its associated agents, leads and recordings. This cannot be undone.'
+        }
+        busy={deleteBusy}
+        onConfirm={runDelete}
+      />
     </PageTransition>
   )
 }
