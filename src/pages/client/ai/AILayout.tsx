@@ -8,7 +8,6 @@ import { PageTransition } from '@/components/motion/PageTransition'
 const TABS = [
   { to: '/client/ai', label: 'Command Center', end: true },
   { to: '/client/ai/conversations', label: 'Conversations' },
-  { to: '/client/ai/calls', label: 'Calls' },
   { to: '/client/ai/learning', label: 'Learning' },
   { to: '/client/ai/performance', label: 'Performance' },
   { to: '/client/ai/agents', label: 'Agents' },

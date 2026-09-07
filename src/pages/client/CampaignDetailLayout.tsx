@@ -29,7 +29,6 @@ const clientTabs: Tab[] = [
   { to: 'calls', label: 'Calls & Recordings' },
   { to: 'analytics', label: 'Analytics' },
   { to: 'integrations', label: 'Integrations' },
-  { to: 'downloads', label: 'Downloads' },
 ]
 
 export default function CampaignDetailLayout({ zone = 'client' }: { zone?: 'client' | 'admin' }) {

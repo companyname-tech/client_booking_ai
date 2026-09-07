@@ -18,13 +18,11 @@ const CampaignLeads = lazy(() => import('@/pages/client/CampaignLeads'))
 const CampaignRecordings = lazy(() => import('@/pages/client/CampaignRecordings'))
 const CampaignAnalytics = lazy(() => import('@/pages/client/CampaignAnalytics'))
 const CampaignIntegrations = lazy(() => import('@/pages/client/CampaignIntegrations'))
-const CampaignDownloads = lazy(() => import('@/pages/client/CampaignDownloads'))
 const ClientSettings = lazy(() => import('@/pages/client/ClientSettings'))
 const AILayout = lazy(() => import('@/pages/client/ai/AILayout'))
 const AICommandCenter = lazy(() => import('@/pages/client/ai/AICommandCenter'))
 const AIConversations = lazy(() => import('@/pages/client/ai/AIConversations'))
 const AIConversationDetail = lazy(() => import('@/pages/client/ai/AIConversationDetail'))
-const AICalls = lazy(() => import('@/pages/client/ai/AICalls'))
 const AILearning = lazy(() => import('@/pages/client/ai/AILearning'))
 const AIPerformance = lazy(() => import('@/pages/client/ai/AIPerformance'))
 const AIAgents = lazy(() => import('@/pages/client/ai/AIAgents'))
@@ -39,7 +37,6 @@ export const campaignSubRoutes = [
   { path: 'calls', element: <CampaignRecordings /> },
   { path: 'analytics', element: <CampaignAnalytics /> },
   { path: 'integrations', element: <CampaignIntegrations /> },
-  { path: 'downloads', element: <CampaignDownloads /> },
 ]
 
 export const clientRoutes = [
@@ -61,7 +58,6 @@ export const clientRoutes = [
       { index: true, element: <AICommandCenter /> },
       { path: 'conversations', element: <AIConversations /> },
       { path: 'conversations/:id', element: <AIConversationDetail /> },
-      { path: 'calls', element: <AICalls /> },
       { path: 'learning', element: <AILearning /> },
       { path: 'performance', element: <AIPerformance /> },
       { path: 'agents', element: <AIAgents /> },
