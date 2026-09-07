@@ -274,6 +274,8 @@ export interface CallHistoryEntry {
   durationSec: number
   /** Playable recording URL (already prefixed with the API base path). */
   audioUrl: string
+  /** Raw conversation transcript (agent:/client: lines) when the backend has one. */
+  transcript?: string
   startedAt: string
 }
 

@@ -106,10 +106,6 @@ export function CallHistoryList({ recordings }: { recordings: CallHistoryEntry[]
           </table>
         </div>
       )}
-
-      <p className="text-2xs text-fg-faint">
-        Transcripts are stored by the backend but are not yet returned by the recordings endpoint.
-      </p>
     </div>
   )
 }

@@ -28,8 +28,8 @@ export function AnalyticsFunnel({ stages }: { stages: AnalyticsFunnelStage[] }) 
                     <div className="h-full rounded-full bg-gradient-to-r from-accent/70 to-violet/70 transition-all duration-500" style={{ width: `${width}%` }} />
                   </div>
                   <p className="mt-1.5 text-2xs text-fg-muted">
-                    {formatPercent(stage.percentOfTotal, 1)} of total
-                    {stage.conversionFromPrev !== undefined && i > 0 && ` · ${formatPercent(stage.conversionFromPrev, 1)} from previous`}
+                    {formatPercent(stage.percentOfTotal ?? 0, 1)} of total
+                    {stage.conversionFromPrev != null && i > 0 && ` · ${formatPercent(stage.conversionFromPrev, 1)} from previous`}
                   </p>
                 </div>
               </div>
@@ -50,7 +50,7 @@ export function DropOffAnalysis({ dropOffs }: { dropOffs: AnalyticsDropOff[] }) 
           <li key={`${d.from}-${d.to}`} className="flex items-center justify-between gap-4 rounded-md border border-line bg-surface-1 px-4 py-3">
             <div>
               <div className="text-sm font-medium text-fg">{d.from} → {d.to}</div>
-              {d.currentConversion !== undefined && (
+              {d.currentConversion != null && (
                 <div className="mt-0.5 text-2xs text-fg-muted">Current conversion: {formatPercent(d.currentConversion, 1)}</div>
               )}
             </div>

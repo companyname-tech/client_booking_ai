@@ -138,6 +138,7 @@ interface RecordingWire {
   lead_name?: string
   lead_company?: string
   phone?: string
+  transcript?: string
 }
 
 interface BookingWire {
@@ -1114,6 +1115,7 @@ function toCallHistoryEntry(wire: RecordingWire): CallHistoryEntry {
     outcome: wire.call_outcome ?? wire.outcome ?? '',
     durationSec: wire.duration_sec ?? wire.duration ?? 0,
     audioUrl: wire.audio_url ? `${env.apiBaseUrl}${wire.audio_url}` : '',
+    transcript: wire.transcript ?? '',
     startedAt: wire.started_at ?? wire.created_at ?? '',
   }
 }
