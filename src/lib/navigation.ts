@@ -3,6 +3,9 @@ import {
   Activity,
   Bot,
   Building2,
+  Calendar,
+  DollarSign,
+  Download,
   GraduationCap,
   LayoutGrid,
   Megaphone,
@@ -62,6 +65,8 @@ export const clientNavigation: NavSection[] = [
     label: 'Operations',
     items: [
       { label: 'Recordings', to: '/client/recordings', icon: Activity },
+      { label: 'Bookings', to: '/client/bookings', icon: Calendar },
+      { label: 'Downloads', to: '/client/downloads', icon: Download },
     ],
   },
   {
@@ -93,6 +98,7 @@ export const adminNavigation: NavSection[] = [
   {
     label: 'System',
     items: [
+      { label: 'Costs', to: '/admin/costs', icon: DollarSign },
       { label: 'Settings', to: '/admin/settings', icon: Settings },
     ],
   },

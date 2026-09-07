@@ -1,10 +1,7 @@
 import { lazy } from 'react'
 import { Navigate } from 'react-router-dom'
 import {
-  BarChart3,
   Calendar,
-  Disc3,
-  Download,
   Mail,
   MessageSquare,
   UsersRound,
@@ -40,6 +37,10 @@ const LeadProfileActivity = lazy(() => import('@/pages/client/leads/LeadProfileA
 const LeadProfileConversations = lazy(() => import('@/pages/client/leads/LeadProfileConversations'))
 const LeadProfileCalls = lazy(() => import('@/pages/client/leads/LeadProfileCalls'))
 const LeadProfileNotes = lazy(() => import('@/pages/client/leads/LeadProfileNotes'))
+const ClientRecordings = lazy(() => import('@/pages/client/ClientRecordings'))
+const ClientBookings = lazy(() => import('@/pages/client/ClientBookings'))
+const ClientDownloads = lazy(() => import('@/pages/client/ClientDownloads'))
+const ClientAnalytics = lazy(() => import('@/pages/client/ClientAnalytics'))
 
 export const campaignSubRoutes = [
   { path: 'leads', element: <CampaignLeads /> },
@@ -73,7 +74,7 @@ export const clientRoutes = [
       { path: 'notes', element: <LeadProfileNotes /> },
     ],
   },
-  { path: 'analytics', element: <PlaceholderPage title="Analytics" description="Workspace-wide performance and trends." icon={<BarChart3 />} /> },
+  { path: 'analytics', element: <ClientAnalytics /> },
   {
     path: 'ai',
     element: <AILayout />,
@@ -91,13 +92,13 @@ export const clientRoutes = [
   { path: 'agents', element: <Navigate to="/client/ai/agents" replace /> },
   { path: 'calls', element: <Navigate to="/client/ai/calls" replace /> },
   { path: 'messages', element: <PlaceholderPage title="Messages" description="Email and WhatsApp follow-ups sent by the AI." icon={<MessageSquare />} /> },
-  { path: 'recordings', element: <PlaceholderPage title="Recordings" description="Call audio with searchable transcripts." icon={<Disc3 />} /> },
-  { path: 'bookings', element: <PlaceholderPage title="Bookings" description="Upcoming and past meetings booked by the AI." icon={<Calendar />} /> },
+  { path: 'recordings', element: <ClientRecordings /> },
+  { path: 'bookings', element: <ClientBookings /> },
   { path: 'integrations', element: <Navigate to="/client/settings" replace /> },
   { path: 'integrations/gmail', element: <PlaceholderPage title="Gmail" description="Booking confirmations and follow-ups are sent from your inbox." icon={<Mail />} /> },
   { path: 'integrations/calendly', element: <PlaceholderPage title="Calendly" description="Connect Calendly so the AI can schedule directly into your availability." icon={<Calendar />} /> },
   { path: 'integrations/zoom', element: <PlaceholderPage title="Zoom" description="Meeting links are generated automatically for each booking." icon={<Video />} /> },
-  { path: 'downloads', element: <PlaceholderPage title="Downloads" description="Export campaign data and AI summaries." icon={<Download />} /> },
+  { path: 'downloads', element: <ClientDownloads /> },
   { path: 'team', element: <PlaceholderPage title="Team" description="Invite teammates and manage roles." icon={<UsersRound />} /> },
   { path: 'settings', element: <ClientSettings /> },
 ]

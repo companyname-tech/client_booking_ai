@@ -197,6 +197,19 @@ export interface Booking {
   createdAt: string
 }
 
+/** A meeting booked by the AI (BE GET /bookings shape, camelCase). */
+export interface Meeting {
+  id: ID
+  offerCampaignId: ID
+  leadName: string
+  contactName: string
+  email: string
+  phone: string
+  offer: string
+  meetingLink: string
+  scheduledAt: string
+}
+
 // ---------------------------------------------------------------------------
 // OfferCampaign command center (Phase 3)
 // ---------------------------------------------------------------------------
@@ -382,6 +395,18 @@ export interface Analytics {
   period: '7d' | '30d' | '90d'
   metrics: MetricSeries[]
   budget: { used: number; total: number }
+}
+
+/** Workspace-wide performance counters (BE GET /analytics shape, camelCase). */
+export interface WorkspaceAnalytics {
+  offers: number
+  leads: number
+  verified: number
+  meetingsBooked: number
+  calls: number
+  costEvents: number
+  spendUsd: number
+  conversionRate: number
 }
 
 export interface CampaignHealth {

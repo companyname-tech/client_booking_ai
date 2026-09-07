@@ -13,7 +13,7 @@
 import { apiClient } from './client'
 import { env } from '@/config/environment'
 import { ensureEntryIds, stripEntryIds } from '@/lib/pronunciation'
-import type { Agent, OfferCampaign, User, Client, ClientInput, ClientPage, Lead, Call, Booking, CallDetail, LeadDetail, Recording, CallHistoryEntry, CampaignFunnelStage, CampaignInsight, CampaignAttentionAlert, CampaignPerformancePoint, CampaignHealthSnapshot, CampaignHealth, Analytics, Activity, AttentionItem, Integration, LeadStatus } from '@/types'
+import type { Agent, OfferCampaign, User, Client, ClientInput, ClientPage, Lead, Call, Booking, CallDetail, LeadDetail, Recording, CallHistoryEntry, CampaignFunnelStage, CampaignInsight, CampaignAttentionAlert, CampaignPerformancePoint, CampaignHealthSnapshot, CampaignHealth, Analytics, Activity, AttentionItem, Integration, LeadStatus, Meeting, WorkspaceAnalytics } from '@/types'
 import type { AppSettings, ConnectionsState, ConnectionKey, TwilioNumber, FishVoice, SettingsSchemaField, AgentModels, AgentVoiceOption, AgentRole } from '@/types/settings'
 import type { AdminCampaignMeta, AdminLead, CampaignReviewData, AuditEvent, AdminNotification, TrainingStatus, ActivityLogEntry, ActivitySource } from '@/types/admin'
 import type { CampaignAnalyticsData, AnalyticsFilters } from '@/types/campaignAnalytics'
@@ -22,6 +22,7 @@ import type { AICommandOverview, AIActivityEvent, AIConversationSummary, AIConve
 import type { CampaignDraft } from '@/types/campaignDraft'
 import type { PronunciationAgentOption, PronunciationConfigDto, PronunciationLexiconEntry, TranscribePronunciationReply } from '@/types/pronunciation'
 import type { LeadGenerateRequest, LeadImportResult, SmartSearchRequest, SmartSearchResponse } from '@/types/leadGeneration'
+import type { CostBalance, CostEvent, CostPricing, CostSummary } from '@/types/costs'
 
 // ---------------------------------------------------------------------------
 // Wire DTOs (snake_case) for the Tier B domains.
@@ -136,6 +137,30 @@ interface RecordingWire {
   lead_name?: string
   lead_company?: string
   phone?: string
+}
+
+interface BookingWire {
+  lead_id: string
+  lead_name?: string
+  meeting_link?: string
+  meeting_created_at?: string
+  offer_id?: string
+  offer?: string
+  contact_name?: string
+  email?: string
+  phone?: string
+  lead_status?: string
+}
+
+interface WorkspaceAnalyticsWire {
+  offers?: number
+  leads?: number
+  verified?: number
+  meetings_booked?: number
+  calls?: number
+  cost_events?: number
+  spend_usd?: number
+  conversion_rate?: number
 }
 
 interface UserWire {
@@ -408,6 +433,25 @@ export const httpRepository = {
   async getBookings(_offerCampaignId?: string): Promise<Booking[]> {
     return apiClient.get<Booking[]>('/bookings')
   },
+  async getMeetings(): Promise<Meeting[]> {
+    const rows = await apiClient.get<BookingWire[]>('/bookings')
+    return (rows ?? []).map((m) => ({
+      id: m.lead_id,
+      offerCampaignId: m.offer_id ?? '',
+      leadName: m.lead_name ?? '',
+      contactName: m.contact_name ?? '',
+      email: m.email ?? '',
+      phone: m.phone ?? '',
+      offer: m.offer ?? '',
+      meetingLink: m.meeting_link ?? '',
+      scheduledAt: m.meeting_created_at ?? '',
+    }))
+  },
+  async exportLeadsCsv(language: 'en' | 'he' = 'en', offerId?: string): Promise<void> {
+    const qs = new URLSearchParams({ language })
+    if (offerId) qs.set('offer_id', offerId)
+    await apiClient.download(`/leads/export/csv?${qs.toString()}`, `leads_export_${language}.csv`)
+  },
   async getRecordings(offerCampaignId: string): Promise<Recording[]> {
     const res = await apiClient.get<{ recordings?: RecordingWire[] }>('/recordings')
     return (res?.recordings ?? []).map((r) => toRecording(r, offerCampaignId))
@@ -557,9 +601,42 @@ export const httpRepository = {
     return apiClient.upload<TranscribePronunciationReply>('/agent/pronunciation/transcribe', form)
   },
 
+  // --- Costs -----------------------------------------------------------------
+  async getCostSummary(since?: string): Promise<CostSummary> {
+    return apiClient.get<CostSummary>(`/costs/summary${since ? `?since=${encodeURIComponent(since)}` : ''}`)
+  },
+  async getCostBalance(force = false): Promise<CostBalance> {
+    return apiClient.get<CostBalance>(`/costs/balance${force ? '?force=true' : ''}`)
+  },
+  async getCostEvents(query: { operation?: string; since?: string; limit?: number } = {}): Promise<CostEvent[]> {
+    const params = new URLSearchParams()
+    if (query.operation) params.set('operation', query.operation)
+    if (query.since) params.set('since', query.since)
+    if (query.limit) params.set('limit', String(query.limit))
+    const qs = params.toString()
+    const res = await apiClient.get<{ events?: CostEvent[] }>(`/costs/events${qs ? `?${qs}` : ''}`)
+    return res?.events ?? []
+  },
+  async getCostPricing(): Promise<CostPricing> {
+    return apiClient.get<CostPricing>('/costs/pricing')
+  },
+
   // --- Analytics / activity --------------------------------------------------
   async getAnalytics(): Promise<Analytics> {
     return apiClient.get<Analytics>('/analytics')
+  },
+  async getWorkspaceAnalytics(): Promise<WorkspaceAnalytics> {
+    const w = await apiClient.get<WorkspaceAnalyticsWire>('/analytics')
+    return {
+      offers: w?.offers ?? 0,
+      leads: w?.leads ?? 0,
+      verified: w?.verified ?? 0,
+      meetingsBooked: w?.meetings_booked ?? 0,
+      calls: w?.calls ?? 0,
+      costEvents: w?.cost_events ?? 0,
+      spendUsd: w?.spend_usd ?? 0,
+      conversionRate: w?.conversion_rate ?? 0,
+    }
   },
   async getActivity(limit = 7): Promise<Activity[]> {
     return apiClient.get<Activity[]>(`/activity?limit=${limit}`)

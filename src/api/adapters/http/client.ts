@@ -87,6 +87,25 @@ class ApiClient {
     }
     return res.json() as Promise<T>
   }
+
+  /** GET a file (e.g. CSV) with auth and trigger a browser download. */
+  async download(path: string, filename: string): Promise<void> {
+    const res = await fetch(`${env.apiBaseUrl}${path}`, {
+      headers: {
+        ...(this.token ? { Authorization: `Bearer ${this.token}` } : {}),
+      },
+    })
+    if (!res.ok) {
+      throw new ApiError(`API ${res.status}: ${res.statusText}`, res.status, await res.text().catch(() => ''))
+    }
+    const blob = await res.blob()
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = filename
+    a.click()
+    URL.revokeObjectURL(url)
+  }
 }
 
 export const apiClient = new ApiClient()

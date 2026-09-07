@@ -1,7 +1,5 @@
 import { lazy } from 'react'
 import { Navigate } from 'react-router-dom'
-import { Disc3 } from 'lucide-react'
-import PlaceholderPage from '@/pages/PlaceholderPage'
 import { campaignSubRoutes } from './client.routes'
 
 const AdminOverview = lazy(() => import('@/pages/admin/AdminOverview'))
@@ -14,6 +12,8 @@ const AdminSettings = lazy(() => import('@/pages/admin/AdminSettings'))
 const AdminActivity = lazy(() => import('@/pages/admin/AdminActivity'))
 const AdminLeads = lazy(() => import('@/pages/admin/AdminLeads'))
 const AdminCalls = lazy(() => import('@/pages/admin/AdminCalls'))
+const AdminCosts = lazy(() => import('@/pages/admin/AdminCosts'))
+const AdminRecordings = lazy(() => import('@/pages/admin/AdminRecordings'))
 const CampaignDetailLayout = lazy(() => import('@/pages/client/CampaignDetailLayout'))
 const CampaignDetailOverview = lazy(() => import('@/pages/client/CampaignDetailOverview'))
 
@@ -37,6 +37,7 @@ export const adminRoutes = [
   { path: 'activity', element: <AdminActivity /> },
   { path: 'leads', element: <AdminLeads /> },
   { path: 'calls', element: <AdminCalls /> },
-  { path: 'recordings', element: <PlaceholderPage zone="admin" title="Recordings" description="QA review of call recordings." icon={<Disc3 />} /> },
+  { path: 'costs', element: <AdminCosts /> },
+  { path: 'recordings', element: <AdminRecordings /> },
   { path: 'settings', element: <AdminSettings /> },
 ]
