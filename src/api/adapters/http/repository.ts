@@ -15,12 +15,13 @@ import { env } from '@/config/environment'
 import { ensureEntryIds, stripEntryIds } from '@/lib/pronunciation'
 import type { Agent, OfferCampaign, User, Client, ClientInput, ClientPage, Lead, Call, Booking, CallDetail, LeadDetail, Recording, CallHistoryEntry, CampaignFunnelStage, CampaignInsight, CampaignAttentionAlert, CampaignPerformancePoint, CampaignHealthSnapshot, CampaignHealth, Analytics, Activity, AttentionItem, Integration, LeadStatus, Meeting, WorkspaceAnalytics } from '@/types'
 import type { AppSettings, ConnectionsState, ConnectionKey, TwilioNumber, FishVoice, SettingsSchemaField, AgentModels, AgentVoiceOption, AgentRole } from '@/types/settings'
-import type { AdminCampaignMeta, AdminLead, CampaignReviewData, AuditEvent, AdminNotification, TrainingStatus, ActivityLogEntry, ActivitySource, ReviewCampaignContent } from '@/types/admin'
+import type { AdminCampaignMeta, AdminLead, CampaignReviewData, AuditEvent, AdminNotification, ActivityLogEntry, ActivitySource, ReviewCampaignContent } from '@/types/admin'
 import type { CampaignAnalyticsData, AnalyticsFilters } from '@/types/campaignAnalytics'
 import type { EnrichedLead, LeadHubMetrics, LeadHubStats, LeadSegment, LeadHubFilters, LeadIntelligenceProfile, LeadNote } from '@/types/leadIntelligence'
 import type { AICommandOverview, AIActivityEvent, AIConversationSummary, AIConversationDetail, AIObjection, AILearningPattern, AIImprovement, AIFollowUp, AIEscalation, AIBookingConversation, AIInsight, AIHealthSnapshot, AIAgentProfile, AIPerformanceSnapshot, AICommandFilters } from '@/types/aiCommand'
 import type { CampaignDraft } from '@/types/campaignDraft'
 import type { PronunciationAgentOption, PronunciationConfigDto, PronunciationLexiconEntry, TranscribePronunciationReply } from '@/types/pronunciation'
+import type { AcceptTrainingSuggestionInput, AcceptTrainingSuggestionResult, TrainingCampaignRow, TrainingSuggestion, TrainingTalkCompleteResult, TrainingTalkTurn } from '@/types/training'
 import type { LeadGenerateRequest, LeadImportResult, SmartSearchRequest, SmartSearchResponse } from '@/types/leadGeneration'
 import type { CostBalance, CostEvent, CostPricing, CostSummary } from '@/types/costs'
 
@@ -740,8 +741,56 @@ export const httpRepository = {
   async startCampaignTraining(id: string): Promise<void> {
     await apiClient.post(`/admin/campaigns/${id}/training/start`)
   },
-  async getTrainingCampaigns(): Promise<{ offerCampaignId: string; status: TrainingStatus }[]> {
-    return apiClient.get<{ offerCampaignId: string; status: TrainingStatus }[]>('/admin/training/campaigns')
+  async getTrainingCampaigns(): Promise<TrainingCampaignRow[]> {
+    return apiClient.get<TrainingCampaignRow[]>('/admin/training/campaigns')
+  },
+  /**
+   * Submit a finished LIVE training talk. The backend grades the real
+   * transcript (score is server-derived — a client score is never trusted),
+   * advances the campaign training state, and harvests pronunciation
+   * suggestions for review. conversation_id makes re-submits idempotent.
+   */
+  async completeTrainingTalk(
+    id: string,
+    input: {
+      transcript: TrainingTalkTurn[]
+      agentId?: string
+      durationS?: number
+      conversationId?: string
+    },
+  ): Promise<TrainingTalkCompleteResult> {
+    return apiClient.post<TrainingTalkCompleteResult>(
+      `/admin/campaigns/${id}/training/complete`,
+      {
+        transcript: input.transcript,
+        agent_id: input.agentId ?? '',
+        duration_s: input.durationS ?? 0,
+        conversation_id: input.conversationId ?? '',
+      },
+    )
+  },
+  async getTrainingSuggestions(status: 'pending' | 'accepted' | 'dismissed' = 'pending'): Promise<TrainingSuggestion[]> {
+    return apiClient.get<TrainingSuggestion[]>(`/admin/training/suggestions?status=${status}`)
+  },
+  async acceptTrainingSuggestion(
+    suggestionId: string,
+    input: AcceptTrainingSuggestionInput,
+  ): Promise<AcceptTrainingSuggestionResult> {
+    return apiClient.post<AcceptTrainingSuggestionResult>(
+      `/admin/training/suggestions/${suggestionId}/accept`,
+      {
+        scope: input.scope,
+        agent_id: input.agentId ?? '',
+        word: input.word ?? '',
+        pronounce_as: input.pronounceAs ?? '',
+        language: input.language ?? '',
+      },
+    )
+  },
+  async dismissTrainingSuggestion(suggestionId: string): Promise<{ status: string }> {
+    return apiClient.post<{ status: string }>(
+      `/admin/training/suggestions/${suggestionId}/dismiss`,
+    )
   },
   async updateCampaign(id: string, patch: Partial<OfferCampaign>): Promise<OfferCampaign> {
     const wire = await apiClient.put<OfferWire>(`/offers/${id}`, {

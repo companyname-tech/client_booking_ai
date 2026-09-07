@@ -16,6 +16,7 @@ export default defineConfig({
       '/api': {
         target: 'http://127.0.0.1:8870',
         changeOrigin: true,
+        ws: true, // the /agent/rtc realtime voice bridge is a WebSocket upgrade
         rewrite: (p) => p.replace(/^\/api/, ''),
       },
     },

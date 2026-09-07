@@ -21,9 +21,13 @@ The UI is fully wired to the real API — there is no mock-data mode.
 The app talks to the **leads_to_conversion** backend over a same-origin `/api`
 reverse proxy (see `vite.config.ts`):
 
-- Dev: `npm run dev` proxies `/api/*` → `http://127.0.0.1:8870/*`.
+- Dev: `npm run dev` proxies `/api/*` → `http://127.0.0.1:8870/*` (WebSocket
+  upgrades included — the live voice bridge `WS /agent/rtc` used by the admin
+  AI-training talk console).
 - Prod: serve the built `dist/` behind a reverse proxy that routes `/api/*` to
   the backend (port 8870). Same-origin proxying is required for cookie auth.
+  The reverse proxy MUST forward WebSocket upgrades for `/api/agent/rtc` (the
+  live AI-training voice sessions); without it the voice console cannot connect.
 
 Auth is a single-admin **JWT session**: `POST /auth/login` sets an HttpOnly
 `access_token` cookie. Default credentials are `admin` / `admin` (override with
