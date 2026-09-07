@@ -13,6 +13,7 @@ import { ErrorState } from '@/components/ui/ErrorState'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { SelectCheckbox } from '@/components/ui/SelectCheckbox'
 import { BulkActionBar } from '@/components/ui/BulkActionBar'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { useBulkSelection } from '@/hooks/useBulkSelection'
 import { ClientFormModal } from '@/components/admin/ClientFormModal'
 import type { Client } from '@/types'
@@ -24,6 +25,9 @@ export default function AdminClients() {
   const [q, setQ] = useState('')
   const [page, setPage] = useState(1)
   const [modal, setModal] = useState<{ open: boolean; client: Client | null }>({ open: false, client: null })
+  const [confirmBulk, setConfirmBulk] = useState(false)
+  const [bulkBusy, setBulkBusy] = useState(false)
+  const [bulkNotice, setBulkNotice] = useState('')
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -45,6 +49,28 @@ export default function AdminClients() {
   const campaignCount = (clientId: string) => (campaigns ?? []).filter((c) => c.clientId === clientId).length
 
   const selection = useBulkSelection(clients.map((c) => c.id))
+
+  const runBulkDelete = async () => {
+    const ids = clients.filter((c) => selection.selected.has(c.id)).map((c) => c.id)
+    if (ids.length === 0) return
+    setBulkBusy(true)
+    setBulkNotice('')
+    try {
+      const res = await repo.bulkDeleteClients(ids)
+      setBulkNotice(
+        res.failed ? `Deleted ${res.affected}, ${res.failed} failed` : `Deleted ${res.affected} client${res.affected === 1 ? '' : 's'}`,
+      )
+      selection.clear()
+      setConfirmBulk(false)
+      if (page > 1 && clients.length === ids.length) setPage(page - 1)
+      void reload()
+    } catch (e) {
+      setBulkNotice(`Bulk delete failed: ${e instanceof Error ? e.message : String(e)}`)
+      setConfirmBulk(false)
+    } finally {
+      setBulkBusy(false)
+    }
+  }
 
   return (
     <PageTransition>
@@ -73,8 +99,10 @@ export default function AdminClients() {
           count={selection.count}
           noun="clients"
           onClear={selection.clear}
-          deleteHint="Client delete needs a backend endpoint @backend is adding — wiring follows the contract."
+          onDelete={() => setConfirmBulk(true)}
+          busy={bulkBusy}
         />
+        {bulkNotice && <p aria-live="polite" className="text-xs text-fg-secondary">{bulkNotice}</p>}
         {loading ? (
           <LoadingState rows={6} />
         ) : error ? (
@@ -166,6 +194,14 @@ export default function AdminClients() {
         client={modal.client}
         onClose={() => setModal({ open: false, client: null })}
         onSaved={reload}
+      />
+      <ConfirmDialog
+        open={confirmBulk}
+        onClose={() => setConfirmBulk(false)}
+        title={`Delete ${selection.count} selected client${selection.count === 1 ? '' : 's'}?`}
+        body={`This permanently deletes ${selection.count} client workspace${selection.count === 1 ? '' : 's'} and their campaigns. This cannot be undone.`}
+        busy={bulkBusy}
+        onConfirm={runBulkDelete}
       />
     </PageTransition>
   )

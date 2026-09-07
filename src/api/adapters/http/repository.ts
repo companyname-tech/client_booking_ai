@@ -962,21 +962,17 @@ export const httpRepository = {
     })
     return { affected: res?.affected ?? 0 }
   },
-  async deleteCampaign(offerId: string): Promise<void> {
-    await apiClient.delete(`/offers/${offerId}`)
-  },
   async bulkDeleteCampaigns(offerIds: string[]): Promise<{ affected: number; failed: number }> {
-    let affected = 0
-    let failed = 0
-    for (const id of offerIds) {
-      try {
-        await apiClient.delete(`/offers/${id}`)
-        affected += 1
-      } catch {
-        failed += 1
-      }
-    }
-    return { affected, failed }
+    return bulkDelete('/offers/bulk', offerIds)
+  },
+  async bulkDeleteClients(clientIds: string[]): Promise<{ affected: number; failed: number }> {
+    return bulkDelete('/admin/clients/bulk', clientIds)
+  },
+  async bulkDeleteRecordings(recordingIds: string[]): Promise<{ affected: number; failed: number }> {
+    return bulkDelete('/recordings/bulk', recordingIds)
+  },
+  async bulkDeleteActivity(eventIds: string[]): Promise<{ affected: number; failed: number }> {
+    return bulkDelete('/activity/bulk', eventIds)
   },
   async dialLead(leadId: string, offerId = ''): Promise<{ callSid: string; to: string }> {
     const res = await apiClient.post<{ call_sid?: string; to?: string }>('/twilio/dial', {
@@ -1006,6 +1002,14 @@ export const httpRepository = {
 // ---------------------------------------------------------------------------
 // Mapping helpers (declared after the object; hoisted function declarations).
 // ---------------------------------------------------------------------------
+
+/** Shared bulk-delete call: POST {ids} -> {deleted}. Nonexistent ids are skipped server-side. */
+async function bulkDelete(path: string, ids: string[]): Promise<{ affected: number; failed: number }> {
+  if (ids.length === 0) return { affected: 0, failed: 0 }
+  const res = await apiClient.post<{ deleted?: number }>(path, { ids })
+  const deleted = Math.min(res?.deleted ?? ids.length, ids.length)
+  return { affected: deleted, failed: ids.length - deleted }
+}
 
 function agentPatch(patch: Partial<Agent>): Record<string, unknown> {
   const out: Record<string, unknown> = {}

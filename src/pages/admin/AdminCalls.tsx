@@ -10,6 +10,7 @@ import { ErrorState } from '@/components/ui/ErrorState'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { SelectCheckbox } from '@/components/ui/SelectCheckbox'
 import { BulkActionBar } from '@/components/ui/BulkActionBar'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { useBulkSelection } from '@/hooks/useBulkSelection'
 import { Input } from '@/components/ui/Input'
 import { StatusBadge } from '@/components/ui/StatusBadge'
@@ -26,6 +27,9 @@ export default function AdminCalls() {
   const calls = data ?? []
   const [search, setSearch] = useState('')
   const [outcome, setOutcome] = useState('all')
+  const [confirmBulk, setConfirmBulk] = useState(false)
+  const [bulkBusy, setBulkBusy] = useState(false)
+  const [bulkNotice, setBulkNotice] = useState('')
 
   const outcomeOptions = useMemo(() => {
     const seen = new Set<string>()
@@ -44,6 +48,29 @@ export default function AdminCalls() {
   }, [calls, search, outcome])
 
   const selection = useBulkSelection(filtered.map((c) => c.id))
+
+  const runBulkDelete = async () => {
+    const ids = filtered.filter((c) => selection.selected.has(c.id)).map((c) => c.id)
+    if (ids.length === 0) return
+    setBulkBusy(true)
+    setBulkNotice('')
+    try {
+      const res = await repo.bulkDeleteRecordings(ids)
+      setBulkNotice(
+        res.failed
+          ? `Deleted ${res.affected}, ${res.failed} failed`
+          : `Deleted ${res.affected} call${res.affected === 1 ? '' : 's'} and recording${res.affected === 1 ? '' : 's'}`,
+      )
+      selection.clear()
+      setConfirmBulk(false)
+      void reload()
+    } catch (e) {
+      setBulkNotice(`Bulk delete failed: ${e instanceof Error ? e.message : String(e)}`)
+      setConfirmBulk(false)
+    } finally {
+      setBulkBusy(false)
+    }
+  }
 
   return (
     <PageTransition>
@@ -93,8 +120,10 @@ export default function AdminCalls() {
               count={selection.count}
               noun="calls"
               onClear={selection.clear}
-              deleteHint="Bulk delete needs a backend endpoint @backend is adding — wiring follows the contract."
+              onDelete={() => setConfirmBulk(true)}
+              busy={bulkBusy}
             />
+            {bulkNotice && <p aria-live="polite" className="text-xs text-fg-secondary">{bulkNotice}</p>}
 
             <div className="surface overflow-hidden">
               <div className="hidden overflow-x-auto md:block">
@@ -192,6 +221,14 @@ export default function AdminCalls() {
           </Reveal>
         )}
       </PageContainer>
+      <ConfirmDialog
+        open={confirmBulk}
+        onClose={() => setConfirmBulk(false)}
+        title={`Delete ${selection.count} selected call${selection.count === 1 ? '' : 's'}?`}
+        body={`This permanently deletes ${selection.count} call record${selection.count === 1 ? '' : 's'} and their recording${selection.count === 1 ? '' : 's'}. This cannot be undone.`}
+        busy={bulkBusy}
+        onConfirm={runBulkDelete}
+      />
     </PageTransition>
   )
 }

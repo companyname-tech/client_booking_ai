@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { repo } from '@/api/repository'
 import { useAsyncData } from '@/hooks/useAsyncData'
 import { PageTransition } from '@/components/motion/PageTransition'
@@ -8,6 +9,7 @@ import { EmptyState } from '@/components/ui/EmptyState'
 import { ActivityFilters, useActivityFilters } from '@/components/admin/ActivityFilters'
 import { ActivityTimeline } from '@/components/admin/ActivityTimeline'
 import { BulkActionBar } from '@/components/ui/BulkActionBar'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { useBulkSelection } from '@/hooks/useBulkSelection'
 
 export default function AdminActivity() {
@@ -15,6 +17,32 @@ export default function AdminActivity() {
   const entries = data ?? []
   const { filters, setFilters, filtered } = useActivityFilters(entries)
   const selection = useBulkSelection(filtered.map((e) => e.id))
+  const [confirmBulk, setConfirmBulk] = useState(false)
+  const [bulkBusy, setBulkBusy] = useState(false)
+  const [bulkNotice, setBulkNotice] = useState('')
+
+  const runBulkDelete = async () => {
+    const ids = filtered.filter((e) => selection.selected.has(e.id)).map((e) => e.id)
+    if (ids.length === 0) return
+    setBulkBusy(true)
+    setBulkNotice('')
+    try {
+      const res = await repo.bulkDeleteActivity(ids)
+      setBulkNotice(
+        res.failed
+          ? `Deleted ${res.affected}, ${res.failed} failed`
+          : `Deleted ${res.affected} event${res.affected === 1 ? '' : 's'}`,
+      )
+      selection.clear()
+      setConfirmBulk(false)
+      void reload()
+    } catch (e) {
+      setBulkNotice(`Bulk delete failed: ${e instanceof Error ? e.message : String(e)}`)
+      setConfirmBulk(false)
+    } finally {
+      setBulkBusy(false)
+    }
+  }
 
   return (
     <PageTransition>
@@ -41,8 +69,10 @@ export default function AdminActivity() {
               count={selection.count}
               noun="events"
               onClear={selection.clear}
-              deleteHint="Activity delete needs a backend endpoint @backend is adding — wiring follows the contract."
+              onDelete={() => setConfirmBulk(true)}
+              busy={bulkBusy}
             />
+            {bulkNotice && <p aria-live="polite" className="text-xs text-fg-secondary">{bulkNotice}</p>}
             {filtered.length === 0 ? (
               <EmptyState title="No matching events" description="Try a different search or stream filter." />
             ) : (
@@ -53,6 +83,14 @@ export default function AdminActivity() {
           </>
         )}
       </PageContainer>
+      <ConfirmDialog
+        open={confirmBulk}
+        onClose={() => setConfirmBulk(false)}
+        title={`Delete ${selection.count} selected event${selection.count === 1 ? '' : 's'}?`}
+        body={`This permanently removes ${selection.count} event${selection.count === 1 ? '' : 's'} from the activity trail. This cannot be undone.`}
+        busy={bulkBusy}
+        onConfirm={runBulkDelete}
+      />
     </PageTransition>
   )
 }
