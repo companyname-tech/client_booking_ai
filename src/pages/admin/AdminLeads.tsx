@@ -19,8 +19,16 @@ import { AddLeadModal } from '@/components/leads/AddLeadModal'
 import { NOW } from '@/data/time'
 import { formatRelativeCompact, initials } from '@/lib/utils'
 
-type SortKey = 'campaign' | 'name' | 'industry' | 'status' | 'score' | 'lastActivity'
+type SortKey = 'campaign' | 'name' | 'industry' | 'status' | 'score' | 'lastActivity' | 'createdAt'
 type SortDir = 'asc' | 'desc'
+
+/** Order-preset options shown in the "Order" dropdown (name / created_at). */
+const ORDER_OPTIONS = [
+  { value: 'az', label: 'A → Z', sort: { key: 'name', dir: 'asc' } as const },
+  { value: 'za', label: 'Z → A', sort: { key: 'name', dir: 'desc' } as const },
+  { value: 'newest', label: 'Newest', sort: { key: 'createdAt', dir: 'desc' } as const },
+  { value: 'oldest', label: 'Oldest', sort: { key: 'createdAt', dir: 'asc' } as const },
+]
 
 const PAGE_SIZE = 15
 
@@ -386,7 +394,7 @@ function LeadExtraDrawer({
 export default function AdminLeads() {
   const { data: leads, loading, error, reload } = useAsyncData(() => repo.getAdminLeads(), [])
   const [search, setSearch] = useState('')
-  const [sort, setSort] = useState<{ key: SortKey; dir: SortDir }>({ key: 'lastActivity', dir: 'desc' })
+  const [sort, setSort] = useState<{ key: SortKey; dir: SortDir }>({ key: 'createdAt', dir: 'desc' })
   const [page, setPage] = useState(1)
   const [preview, setPreview] = useState<AdminLead | null>(null)
   const [adding, setAdding] = useState(false)
@@ -450,6 +458,8 @@ export default function AdminLeads() {
           return (a.score - b.score) * dir
         case 'lastActivity':
           return (a.lastContactAt ?? '').localeCompare(b.lastContactAt ?? '') * dir
+        case 'createdAt':
+          return (a.createdAt ?? '').localeCompare(b.createdAt ?? '') * dir
       }
     })
   }, [leads, search, sort])
@@ -460,6 +470,16 @@ export default function AdminLeads() {
 
   const onSort = (key: SortKey) => {
     setSort((prev) => (prev.key === key ? { key, dir: prev.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: 'asc' }))
+    setPage(1)
+  }
+
+  /** Active order-preset value for the dropdown, or '' while a column-header sort is active. */
+  const orderValue = ORDER_OPTIONS.find((o) => o.sort.key === sort.key && o.sort.dir === sort.dir)?.value ?? ''
+
+  const onOrderChange = (e: ChangeEvent<HTMLSelectElement>) => {
+    const preset = ORDER_OPTIONS.find((o) => o.value === e.target.value)
+    if (!preset) return
+    setSort({ ...preset.sort })
     setPage(1)
   }
 
@@ -486,6 +506,23 @@ export default function AdminLeads() {
               aria-label="Search leads"
             />
           </div>
+          <select
+            aria-label="Order leads"
+            value={orderValue}
+            onChange={onOrderChange}
+            className="interactive shrink-0 rounded-md border border-line-strong bg-surface-1 px-3 py-2 text-sm text-fg"
+          >
+            {orderValue === '' && (
+              <option value="" disabled>
+                Order…
+              </option>
+            )}
+            {ORDER_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+          </select>
           <Button variant="primary" size="sm" leadingIcon={<Plus className="size-3.5" />} onClick={() => setAdding(true)}>
             Add lead
           </Button>
