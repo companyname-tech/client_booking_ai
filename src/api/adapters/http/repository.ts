@@ -15,7 +15,7 @@ import { env } from '@/config/environment'
 import { ensureEntryIds, stripEntryIds } from '@/lib/pronunciation'
 import type { Agent, OfferCampaign, User, Client, Lead, Call, Booking, CallDetail, LeadDetail, Recording, CallHistoryEntry, CampaignFunnelStage, CampaignInsight, CampaignAttentionAlert, CampaignPerformancePoint, CampaignHealthSnapshot, CampaignHealth, Analytics, Activity, AttentionItem, Integration, LeadStatus } from '@/types'
 import type { AppSettings, ConnectionsState, ConnectionKey, TwilioNumber, FishVoice, SettingsSchemaField, AgentModels, AgentVoiceOption, AgentRole } from '@/types/settings'
-import type { AdminCampaignMeta, AdminLead, CampaignReviewData, AuditEvent, AdminNotification, TrainingStatus } from '@/types/admin'
+import type { AdminCampaignMeta, AdminLead, CampaignReviewData, AuditEvent, AdminNotification, TrainingStatus, ActivityLogEntry, ActivitySource } from '@/types/admin'
 import type { CampaignAnalyticsData, AnalyticsFilters } from '@/types/campaignAnalytics'
 import type { EnrichedLead, LeadHubMetrics, LeadHubStats, LeadSegment, LeadHubFilters, LeadIntelligenceProfile, LeadNote } from '@/types/leadIntelligence'
 import type { AICommandOverview, AIActivityEvent, AIConversationSummary, AIConversationDetail, AIObjection, AILearningPattern, AIImprovement, AIFollowUp, AIEscalation, AIBookingConversation, AIInsight, AIHealthSnapshot, AIAgentProfile, AIPerformanceSnapshot, AICommandFilters } from '@/types/aiCommand'
@@ -167,6 +167,20 @@ interface LeadHubStatsWire {
   status_distribution?: { status: string; count: number }[]
   quality_distribution?: { range: string; percent: number }[]
   sources?: { campaign_name: string; percent: number }[]
+}
+
+interface ActivityLogWire {
+  id: string
+  source: string
+  kind: string
+  action: string
+  actor: string
+  target_type?: string
+  target_id?: string
+  target?: string
+  description?: string
+  offer_id?: string
+  timestamp?: string
 }
 
 // ---------------------------------------------------------------------------
@@ -522,6 +536,27 @@ export const httpRepository = {
   },
   async getActivity(limit = 7): Promise<Activity[]> {
     return apiClient.get<Activity[]>(`/activity?limit=${limit}`)
+  },
+  async getActivityLog(filters: { source?: ActivitySource | 'all'; search?: string; limit?: number } = {}): Promise<ActivityLogEntry[]> {
+    const params = new URLSearchParams()
+    if (filters.limit) params.set('limit', String(filters.limit))
+    if (filters.source && filters.source !== 'all') params.set('source', filters.source)
+    if (filters.search?.trim()) params.set('search', filters.search.trim())
+    const qs = params.toString()
+    const rows = await apiClient.get<ActivityLogWire[]>(`/activity${qs ? `?${qs}` : ''}`)
+    return (rows ?? []).map((w) => ({
+      id: w.id,
+      source: (w.source as ActivitySource) ?? 'cost',
+      kind: w.kind,
+      action: w.action,
+      actor: w.actor,
+      targetType: w.target_type ?? '',
+      targetId: w.target_id ?? '',
+      target: w.target ?? '',
+      description: w.description ?? '',
+      offerId: w.offer_id ?? '',
+      timestamp: w.timestamp ?? '',
+    }))
   },
   async getAttentionItems(): Promise<AttentionItem[]> {
     return apiClient.get<AttentionItem[]>('/attention')

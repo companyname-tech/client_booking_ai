@@ -50,6 +50,26 @@ export interface AuditEvent {
   actor?: 'client' | 'ai' | 'admin' | 'system'
 }
 
+// ---------------------------------------------------------------------------
+// Activity log (Super Admin → Activity — audit trail + system events)
+// ---------------------------------------------------------------------------
+
+export type ActivitySource = 'audit' | 'cost' | 'call'
+
+export interface ActivityLogEntry {
+  id: string
+  source: ActivitySource
+  kind: string
+  action: string
+  actor: string
+  targetType: string
+  targetId: string
+  target: string
+  description: string
+  offerId: string
+  timestamp: string
+}
+
 export interface AIAssessment {
   score: number
   summary: string
