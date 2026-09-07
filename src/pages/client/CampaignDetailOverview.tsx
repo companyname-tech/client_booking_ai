@@ -12,26 +12,21 @@ import { CampaignMetricsGrid } from '@/components/campaign/CampaignMetricsGrid'
 import { CampaignPerformanceChart, PerformancePeriodToggle } from '@/components/campaign/CampaignPerformanceChart'
 import { CampaignFunnel } from '@/components/campaign/CampaignFunnel'
 import { AIAgentStatus } from '@/components/campaign/AIAgentStatus'
-import { RecentLeads } from '@/components/campaign/RecentLeads'
-import { CampaignInsights } from '@/components/campaign/CampaignInsights'
 import { NeedsAttention } from '@/components/campaign/NeedsAttention'
+import { CampaignInsights } from '@/components/campaign/CampaignInsights'
 import { CampaignLifecycle } from '@/components/campaign/CampaignLifecycle'
-import { LeadDrawer } from '@/components/leads/LeadDrawer'
 import { useCampaignContext } from './campaignContext'
-import type { Lead } from '@/types'
 
 export default function CampaignDetailOverview() {
   const { campaign, zone, effectiveStatus } = useCampaignContext()
   const awaitingApproval = effectiveStatus === 'awaiting_approval'
   const [period, setPeriod] = useState<7 | 14 | 30>(14)
-  const [selectedLead, setSelectedLead] = useState<Lead | null>(null)
 
   const { data, loading, error, reload } = useAsyncData(
     () =>
       Promise.all([
         repo.getAgents(),
         repo.getActivity(12),
-        repo.getLeads(campaign.id),
         repo.getCampaignHealthSnapshot(campaign.id),
         repo.getCampaignFunnel(campaign.id),
         repo.getCampaignInsights(campaign.id),
@@ -45,16 +40,11 @@ export default function CampaignDetailOverview() {
     [campaign.id, period],
   )
 
-  const { data: leadDetail } = useAsyncData(
-    () => (selectedLead ? repo.getLead(campaign.id, selectedLead.id) : Promise.resolve(null)),
-    [campaign.id, selectedLead],
-  )
-
   if (loading) return <LoadingState rows={8} />
   if (error) return <ErrorState message={error} onRetry={reload} />
   if (!data) return null
 
-  const [agents, activityRaw, leads, health, funnel, insights, alerts] = data
+  const [agents, activityRaw, health, funnel, insights, alerts] = data
   const agent = campaign.agentId ? agents.find((a) => a.id === campaign.agentId) : undefined
   const activity = activityRaw.filter((a) => !a.offerCampaignId || a.offerCampaignId === campaign.id)
   const stageProgress = campaign.stage === 'ai_training' && agent ? agent.trainingProgress : (campaign.progress % 17) * 5
@@ -125,10 +115,6 @@ export default function CampaignDetailOverview() {
           </Reveal>
 
           <Reveal>
-            <RecentLeads leads={leads} basePath={basePath} onSelect={setSelectedLead} />
-          </Reveal>
-
-          <Reveal>
             <CampaignInsights insights={insights} />
           </Reveal>
         </>
@@ -152,7 +138,6 @@ export default function CampaignDetailOverview() {
         </Reveal>
       )}
 
-      <LeadDrawer lead={leadDetail ?? null} open={!!selectedLead} onClose={() => setSelectedLead(null)} />
     </Stagger>
   )
 }

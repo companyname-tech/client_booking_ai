@@ -33,7 +33,7 @@ interface Command {
   label: string
   hint?: string
   icon: ReactNode
-  group: 'Actions' | 'Navigate' | 'Campaigns' | 'Leads'
+  group: 'Actions' | 'Navigate' | 'Campaigns'
   keywords?: string
   run: () => void
 }
@@ -56,14 +56,13 @@ function useCommands(): Command[] {
           ]
         : [
             { id: 'create', label: 'Create campaign', hint: 'New', icon: <Plus />, group: 'Actions' as const, run: () => navigate('/client/campaigns/new') },
-            { id: 'search-leads', label: 'Search leads', icon: <Users />, group: 'Actions' as const, run: () => navigate(`${base}/leads`) },
             { id: 'ai-center', label: 'Open AI Command Center', icon: <Bot />, group: 'Actions' as const, run: () => navigate('/client/ai') },
             { id: 'ai-conversations', label: 'Search conversations', icon: <MessageSquare />, group: 'Actions' as const, run: () => navigate('/client/ai/conversations') },
             { id: 'connect', label: 'Connect integration', hint: 'Gmail · Calendly · Zoom', icon: <Plug />, group: 'Actions' as const, run: () => navigate('/client/integrations/calendly') },
           ]),
       { id: 'search-campaigns', label: 'Search campaigns', icon: <Megaphone />, group: 'Actions', run: () => navigate(`${base}/campaigns`) },
       { id: 'analytics', label: 'Open analytics', icon: <BarChart3 />, group: 'Navigate', run: () => navigate(`${base}/analytics`) },
-      { id: 'recordings', label: 'Open recordings', icon: <Disc3 />, group: 'Navigate', run: () => navigate(`${base}/recordings`) },
+      { id: 'recordings', label: 'Open calls & recordings', icon: <Disc3 />, group: 'Navigate', run: () => navigate(`${base}/recordings`) },
       { id: 'agents', label: 'Open AI Command Center', icon: <Bot />, group: 'Navigate', run: () => navigate(zone === 'client' ? '/client/ai' : `${base}/agents`) },
       { id: 'settings', label: 'Go to settings', icon: <Settings />, group: 'Navigate', keywords: 'preferences', run: () => navigate(`${base}/settings`) },
       {
@@ -81,8 +80,7 @@ function useCommands(): Command[] {
       const campaigns = await repo.getCampaigns()
       const clients = zone === 'admin' ? (await repo.getClients({ pageSize: 100 })).items : []
       const conversations = zone === 'client' ? await repo.getAIConversations() : []
-      const leads = zone === 'client' ? await repo.getAllLeads() : []
-      return { campaigns, clients, conversations, leads }
+      return { campaigns, clients, conversations }
     },
     [zone],
   )
@@ -120,22 +118,11 @@ function useCommands(): Command[] {
           run: () => navigate(`/client/ai/conversations/${c.id}`),
         }))
       : []
-    const leadCommands: Command[] = zone === 'client'
-      ? (data?.leads ?? []).slice(0, 12).map((l) => ({
-          id: `lead-${l.id}`,
-          label: l.name,
-          hint: l.company,
-          icon: <Users />,
-          group: 'Leads' as const,
-          keywords: `${l.company} ${l.campaignName} ${l.title} ${l.location}`,
-          run: () => navigate(`/client/leads/${l.id}`),
-        }))
-      : []
-    return [...nav, ...clientCommands, ...conversationCommands, ...leadCommands, ...campaigns]
+    return [...nav, ...clientCommands, ...conversationCommands, ...campaigns]
   }, [nav, data, navigate, zone])
 }
 
-const GROUP_ORDER: Command['group'][] = ['Actions', 'Navigate', 'Leads', 'Campaigns']
+const GROUP_ORDER: Command['group'][] = ['Actions', 'Navigate', 'Campaigns']
 
 export function CommandMenu() {
   const { commandOpen, setCommandOpen } = useShell()

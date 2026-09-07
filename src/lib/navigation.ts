@@ -44,27 +44,18 @@ export const clientNavigation: NavSection[] = [
     items: [
       { label: 'AI Command Center', to: '/client/ai', icon: Bot, badge: 'Live', badgeTone: 'accent' },
       { label: 'Conversations', to: '/client/ai/conversations', icon: MessageSquare },
-      { label: 'Calls', to: '/client/ai/calls', icon: Phone },
       { label: 'Learning', to: '/client/ai/learning', icon: GraduationCap },
       { label: 'Performance', to: '/client/ai/performance', icon: Activity },
     ],
   },
   {
-    label: 'Leads',
-    items: [
-      { label: 'Lead Intelligence', to: '/client/leads', icon: Users },
-    ],
-  },
-  {
     label: 'Analytics',
-    items: [
-      { label: 'Analytics', to: '/client/analytics', icon: Activity },
-    ],
+    items: [{ label: 'Analytics', to: '/client/analytics', icon: Activity }],
   },
   {
     label: 'Operations',
     items: [
-      { label: 'Recordings', to: '/client/recordings', icon: Activity },
+      { label: 'Calls & Recordings', to: '/client/recordings', icon: Phone },
       { label: 'Bookings', to: '/client/bookings', icon: Calendar },
       { label: 'Downloads', to: '/client/downloads', icon: Download },
     ],
@@ -91,7 +82,7 @@ export const adminNavigation: NavSection[] = [
     label: 'Operations',
     items: [
       { label: 'Leads', to: '/admin/leads', icon: Users },
-      { label: 'Calls', to: '/admin/calls', icon: Phone },
+      { label: 'Calls & Recordings', to: '/admin/calls', icon: Phone },
       { label: 'Activity', to: '/admin/activity', icon: Activity },
     ],
   },

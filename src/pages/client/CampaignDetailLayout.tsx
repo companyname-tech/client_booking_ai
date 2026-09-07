@@ -26,8 +26,7 @@ interface Tab {
 const clientTabs: Tab[] = [
   { to: '', label: 'Overview', end: true },
   { to: 'leads', label: 'Leads' },
-  { to: 'calls', label: 'Calls' },
-  { to: 'recordings', label: 'Recordings' },
+  { to: 'calls', label: 'Calls & Recordings' },
   { to: 'analytics', label: 'Analytics' },
   { to: 'integrations', label: 'Integrations' },
   { to: 'downloads', label: 'Downloads' },
@@ -90,16 +89,9 @@ export default function CampaignDetailLayout({ zone = 'client' }: { zone?: 'clie
   const pauseCampaign = () => setStatusOverride('paused')
   const resumeCampaign = () => setStatusOverride('active')
 
-  const adminTabs: Tab[] =
-    zone === 'admin'
-      ? [
-          { to: 'onboarding', label: 'Onboarding' },
-          { to: 'ai-training', label: 'AI training' },
-          { to: 'legal', label: 'Legal' },
-          { to: 'approval', label: 'Approval' },
-        ]
-      : []
-  const visibleTabs = zone === 'admin' ? [clientTabs[0], ...adminTabs, ...clientTabs.slice(1, 5)] : clientTabs
+  // Both zones show the same data tabs — the lifecycle stage is conveyed by the
+  // CampaignLifecycle progress in Overview, not by separate lifecycle tab pages.
+  const visibleTabs = clientTabs
 
   return (
     <PageTransition>

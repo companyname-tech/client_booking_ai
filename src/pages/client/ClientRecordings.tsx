@@ -13,8 +13,8 @@ export default function ClientRecordings() {
     <PageTransition>
       <PageContainer className="space-y-6">
         <PageHeader
-          title="Recordings"
-          description="Call audio with replay — every completed call, newest first."
+          title="Calls & Recordings"
+          description="Call history with replay — every completed call, newest first."
         />
 
         {loading ? (

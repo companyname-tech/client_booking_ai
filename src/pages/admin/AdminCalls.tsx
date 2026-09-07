@@ -45,8 +45,8 @@ export default function AdminCalls() {
       <PageContainer className="space-y-6">
         <PageHeader
           eyebrow={<WorkspaceEyebrow name="Super Admin" context="Operations" />}
-          title="Calls"
-          description="Call history across every agent and campaign."
+          title="Calls & Recordings"
+          description="Call history across every agent and campaign — with replayable audio."
         />
         {loading ? (
           <LoadingState rows={6} />

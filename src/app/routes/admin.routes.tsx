@@ -13,7 +13,6 @@ const AdminActivity = lazy(() => import('@/pages/admin/AdminActivity'))
 const AdminLeads = lazy(() => import('@/pages/admin/AdminLeads'))
 const AdminCalls = lazy(() => import('@/pages/admin/AdminCalls'))
 const AdminCosts = lazy(() => import('@/pages/admin/AdminCosts'))
-const AdminRecordings = lazy(() => import('@/pages/admin/AdminRecordings'))
 const CampaignDetailLayout = lazy(() => import('@/pages/client/CampaignDetailLayout'))
 const CampaignDetailOverview = lazy(() => import('@/pages/client/CampaignDetailOverview'))
 
@@ -25,10 +24,7 @@ export const adminRoutes = [
   {
     path: 'campaigns/:id',
     element: <CampaignDetailLayout zone="admin" />,
-    children: [
-      { index: true, element: <CampaignDetailOverview /> },
-      ...campaignSubRoutes.slice(0, 4),
-    ],
+    children: [{ index: true, element: <CampaignDetailOverview /> }, ...campaignSubRoutes],
   },
   { path: 'approvals', element: <Navigate to="/admin/campaigns" replace /> },
   { path: 'ai-training', element: <AdminAITraining /> },
@@ -38,6 +34,6 @@ export const adminRoutes = [
   { path: 'leads', element: <AdminLeads /> },
   { path: 'calls', element: <AdminCalls /> },
   { path: 'costs', element: <AdminCosts /> },
-  { path: 'recordings', element: <AdminRecordings /> },
+  { path: 'recordings', element: <Navigate to="/admin/calls" replace /> },
   { path: 'settings', element: <AdminSettings /> },
 ]

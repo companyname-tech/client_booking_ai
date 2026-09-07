@@ -15,7 +15,6 @@ const CampaignOnboarding = lazy(() => import('@/pages/client/CampaignOnboarding'
 const CampaignDetailLayout = lazy(() => import('@/pages/client/CampaignDetailLayout'))
 const CampaignDetailOverview = lazy(() => import('@/pages/client/CampaignDetailOverview'))
 const CampaignLeads = lazy(() => import('@/pages/client/CampaignLeads'))
-const CampaignCalls = lazy(() => import('@/pages/client/CampaignCalls'))
 const CampaignRecordings = lazy(() => import('@/pages/client/CampaignRecordings'))
 const CampaignAnalytics = lazy(() => import('@/pages/client/CampaignAnalytics'))
 const CampaignIntegrations = lazy(() => import('@/pages/client/CampaignIntegrations'))
@@ -30,13 +29,6 @@ const AILearning = lazy(() => import('@/pages/client/ai/AILearning'))
 const AIPerformance = lazy(() => import('@/pages/client/ai/AIPerformance'))
 const AIAgents = lazy(() => import('@/pages/client/ai/AIAgents'))
 const AIAgentDetail = lazy(() => import('@/pages/client/ai/AIAgentDetail'))
-const LeadHub = lazy(() => import('@/pages/client/leads/LeadHub'))
-const LeadProfileLayout = lazy(() => import('@/pages/client/leads/LeadProfileLayout'))
-const LeadProfileOverview = lazy(() => import('@/pages/client/leads/LeadProfileOverview'))
-const LeadProfileActivity = lazy(() => import('@/pages/client/leads/LeadProfileActivity'))
-const LeadProfileConversations = lazy(() => import('@/pages/client/leads/LeadProfileConversations'))
-const LeadProfileCalls = lazy(() => import('@/pages/client/leads/LeadProfileCalls'))
-const LeadProfileNotes = lazy(() => import('@/pages/client/leads/LeadProfileNotes'))
 const ClientRecordings = lazy(() => import('@/pages/client/ClientRecordings'))
 const ClientBookings = lazy(() => import('@/pages/client/ClientBookings'))
 const ClientDownloads = lazy(() => import('@/pages/client/ClientDownloads'))
@@ -44,8 +36,7 @@ const ClientAnalytics = lazy(() => import('@/pages/client/ClientAnalytics'))
 
 export const campaignSubRoutes = [
   { path: 'leads', element: <CampaignLeads /> },
-  { path: 'calls', element: <CampaignCalls /> },
-  { path: 'recordings', element: <CampaignRecordings /> },
+  { path: 'calls', element: <CampaignRecordings /> },
   { path: 'analytics', element: <CampaignAnalytics /> },
   { path: 'integrations', element: <CampaignIntegrations /> },
   { path: 'downloads', element: <CampaignDownloads /> },
@@ -61,18 +52,6 @@ export const clientRoutes = [
     path: 'campaigns/:id',
     element: <CampaignDetailLayout />,
     children: [{ index: true, element: <CampaignDetailOverview /> }, ...campaignSubRoutes],
-  },
-  { path: 'leads', element: <LeadHub /> },
-  {
-    path: 'leads/:id',
-    element: <LeadProfileLayout />,
-    children: [
-      { index: true, element: <LeadProfileOverview /> },
-      { path: 'activity', element: <LeadProfileActivity /> },
-      { path: 'conversations', element: <LeadProfileConversations /> },
-      { path: 'calls', element: <LeadProfileCalls /> },
-      { path: 'notes', element: <LeadProfileNotes /> },
-    ],
   },
   { path: 'analytics', element: <ClientAnalytics /> },
   {
@@ -90,7 +69,6 @@ export const clientRoutes = [
     ],
   },
   { path: 'agents', element: <Navigate to="/client/ai/agents" replace /> },
-  { path: 'calls', element: <Navigate to="/client/ai/calls" replace /> },
   { path: 'messages', element: <PlaceholderPage title="Messages" description="Email and WhatsApp follow-ups sent by the AI." icon={<MessageSquare />} /> },
   { path: 'recordings', element: <ClientRecordings /> },
   { path: 'bookings', element: <ClientBookings /> },
