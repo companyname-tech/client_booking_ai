@@ -1,11 +1,8 @@
 import { lazy } from 'react'
 import { Navigate } from 'react-router-dom'
 import {
-  Calendar,
-  Mail,
   MessageSquare,
   UsersRound,
-  Video,
 } from 'lucide-react'
 import PlaceholderPage from '@/pages/PlaceholderPage'
 
@@ -68,10 +65,7 @@ export const clientRoutes = [
   { path: 'messages', element: <PlaceholderPage title="Messages" description="Email and WhatsApp follow-ups sent by the AI." icon={<MessageSquare />} /> },
   { path: 'recordings', element: <ClientRecordings /> },
   { path: 'bookings', element: <ClientBookings /> },
-  { path: 'integrations', element: <Navigate to="/client/settings" replace /> },
-  { path: 'integrations/gmail', element: <PlaceholderPage title="Gmail" description="Booking confirmations and follow-ups are sent from your inbox." icon={<Mail />} /> },
-  { path: 'integrations/calendly', element: <PlaceholderPage title="Calendly" description="Connect Calendly so the AI can schedule directly into your availability." icon={<Calendar />} /> },
-  { path: 'integrations/zoom', element: <PlaceholderPage title="Zoom" description="Meeting links are generated automatically for each booking." icon={<Video />} /> },
+  { path: 'integrations', element: <Navigate to="/client/settings?tab=connection" replace /> },
   { path: 'downloads', element: <ClientDownloads /> },
   { path: 'team', element: <PlaceholderPage title="Team" description="Invite teammates and manage roles." icon={<UsersRound />} /> },
   { path: 'settings', element: <ClientSettings /> },

@@ -58,7 +58,7 @@ function useCommands(): Command[] {
             { id: 'create', label: 'Create campaign', hint: 'New', icon: <Plus />, group: 'Actions' as const, run: () => navigate('/client/campaigns/new') },
             { id: 'ai-center', label: 'Open AI Command Center', icon: <Bot />, group: 'Actions' as const, run: () => navigate('/client/ai') },
             { id: 'ai-conversations', label: 'Search conversations', icon: <MessageSquare />, group: 'Actions' as const, run: () => navigate('/client/ai/conversations') },
-            { id: 'connect', label: 'Connect integration', hint: 'Gmail · Calendly · Zoom', icon: <Plug />, group: 'Actions' as const, run: () => navigate('/client/integrations/calendly') },
+            { id: 'connect', label: 'Manage connections', hint: 'Settings → Connection', icon: <Plug />, group: 'Actions' as const, run: () => navigate('/client/settings?tab=connection') },
           ]),
       { id: 'search-campaigns', label: 'Search campaigns', icon: <Megaphone />, group: 'Actions', run: () => navigate(`${base}/campaigns`) },
       { id: 'analytics', label: 'Open analytics', icon: <BarChart3 />, group: 'Navigate', run: () => navigate(`${base}/analytics`) },

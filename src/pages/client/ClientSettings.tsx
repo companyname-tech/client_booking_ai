@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { repo } from '@/api/repository'
 import { useAsyncData } from '@/hooks/useAsyncData'
 import { LoadingState } from '@/components/ui/LoadingState'
@@ -15,6 +16,15 @@ import { TemplatesTab } from '@/components/settings/TemplatesTab'
 import { ApplicationTab } from '@/components/settings/ApplicationTab'
 
 type Section = 'agent' | 'connection' | 'fish' | 'templates' | 'application'
+
+/** Sections reachable by the `?tab=` search param (deep links from other pages). */
+const SECTION_FROM_PARAM: Record<string, Section> = {
+  agent: 'agent',
+  connection: 'connection',
+  fish: 'fish',
+  templates: 'templates',
+  application: 'application',
+}
 
 function AutoHangupToggle({ on, onToggle }: { on: boolean; onToggle: () => void }) {
   return (
@@ -60,7 +70,8 @@ export default function ClientSettings() {
     error: settingsError,
     reload: reloadSettings,
   } = useAsyncData(() => repo.getSettings())
-  const [section, setSection] = useState<Section>('agent')
+  const [searchParams] = useSearchParams()
+  const [section, setSection] = useState<Section>(() => SECTION_FROM_PARAM[searchParams.get('tab') ?? ''] ?? 'agent')
   const [autoHangup, setAutoHangup] = useState(false)
 
   useEffect(() => {
