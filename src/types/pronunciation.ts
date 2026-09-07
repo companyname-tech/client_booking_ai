@@ -32,6 +32,8 @@ export interface TranscribePronunciationReply {
 export interface PronunciationAgentOption {
   agentId: string
   name: string
+  /** TTS voice name — used to synthesize per-agent pronunciation samples. */
+  voice: string
 }
 
 /**

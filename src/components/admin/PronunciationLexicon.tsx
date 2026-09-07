@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Plus, Trash2, Globe2, UserRound, Upload, Loader2 } from 'lucide-react'
+import { Plus, Trash2, Globe2, UserRound, Upload, Loader2, Volume2 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
@@ -19,9 +19,13 @@ function errText(e: unknown): string {
 function LexiconList({
   entries,
   onRemove,
+  previewingId,
+  onPreview,
 }: {
   entries: PronunciationLexiconEntry[]
   onRemove: (id: string) => void
+  previewingId: string | null
+  onPreview: (entry: PronunciationLexiconEntry) => void
 }) {
   if (entries.length === 0) {
     return <p className="text-sm text-fg-muted">No words yet — add your first pronunciation below.</p>
@@ -43,14 +47,30 @@ function LexiconList({
                   <span className="text-sm font-medium text-fg">{e.word}</span>
                   <span className="ml-2 text-xs text-fg-muted">→ {e.pronounce_as}</span>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => onRemove(e.id!)}
-                  className="shrink-0 rounded p-1 text-fg-faint transition-colors hover:text-danger"
-                  aria-label={`Remove ${e.word}`}
-                >
-                  <Trash2 className="size-3.5" />
-                </button>
+                <div className="flex shrink-0 items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => onPreview(e)}
+                    disabled={previewingId !== null}
+                    className="rounded p-1.5 text-fg-muted transition-colors hover:text-fg disabled:opacity-40"
+                    aria-label={`Play sample for ${e.word}`}
+                    title="Play pronunciation sample"
+                  >
+                    {previewingId === e.id ? (
+                      <Loader2 className="size-3.5 animate-spin" />
+                    ) : (
+                      <Volume2 className="size-3.5" />
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onRemove(e.id!)}
+                    className="rounded p-1.5 text-fg-faint transition-colors hover:text-danger"
+                    aria-label={`Remove ${e.word}`}
+                  >
+                    <Trash2 className="size-3.5" />
+                  </button>
+                </div>
               </li>
             ))}
           </ul>
@@ -74,7 +94,9 @@ export function PronunciationLexicon() {
   const [pronounceAs, setPronounceAs] = useState('')
   const [language, setLanguage] = useState('en')
   const [transcribing, setTranscribing] = useState(false)
+  const [previewingId, setPreviewingId] = useState<string | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
+  const audioRef = useRef<HTMLAudioElement | null>(null)
 
   // Load global lexicon + agent list once.
   useEffect(() => {
@@ -171,6 +193,36 @@ export function PronunciationLexicon() {
   }
 
   const selectedAgent = agents.find((a) => a.agentId === agentId)
+
+  const playSample = async (entry: PronunciationLexiconEntry) => {
+    if (previewingId !== null) return
+    const text = (entry.pronounce_as || entry.word).trim()
+    if (!text) {
+      setStatus({ kind: 'err', text: 'Nothing to synthesize — add a pronounce-as first.' })
+      return
+    }
+    const voice = tab === 'agent' ? (selectedAgent?.voice ?? '') : ''
+    const language = entry.language || 'en'
+    setPreviewingId(entry.id ?? null)
+    setStatus(null)
+    try {
+      const { audioUrl } = await repo.previewVoice(text, voice, language)
+      if (!audioUrl) throw new Error('No playable audio was returned')
+      const audio = audioRef.current ?? new Audio()
+      audioRef.current = audio
+      audio.pause()
+      audio.src = audioUrl
+      audio.onended = () => setPreviewingId(null)
+      audio.onerror = () => {
+        setPreviewingId(null)
+        setStatus({ kind: 'err', text: 'Playback failed — audio unavailable.' })
+      }
+      await audio.play()
+    } catch (e) {
+      setPreviewingId(null)
+      setStatus({ kind: 'err', text: `Preview failed: ${errText(e)}` })
+    }
+  }
 
   return (
     <div className="surface p-5">
@@ -306,7 +358,12 @@ export function PronunciationLexicon() {
         {loading ? (
           <p className="text-sm text-fg-muted">Loading…</p>
         ) : (
-          <LexiconList entries={entries} onRemove={removeEntry} />
+          <LexiconList
+            entries={entries}
+            onRemove={removeEntry}
+            previewingId={previewingId}
+            onPreview={(e) => void playSample(e)}
+          />
         )}
       </div>
     </div>

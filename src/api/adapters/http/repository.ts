@@ -322,6 +322,7 @@ function toCampaign(wire: OfferWire): OfferCampaign {
     clientId: wire.client_id ?? '',
     name: wire.name || wire.title,
     offerName: wire.title,
+    valueProposition: wire.value_proposition || wire.description || '',
     status,
     stage: status === 'active' ? 'calling' : 'onboarding',
     targetAudience: targeting ? [targeting.industry, targeting.companySize].filter(Boolean).join(' · ') : '',
@@ -614,7 +615,20 @@ export const httpRepository = {
   // --- Pronunciation lexicon (already wired) --------------------------------
   async listPronunciationAgents(): Promise<PronunciationAgentOption[]> {
     const agents = await apiClient.get<AgentWire[]>('/agents')
-    return (agents ?? []).map((a) => ({ agentId: a.agent_id, name: a.name }))
+    return (agents ?? []).map((a) => ({ agentId: a.agent_id, name: a.name, voice: a.voice ?? '' }))
+  },
+  async previewVoice(text: string, voice: string, language: string, model = ''): Promise<{ audioUrl: string }> {
+    const res = await apiClient.post<{ audio_path?: string; audio_url?: string }>('/agents/preview-voice', {
+      text,
+      voice,
+      language,
+      model,
+    })
+    // @backend returns an explicit playable path (audio_url) when landed;
+    // until then derive /audio/<basename> from the server-side audio_path.
+    const playable =
+      res?.audio_url || (res?.audio_path ? `/audio/${res.audio_path.split(/[\\/]/).pop()}` : '')
+    return { audioUrl: mediaUrl(playable) }
   },
   async getGlobalLexicon(): Promise<PronunciationLexiconEntry[]> {
     const cfg = await apiClient.get<PronunciationConfigDto>('/agent/config')
