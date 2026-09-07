@@ -3,7 +3,7 @@ import { Trash2, Clock3 } from 'lucide-react'
 import { repo } from '@/api/repository'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
-import { WEEKDAY_NAMES_MON, WEEKDAY_TOGGLES, fmtDayShort, fmtTime } from '@/lib/calendar'
+import { WEEKDAY_NAMES_MON, WEEKDAY_TOGGLES, fmtDayShort, fmtTime, ilFromParts, toIso, CAL_TZ } from '@/lib/calendar'
 import { cn } from '@/lib/utils'
 import type { AvailabilityInstance, AvailabilityKind } from '@/types/calendar'
 
@@ -34,11 +34,11 @@ export function AvailabilityPanel({
   const [removing, setRemoving] = useState<string | null>(null)
   const [error, setError] = useState('')
 
+  // Israel wall clock → RFC3339 instant (the business works by Israel time).
   const toLocalIso = (date: string, time: string) => {
     const [y, m, d] = date.split('-').map(Number)
     const [hh, mm] = time.split(':').map(Number)
-    const dt = new Date(y, (m ?? 1) - 1, d ?? 1, hh ?? 0, mm ?? 0)
-    return dt.toISOString()
+    return toIso(ilFromParts(y, m, d, hh ?? 0, mm ?? 0))
   }
 
   const submit = async () => {
@@ -60,7 +60,7 @@ export function AvailabilityPanel({
           start: ref,
           end: refEnd,
           daysOfWeek: days,
-          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+          timezone: CAL_TZ,
           note: note.trim() || undefined,
         })
       } else {
@@ -71,7 +71,7 @@ export function AvailabilityPanel({
           kind,
           start,
           end,
-          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+          timezone: CAL_TZ,
           note: note.trim() || undefined,
         })
       }

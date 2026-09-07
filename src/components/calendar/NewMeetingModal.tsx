@@ -8,24 +8,12 @@ import { Select } from '@/components/ui/Select'
 import { FieldGroup, FieldLabel, FieldError } from '@/components/ui/Field'
 import { useDaySlots } from '@/hooks/useCalendarEvents'
 import { useAsyncData } from '@/hooks/useAsyncData'
-import { fmtDayShort, fmtTime, startOfDay } from '@/lib/calendar'
+import { fmtDayShort, fmtTime, startOfDay, toDateInputValue, fromDateInputValue } from '@/lib/calendar'
 import { cn } from '@/lib/utils'
 import type { Lead, OfferCampaign } from '@/types'
 import type { CalendarMeeting } from '@/types/calendar'
 
 const DURATIONS = [30, 60, 90]
-
-function dayValue(d: Date): string {
-  const y = d.getFullYear()
-  const m = String(d.getMonth() + 1).padStart(2, '0')
-  const day = String(d.getDate()).padStart(2, '0')
-  return `${y}-${m}-${day}`
-}
-
-function fromDayValue(v: string): Date {
-  const [y, m, d] = v.split('-').map(Number)
-  return new Date(y, (m ?? 1) - 1, d ?? 1)
-}
 
 function conflictDetail(e: unknown): string {
   if (e instanceof ApiError && e.body && typeof e.body === 'object' && 'detail' in e.body) {
@@ -204,10 +192,10 @@ export function NewMeetingModal({
               <FieldLabel>Day</FieldLabel>
               <Input
                 type="date"
-                value={dayValue(day)}
+                value={toDateInputValue(day)}
                 onChange={(e) => {
                   if (e.target.value) {
-                    setDay(startOfDay(fromDayValue(e.target.value)))
+                    setDay(startOfDay(fromDateInputValue(e.target.value)))
                     setSlot('')
                   }
                 }}

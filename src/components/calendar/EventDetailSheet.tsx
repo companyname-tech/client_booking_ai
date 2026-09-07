@@ -6,7 +6,7 @@ import { DetailDrawer } from '@/components/ui/DetailDrawer'
 import { Button } from '@/components/ui/Button'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { useDaySlots } from '@/hooks/useCalendarEvents'
-import { startOfDay, fmtDayShort, fmtTime } from '@/lib/calendar'
+import { startOfDay, fmtDayShort, fmtTime, addDays } from '@/lib/calendar'
 import { cn } from '@/lib/utils'
 import type { CalendarMeeting } from '@/types/calendar'
 
@@ -181,7 +181,7 @@ export function EventDetailSheet({
                     </div>
                   )}
                   <div className="flex justify-end gap-2">
-                    <Button variant="secondary" size="sm" onClick={() => setDay(startOfDay(new Date(day.getTime() + 86400000)))} disabled={busy !== null}>
+                    <Button variant="secondary" size="sm" onClick={() => setDay(startOfDay(addDays(day, 1)))} disabled={busy !== null}>
                       Next day
                     </Button>
                     <Button variant="primary" size="sm" onClick={runReschedule} disabled={busy !== null || !slot}>

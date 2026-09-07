@@ -14,7 +14,7 @@ import { NewMeetingModal } from '@/components/calendar/NewMeetingModal'
 import { EventDetailSheet } from '@/components/calendar/EventDetailSheet'
 import { AvailabilityPanel } from '@/components/calendar/AvailabilityPanel'
 import { GoogleConnectCard } from '@/components/calendar/GoogleConnectCard'
-import { fmtDateShort } from '@/lib/calendar'
+import { fmtDateShort, fmtMonthYear, weekDays, addDays, addMonths } from '@/lib/calendar'
 import { cn } from '@/lib/utils'
 import type { CalendarMeeting } from '@/types/calendar'
 
@@ -54,17 +54,12 @@ export default function CalendarScreen() {
   }, [toast])
 
   const shift = (dir: -1 | 1) =>
-    setCursor((prev) => {
-      const next = new Date(prev)
-      if (view === 'month') next.setMonth(next.getMonth() + dir)
-      else next.setDate(next.getDate() + dir * 7)
-      return next
-    })
+    setCursor((prev) => (view === 'month' ? addMonths(prev, dir) : addDays(prev, dir * 7)))
 
   const rangeLabel =
     view === 'month'
-      ? cursor.toLocaleDateString([], { month: 'long', year: 'numeric' })
-      : `${fmtDateShort(new Date(cursor.getFullYear(), cursor.getMonth(), cursor.getDate() - cursor.getDay()))} – ${fmtDateShort(new Date(cursor.getFullYear(), cursor.getMonth(), cursor.getDate() - cursor.getDay() + 6))}`
+      ? fmtMonthYear(cursor)
+      : `${fmtDateShort(weekDays(cursor)[0])} – ${fmtDateShort(weekDays(cursor)[6])}`
 
   return (
     <PageTransition>

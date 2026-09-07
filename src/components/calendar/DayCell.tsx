@@ -1,5 +1,5 @@
 import { cn } from '@/lib/utils'
-import { sameDay, toDayKey } from '@/lib/calendar'
+import { sameDay, toDayKey, ilParts, WEEKDAY_LABELS, fmtDateShort } from '@/lib/calendar'
 import { EventChip } from './EventChip'
 import { BlockedOverlay } from './BlockedOverlay'
 import type { CalendarMeeting } from '@/types/calendar'
@@ -21,7 +21,9 @@ const isBlockedDay = (blocked: AvailabilityInstance[] | undefined, day: Date): b
 
 /** One calendar cell: day number, event chips, blocked hatch. */
 export function DayCell({ day, month, meetings, blocked, onSelectMeeting, onSelectSlot, today, dense }: DayCellProps) {
-  const inMonth = day.getMonth() === month.getMonth()
+  const parts = ilParts(day)
+  const monthParts = ilParts(month)
+  const inMonth = parts.year === monthParts.year && parts.month === monthParts.month
   const isToday = sameDay(day, today)
   const blockedDay = isBlockedDay(blocked, day)
   const key = toDayKey(day)
@@ -40,14 +42,14 @@ export function DayCell({ day, month, meetings, blocked, onSelectMeeting, onSele
       <button
         type="button"
         onClick={() => onSelectSlot(day)}
-        aria-label={`New meeting on ${day.toLocaleDateString()}`}
+        aria-label={`New meeting on ${WEEKDAY_LABELS[parts.weekday]} ${fmtDateShort(day)}`}
         className={cn(
           'interactive relative z-10 flex h-5 w-7 shrink-0 items-center justify-center rounded-full text-2xs font-medium outline-none',
           isToday ? 'bg-accent text-white' : 'text-fg-muted hover:text-fg',
           !inMonth && 'text-fg-faint',
         )}
       >
-        {day.getDate()}
+        {parts.day}
       </button>
       <div className="relative z-10 flex min-w-0 flex-col gap-0.5">
         {meetings
