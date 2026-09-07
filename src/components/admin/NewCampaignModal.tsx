@@ -4,10 +4,8 @@ import { Modal } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { FieldError } from '@/components/ui/Field'
 import { Select } from '@/components/ui/Select'
+import { Input } from '@/components/ui/Input'
 import type { Client } from '@/types'
-
-const inputClass =
-  'mt-1 w-full rounded-md border border-border bg-card px-3 py-2 text-sm text-fg placeholder:text-fg-muted focus:outline-none focus:ring-1 focus:ring-accent'
 
 export interface NewCampaignModalProps {
   open: boolean
@@ -87,7 +85,7 @@ export function NewCampaignModal({ open, onClose, onCreated, fixedClient, client
         {fixedClient ? (
           <div>
             <span className="text-xs text-fg-muted">Client</span>
-            <div className="mt-1 w-full rounded-md border border-border bg-card px-3 py-2 text-sm text-fg">
+            <div className="mt-1 w-full rounded-md border border-line-strong bg-surface-1 px-3 py-2 text-sm text-fg">
               {fixedClient.name}
             </div>
             <p className="mt-1 text-2xs text-fg-muted">The campaign is attached to this client.</p>
@@ -111,8 +109,8 @@ export function NewCampaignModal({ open, onClose, onCreated, fixedClient, client
         )}
         <div>
           <span className="text-xs text-fg-muted">Campaign name *</span>
-          <input
-            className={inputClass}
+          <Input
+            className="mt-1"
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="e.g. Arch Sites"
@@ -120,8 +118,8 @@ export function NewCampaignModal({ open, onClose, onCreated, fixedClient, client
         </div>
         <div>
           <span className="text-xs text-fg-muted">Offer</span>
-          <input
-            className={inputClass}
+          <Input
+            className="mt-1"
             value={offerName}
             onChange={(e) => setOfferName(e.target.value)}
             placeholder="The offer the campaign sells, e.g. Website redesign"
@@ -129,8 +127,8 @@ export function NewCampaignModal({ open, onClose, onCreated, fixedClient, client
         </div>
         <div>
           <span className="text-xs text-fg-muted">Category</span>
-          <input
-            className={inputClass}
+          <Input
+            className="mt-1"
             value={category}
             onChange={(e) => setCategory(e.target.value)}
             placeholder="e.g. Architecture"

@@ -5,6 +5,8 @@ import { LoadingState } from '@/components/ui/LoadingState'
 import { ErrorState } from '@/components/ui/ErrorState'
 import { Reveal, Stagger } from '@/components/motion/Reveal'
 import { Card, SectionHeader } from '@/components/ui/Card'
+import { Button } from '@/components/ui/Button'
+import { Textarea } from '@/components/ui/Textarea'
 import { CampaignStatus } from '@/components/campaigns/CampaignStatus'
 import { AIActivityFeed } from '@/components/activity/AIActivityFeed'
 import { CampaignHealthPanel } from '@/components/campaign/CampaignHealthPanel'
@@ -21,6 +23,13 @@ export default function CampaignDetailOverview() {
   const { campaign, zone, effectiveStatus } = useCampaignContext()
   const awaitingApproval = effectiveStatus === 'awaiting_approval'
   const [period, setPeriod] = useState<7 | 14 | 30>(14)
+
+  // Offer editing (most important element) — saved value is held locally.
+  const [editingOffer, setEditingOffer] = useState(false)
+  const [offerDraft, setOfferDraft] = useState('')
+  const [savingOffer, setSavingOffer] = useState(false)
+  const [localOffer, setLocalOffer] = useState<string | null>(null)
+  const displayOffer = localOffer ?? campaign.valueProposition ?? ''
 
   const { data, loading, error, reload } = useAsyncData(
     () =>
@@ -39,6 +48,21 @@ export default function CampaignDetailOverview() {
     () => repo.getCampaignPerformance(campaign.id, period),
     [campaign.id, period],
   )
+
+  const startOfferEdit = () => {
+    setOfferDraft(campaign.valueProposition || '')
+    setEditingOffer(true)
+  }
+  const saveOffer = async () => {
+    setSavingOffer(true)
+    try {
+      await repo.updateCampaignOffer(campaign.id, { pitch: offerDraft.trim() })
+      setLocalOffer(offerDraft.trim())
+      setEditingOffer(false)
+    } finally {
+      setSavingOffer(false)
+    }
+  }
 
   if (loading) return <LoadingState rows={8} />
   if (error) return <ErrorState message={error} onRetry={reload} />
@@ -64,6 +88,55 @@ export default function CampaignDetailOverview() {
           </Card>
         </Reveal>
       )}
+
+      {/* THE OFFER — most important element of the campaign */}
+      <Reveal>
+        <Card className="p-5 sm:p-6">
+          <div className="flex items-start justify-between gap-4">
+            <SectionHeader title="The offer" description="What this campaign sells to leads" />
+            {!editingOffer && (
+              <Button variant="secondary" size="sm" onClick={startOfferEdit}>
+                Edit offer
+              </Button>
+            )}
+          </div>
+          <div className="mt-4 rounded-lg border border-line bg-surface-1 px-4 py-3">
+            {editingOffer ? (
+              <div className="space-y-3">
+                <Textarea
+                  rows={4}
+                  value={offerDraft}
+                  onChange={(e) => setOfferDraft(e.target.value)}
+                  placeholder="Write the offer pitch the AI uses when contacting leads — what you sell, for whom, and the value."
+                  className="bg-surface-1"
+                />
+                <div className="flex justify-end gap-2">
+                  <Button variant="ghost" size="sm" onClick={() => setEditingOffer(false)} disabled={savingOffer}>
+                    Cancel
+                  </Button>
+                  <Button variant="primary" size="sm" onClick={() => void saveOffer()} disabled={savingOffer}>
+                    {savingOffer ? 'Saving…' : 'Save offer'}
+                  </Button>
+                </div>
+              </div>
+            ) : displayOffer ? (
+              <>
+                <p className="text-[15px] font-medium leading-relaxed text-fg">{displayOffer}</p>
+                {!campaign.valueProposition && (
+                  <p className="mt-1 text-xs text-fg-muted">Offer pitch set locally — save persists it to the offer.</p>
+                )}
+              </>
+            ) : campaign.offerName ? (
+              <>
+                <p className="text-[15px] font-medium text-fg">{campaign.offerName}</p>
+                <p className="mt-1 text-xs text-fg-muted">Offer name is set — click Edit to write the full offer pitch the AI sells.</p>
+              </>
+            ) : (
+              <p className="text-sm text-fg-muted">No offer set for this campaign yet — click Edit to add it.</p>
+            )}
+          </div>
+        </Card>
+      </Reveal>
 
       {isOperational && !awaitingApproval && (
         <Reveal>

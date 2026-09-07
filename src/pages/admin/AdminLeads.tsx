@@ -83,17 +83,6 @@ function LeadRowActions({
   const group = leadGroup(lead.verificationStatus)
   return (
     <div className="flex flex-wrap items-center gap-1">
-      {group === 'new' && (
-        <Button
-          variant="secondary"
-          size="sm"
-          leadingIcon={<Search className="size-3" />}
-          disabled={busy}
-          onClick={() => onAction(lead, 'analyze')}
-        >
-          Analyze
-        </Button>
-      )}
       {group === 'rejected' && (
         <Button
           variant="secondary"
@@ -238,9 +227,6 @@ function LeadExtraDrawer({
     }
   }
 
-  const inputClass =
-    'mt-1 w-full rounded-md border border-border bg-card px-3 py-2 text-sm text-fg placeholder:text-fg-muted focus:outline-none focus:ring-1 focus:ring-accent'
-
   if (editing) {
     return (
       <DetailDrawer
@@ -258,31 +244,31 @@ function LeadExtraDrawer({
         >
           <div>
             <span className="text-xs text-fg-muted">Name</span>
-            <input className={inputClass} value={form.name} onChange={set('name')} />
+            <Input className="mt-1" value={form.name} onChange={set('name')} />
           </div>
           <div>
             <span className="text-xs text-fg-muted">Job title</span>
-            <input className={inputClass} value={form.title} onChange={set('title')} />
+            <Input className="mt-1" value={form.title} onChange={set('title')} />
           </div>
           <div>
             <span className="text-xs text-fg-muted">Company</span>
-            <input className={inputClass} value={form.company} onChange={set('company')} />
+            <Input className="mt-1" value={form.company} onChange={set('company')} />
           </div>
           <div>
             <span className="text-xs text-fg-muted">Industry</span>
-            <input className={inputClass} value={form.industry} onChange={set('industry')} />
+            <Input className="mt-1" value={form.industry} onChange={set('industry')} />
           </div>
           <div>
             <span className="text-xs text-fg-muted">Email</span>
-            <input className={inputClass} value={form.email} onChange={set('email')} />
+            <Input className="mt-1" value={form.email} onChange={set('email')} />
           </div>
           <div>
             <span className="text-xs text-fg-muted">Phone</span>
-            <input className={inputClass} value={form.phone} onChange={set('phone')} />
+            <Input className="mt-1" value={form.phone} onChange={set('phone')} />
           </div>
           <div>
             <span className="text-xs text-fg-muted">Website</span>
-            <input className={inputClass} value={form.website} onChange={set('website')} />
+            <Input className="mt-1" value={form.website} onChange={set('website')} />
           </div>
           <div>
             <span className="text-xs text-fg-muted">Status</span>

@@ -4,9 +4,8 @@ import type { OfferCampaign } from '@/types'
 import { Modal } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { Select } from '@/components/ui/Select'
-
-const inputClass =
-  'mt-1 w-full rounded-md border border-border bg-card px-3 py-2 text-sm text-fg placeholder:text-fg-muted focus:outline-none focus:ring-1 focus:ring-accent'
+import { Input } from '@/components/ui/Input'
+import { Textarea } from '@/components/ui/Textarea'
 
 type AddLeadForm = {
   leadName: string
@@ -102,7 +101,7 @@ export function AddLeadModal({
       >
         <div>
           <span className="text-xs text-fg-muted">Lead name *</span>
-          <input className={inputClass} autoFocus value={form.leadName} onChange={set('leadName')} placeholder="e.g. David Cohen" />
+          <Input className="mt-1" autoFocus value={form.leadName} onChange={set('leadName')} placeholder="e.g. David Cohen" />
         </div>
         <div>
           <span className="text-xs text-fg-muted">Campaign</span>
@@ -133,23 +132,23 @@ export function AddLeadModal({
         </div>
         <div>
           <span className="text-xs text-fg-muted">Phone</span>
-          <input className={inputClass} value={form.phone} onChange={set('phone')} placeholder="e.g. +972501234567" />
+          <Input className="mt-1" value={form.phone} onChange={set('phone')} placeholder="e.g. +972501234567" />
         </div>
         <div>
           <span className="text-xs text-fg-muted">Email</span>
-          <input className={inputClass} value={form.email} onChange={set('email')} placeholder="e.g. david@example.com" />
+          <Input className="mt-1" value={form.email} onChange={set('email')} placeholder="e.g. david@example.com" />
         </div>
         <div>
           <span className="text-xs text-fg-muted">Industry</span>
-          <input className={inputClass} value={form.industry} onChange={set('industry')} />
+          <Input className="mt-1" value={form.industry} onChange={set('industry')} />
         </div>
         <div>
           <span className="text-xs text-fg-muted">Contact name</span>
-          <input className={inputClass} value={form.contactName} onChange={set('contactName')} />
+          <Input className="mt-1" value={form.contactName} onChange={set('contactName')} />
         </div>
         <div>
           <span className="text-xs text-fg-muted">Notes</span>
-          <textarea className={inputClass} rows={2} value={form.notes} onChange={set('notes')} />
+          <Textarea className="mt-1 min-h-[72px]" rows={2} value={form.notes} onChange={set('notes')} />
         </div>
         {formError && <p className="text-xs text-danger">{formError}</p>}
         <div className="flex justify-end gap-2 pt-2">
