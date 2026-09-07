@@ -8,6 +8,9 @@ import { Reveal } from '@/components/motion/Reveal'
 import { LoadingState } from '@/components/ui/LoadingState'
 import { ErrorState } from '@/components/ui/ErrorState'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { SelectCheckbox } from '@/components/ui/SelectCheckbox'
+import { BulkActionBar } from '@/components/ui/BulkActionBar'
+import { useBulkSelection } from '@/hooks/useBulkSelection'
 import { Input } from '@/components/ui/Input'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { formatDuration } from '@/lib/utils'
@@ -39,6 +42,8 @@ export default function AdminCalls() {
     if (outcome !== 'all') list = list.filter((c) => c.outcome === outcome)
     return list
   }, [calls, search, outcome])
+
+  const selection = useBulkSelection(filtered.map((c) => c.id))
 
   return (
     <PageTransition>
@@ -84,11 +89,26 @@ export default function AdminCalls() {
               </span>
             </div>
 
+            <BulkActionBar
+              count={selection.count}
+              noun="calls"
+              onClear={selection.clear}
+              deleteHint="Bulk delete needs a backend endpoint @backend is adding — wiring follows the contract."
+            />
+
             <div className="surface overflow-hidden">
               <div className="hidden overflow-x-auto md:block">
                 <table className="w-full min-w-[720px] text-sm">
                   <thead>
                     <tr className="border-b border-line text-left text-2xs text-fg-muted">
+                      <th className="w-10 px-3 py-2.5">
+                        <SelectCheckbox
+                          checked={selection.allChecked}
+                          indeterminate={selection.someChecked}
+                          onChange={selection.toggleAll}
+                          label="Select all calls"
+                        />
+                      </th>
                       <th className="px-5 py-2.5 font-medium">When</th>
                       <th className="px-3 py-2.5 font-medium">Lead</th>
                       <th className="px-3 py-2.5 font-medium">Phone</th>
@@ -100,6 +120,13 @@ export default function AdminCalls() {
                   <tbody>
                     {filtered.map((c) => (
                       <tr key={c.id} className="border-b border-line last:border-0 hover:bg-white/[0.02]">
+                        <td className="px-3 py-3">
+                          <SelectCheckbox
+                            checked={selection.selected.has(c.id)}
+                            onChange={() => selection.toggle(c.id)}
+                            label={`Select call with ${c.leadName || c.phone || c.id}`}
+                          />
+                        </td>
                         <td className="px-5 py-3 text-xs tabular text-fg-muted">{fmtWhen(c.startedAt)}</td>
                         <td className="px-3 py-3 font-medium text-fg">{c.leadName || '—'}</td>
                         <td className="px-3 py-3 tabular text-fg-secondary">{c.phone || '—'}</td>
@@ -124,8 +151,24 @@ export default function AdminCalls() {
                 </table>
               </div>
               <div className="space-y-2 p-3 md:hidden">
+                <div className="flex items-center gap-2 px-1">
+                  <SelectCheckbox
+                    checked={selection.allChecked}
+                    indeterminate={selection.someChecked}
+                    onChange={selection.toggleAll}
+                    label="Select all calls"
+                  />
+                  <span className="text-2xs text-fg-muted">Select all</span>
+                </div>
                 {filtered.map((c) => (
                   <div key={c.id} className="rounded-md border border-line bg-surface-1 p-3">
+                    <div className="mb-2">
+                      <SelectCheckbox
+                        checked={selection.selected.has(c.id)}
+                        onChange={() => selection.toggle(c.id)}
+                        label={`Select call with ${c.leadName || c.phone || c.id}`}
+                      />
+                    </div>
                     <div className="flex items-center justify-between gap-2">
                       <div className="font-medium text-fg">{c.leadName || '—'}</div>
                       <StatusBadge tone={callHistoryOutcomeTone(c.outcome)}>

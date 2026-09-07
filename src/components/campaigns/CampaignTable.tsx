@@ -9,11 +9,22 @@ import { Reveal, Stagger } from '@/components/motion/Reveal'
 import { ProgressBar } from '@/components/ui/ProgressBar'
 import { Sparkline } from '@/components/ui/Sparkline'
 import { CampaignStatus } from './CampaignStatus'
+import { SelectCheckbox } from '@/components/ui/SelectCheckbox'
+
+export interface CampaignSelection {
+  selected: ReadonlySet<string>
+  toggle: (id: string) => void
+  allChecked: boolean
+  someChecked: boolean
+  toggleAll: () => void
+}
 
 export interface CampaignTableProps {
   campaigns: OfferCampaign[]
   zone?: 'client' | 'admin'
   className?: string
+  /** Optional bulk-selection state — renders a checkbox column (admin lists). */
+  selection?: CampaignSelection
 }
 
 const progressTone = (c: OfferCampaign) =>
@@ -29,7 +40,17 @@ function Th({ children, align = 'left', className }: { children: React.ReactNode
   )
 }
 
-const Row = memo(function Row({ campaign, onOpen }: { campaign: OfferCampaign; onOpen: () => void }) {
+const Row = memo(function Row({
+  campaign,
+  onOpen,
+  selected,
+  onToggle,
+}: {
+  campaign: OfferCampaign
+  onOpen: () => void
+  selected?: boolean
+  onToggle?: (id: string) => void
+}) {
   const { metrics, budget } = campaign
 
   return (
@@ -43,8 +64,15 @@ const Row = memo(function Row({ campaign, onOpen }: { campaign: OfferCampaign; o
       className="group interactive ring-focus cursor-pointer border-t border-line outline-none hover:bg-white/[0.025] focus-visible:bg-white/[0.03]"
     >
       <td className={cell}>
-        <div className="truncate text-sm font-medium text-fg">{campaign.name}</div>
-        <div className="truncate text-xs text-fg-muted">{campaign.targetAudience}</div>
+        <div className="flex items-center gap-2.5">
+          {onToggle ? (
+            <SelectCheckbox checked={!!selected} onChange={() => onToggle(campaign.id)} label={`Select ${campaign.name}`} />
+          ) : null}
+          <div className="min-w-0">
+            <div className="truncate text-sm font-medium text-fg">{campaign.name}</div>
+            <div className="truncate text-xs text-fg-muted">{campaign.targetAudience}</div>
+          </div>
+        </div>
       </td>
       <td className={cell}>
         <CampaignStatus status={campaign.status} />
@@ -80,10 +108,27 @@ const Row = memo(function Row({ campaign, onOpen }: { campaign: OfferCampaign; o
   )
 })
 
-const CardRow = memo(function CardRow({ campaign, onOpen }: { campaign: OfferCampaign; onOpen: () => void }) {
+const CardRow = memo(function CardRow({
+  campaign,
+  onOpen,
+  selected,
+  onToggle,
+}: {
+  campaign: OfferCampaign
+  onOpen: () => void
+  selected?: boolean
+  onToggle?: (id: string) => void
+}) {
   const { metrics, budget } = campaign
   return (
     <Reveal as="li">
+      <div className="flex items-center gap-2 px-4 pt-3">
+        {onToggle ? (
+          <SelectCheckbox checked={!!selected} onChange={() => onToggle(campaign.id)} label={`Select ${campaign.name}`} />
+        ) : (
+          <span className="size-4" />
+        )}
+      </div>
       <button
         type="button"
         onClick={onOpen}
@@ -121,7 +166,7 @@ const CardRow = memo(function CardRow({ campaign, onOpen }: { campaign: OfferCam
   )
 })
 
-export function CampaignTable({ campaigns, zone = 'client', className }: CampaignTableProps) {
+export function CampaignTable({ campaigns, zone = 'client', className, selection }: CampaignTableProps) {
   const navigate = useNavigate()
   const isWide = useIsWide()
   const open = (id: string) => navigate(`/${zone}/campaigns/${id}`)
@@ -131,7 +176,13 @@ export function CampaignTable({ campaigns, zone = 'client', className }: Campaig
       <div className={cn('surface overflow-hidden', className)}>
         <Stagger as="ul" stagger={0.04} className="divide-y divide-line">
           {campaigns.map((c) => (
-            <CardRow key={c.id} campaign={c} onOpen={() => open(c.id)} />
+            <CardRow
+              key={c.id}
+              campaign={c}
+              onOpen={() => open(c.id)}
+              selected={selection?.selected.has(c.id)}
+              onToggle={selection?.toggle}
+            />
           ))}
         </Stagger>
       </div>
@@ -156,7 +207,19 @@ export function CampaignTable({ campaigns, zone = 'client', className }: Campaig
           </colgroup>
           <thead>
             <tr>
-              <Th>OfferCampaign</Th>
+              <Th>
+                <span className="inline-flex items-center gap-2.5">
+                  {selection ? (
+                    <SelectCheckbox
+                      checked={selection.allChecked}
+                      indeterminate={selection.someChecked}
+                      onChange={selection.toggleAll}
+                      label="Select all campaigns"
+                    />
+                  ) : null}
+                  OfferCampaign
+                </span>
+              </Th>
               <Th>Status</Th>
               <Th align="right">Leads</Th>
               <Th align="right">Calls</Th>
@@ -170,7 +233,13 @@ export function CampaignTable({ campaigns, zone = 'client', className }: Campaig
           </thead>
           <Stagger as="tbody" stagger={0.03}>
             {campaigns.map((c) => (
-              <Row key={c.id} campaign={c} onOpen={() => open(c.id)} />
+              <Row
+                key={c.id}
+                campaign={c}
+                onOpen={() => open(c.id)}
+                selected={selection?.selected.has(c.id)}
+                onToggle={selection?.toggle}
+              />
             ))}
           </Stagger>
         </table>

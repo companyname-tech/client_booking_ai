@@ -953,6 +953,31 @@ export const httpRepository = {
   async deleteLead(leadId: string): Promise<void> {
     await apiClient.delete(`/leads/${leadId}`)
   },
+  async bulkDeleteLeads(leadIds: string[]): Promise<{ affected: number }> {
+    if (leadIds.length === 0) return { affected: 0 }
+    const res = await apiClient.post<{ action?: string; affected?: number }>('/leads/bulk', {
+      action: 'delete',
+      lead_ids: leadIds,
+      changed_by: 'admin',
+    })
+    return { affected: res?.affected ?? 0 }
+  },
+  async deleteCampaign(offerId: string): Promise<void> {
+    await apiClient.delete(`/offers/${offerId}`)
+  },
+  async bulkDeleteCampaigns(offerIds: string[]): Promise<{ affected: number; failed: number }> {
+    let affected = 0
+    let failed = 0
+    for (const id of offerIds) {
+      try {
+        await apiClient.delete(`/offers/${id}`)
+        affected += 1
+      } catch {
+        failed += 1
+      }
+    }
+    return { affected, failed }
+  },
   async dialLead(leadId: string, offerId = ''): Promise<{ callSid: string; to: string }> {
     const res = await apiClient.post<{ call_sid?: string; to?: string }>('/twilio/dial', {
       lead_id: leadId,

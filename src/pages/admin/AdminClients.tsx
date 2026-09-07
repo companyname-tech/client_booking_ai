@@ -11,6 +11,9 @@ import { Input } from '@/components/ui/Input'
 import { LoadingState } from '@/components/ui/LoadingState'
 import { ErrorState } from '@/components/ui/ErrorState'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { SelectCheckbox } from '@/components/ui/SelectCheckbox'
+import { BulkActionBar } from '@/components/ui/BulkActionBar'
+import { useBulkSelection } from '@/hooks/useBulkSelection'
 import { ClientFormModal } from '@/components/admin/ClientFormModal'
 import type { Client } from '@/types'
 
@@ -41,6 +44,8 @@ export default function AdminClients() {
   const pages = Math.max(1, Math.ceil(total / PAGE_SIZE))
   const campaignCount = (clientId: string) => (campaigns ?? []).filter((c) => c.clientId === clientId).length
 
+  const selection = useBulkSelection(clients.map((c) => c.id))
+
   return (
     <PageTransition>
       <PageContainer className="space-y-6">
@@ -64,6 +69,12 @@ export default function AdminClients() {
           />
           <Button variant="ghost" onClick={reload}>Refresh</Button>
         </div>
+        <BulkActionBar
+          count={selection.count}
+          noun="clients"
+          onClear={selection.clear}
+          deleteHint="Client delete needs a backend endpoint @backend is adding — wiring follows the contract."
+        />
         {loading ? (
           <LoadingState rows={6} />
         ) : error ? (
@@ -76,6 +87,14 @@ export default function AdminClients() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-line text-left text-2xs text-fg-muted">
+                    <th className="w-10 px-3 py-2.5">
+                      <SelectCheckbox
+                        checked={selection.allChecked}
+                        indeterminate={selection.someChecked}
+                        onChange={selection.toggleAll}
+                        label="Select all clients on this page"
+                      />
+                    </th>
                     <th className="px-5 py-2.5">Client</th>
                     <th className="px-3 py-2.5">Contact</th>
                     <th className="px-3 py-2.5">Plan</th>
@@ -91,6 +110,13 @@ export default function AdminClients() {
                       className="interactive cursor-pointer border-b border-line last:border-0 hover:bg-white/[0.03]"
                       onClick={() => setModal({ open: true, client })}
                     >
+                      <td className="px-3 py-3">
+                        <SelectCheckbox
+                          checked={selection.selected.has(client.id)}
+                          onChange={() => selection.toggle(client.id)}
+                          label={`Select ${client.name}`}
+                        />
+                      </td>
                       <td className="px-5 py-3">
                         <div className="flex items-center gap-3">
                           <Avatar name={client.name} size="md" className="rounded-md" />

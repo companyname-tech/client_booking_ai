@@ -12,6 +12,10 @@ import { LoadingState } from '@/components/ui/LoadingState'
 import { ErrorState } from '@/components/ui/ErrorState'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { DetailDrawer } from '@/components/ui/DetailDrawer'
+import { SelectCheckbox } from '@/components/ui/SelectCheckbox'
+import { BulkActionBar } from '@/components/ui/BulkActionBar'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
+import { useBulkSelection } from '@/hooks/useBulkSelection'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { LeadScore } from '@/components/leads/LeadScore'
 import { LeadStatusBadge } from '@/components/leads/LeadStatusBadge'
@@ -392,6 +396,8 @@ export default function AdminLeads() {
   const [adding, setAdding] = useState(false)
   const [actionMsg, setActionMsg] = useState('')
   const [busyId, setBusyId] = useState<string | null>(null)
+  const [confirmBulk, setConfirmBulk] = useState(false)
+  const [bulkBusy, setBulkBusy] = useState(false)
 
   const runAction = async (lead: AdminLead, action: LeadAction) => {
     setBusyId(lead.id)
@@ -458,6 +464,27 @@ export default function AdminLeads() {
   const safePage = Math.min(page, totalPages)
   const slice = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE)
 
+  const selection = useBulkSelection(filtered.map((l) => l.id))
+
+  const runBulkDelete = async () => {
+    const ids = filtered.filter((l) => selection.selected.has(l.id)).map((l) => l.id)
+    if (ids.length === 0) return
+    setBulkBusy(true)
+    try {
+      const res = await repo.bulkDeleteLeads(ids)
+      setActionMsg(`Deleted ${res.affected ?? ids.length} lead${ids.length === 1 ? '' : 's'}`)
+      selection.clear()
+      setConfirmBulk(false)
+      setPage(1)
+      reload()
+    } catch (e) {
+      setActionMsg(`Bulk delete failed: ${e instanceof Error ? e.message : String(e)}`)
+      setConfirmBulk(false)
+    } finally {
+      setBulkBusy(false)
+    }
+  }
+
   const onSort = (key: SortKey) => {
     setSort((prev) => (prev.key === key ? { key, dir: prev.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: 'asc' }))
     setPage(1)
@@ -491,6 +518,14 @@ export default function AdminLeads() {
           </Button>
         </div>
 
+        <BulkActionBar
+          count={selection.count}
+          noun="leads"
+          onClear={selection.clear}
+          onDelete={() => setConfirmBulk(true)}
+          busy={bulkBusy}
+        />
+
         {loading ? (
           <LoadingState rows={8} />
         ) : error ? (
@@ -511,6 +546,14 @@ export default function AdminLeads() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-line text-left text-2xs text-fg-muted">
+                      <th className="w-10 px-3 py-2.5">
+                        <SelectCheckbox
+                          checked={selection.allChecked}
+                          indeterminate={selection.someChecked}
+                          onChange={selection.toggleAll}
+                          label="Select all leads"
+                        />
+                      </th>
                       <SortHeader label="Campaign" sortKey="campaign" current={sort.key} dir={sort.dir} onSort={onSort} />
                       <SortHeader label="Lead" sortKey="name" current={sort.key} dir={sort.dir} onSort={onSort} />
                       <th className="px-3 py-2.5 font-medium">Contact</th>
@@ -524,6 +567,13 @@ export default function AdminLeads() {
                   <tbody>
                     {slice.map((lead) => (
                       <tr key={lead.id} className="interactive border-b border-line last:border-0 hover:bg-white/[0.02]">
+                        <td className="px-3 py-3">
+                          <SelectCheckbox
+                            checked={selection.selected.has(lead.id)}
+                            onChange={() => selection.toggle(lead.id)}
+                            label={`Select ${lead.name}`}
+                          />
+                        </td>
                         <td className="max-w-[160px] truncate px-3 py-3 text-fg-secondary">{lead.campaignName || '—'}</td>
                         <td className="px-3 py-3">
                           <div className="flex items-center gap-2.5">
@@ -562,8 +612,24 @@ export default function AdminLeads() {
               </div>
 
               <div className="space-y-2 p-3 md:hidden">
+                <div className="flex items-center gap-2 px-1">
+                  <SelectCheckbox
+                    checked={selection.allChecked}
+                    indeterminate={selection.someChecked}
+                    onChange={selection.toggleAll}
+                    label="Select all leads"
+                  />
+                  <span className="text-2xs text-fg-muted">Select all</span>
+                </div>
                 {slice.map((lead) => (
                   <div key={lead.id} className="rounded-md border border-line bg-surface-1 p-3">
+                    <div className="mb-2">
+                      <SelectCheckbox
+                        checked={selection.selected.has(lead.id)}
+                        onChange={() => selection.toggle(lead.id)}
+                        label={`Select ${lead.name}`}
+                      />
+                    </div>
                     <button
                       type="button"
                       onClick={() => setPreview(lead)}
@@ -612,6 +678,14 @@ export default function AdminLeads() {
 
         <AddLeadModal open={adding} onClose={() => setAdding(false)} onAdded={reload} />
         <LeadExtraDrawer lead={preview} open={!!preview} onClose={() => setPreview(null)} onUpdate={reload} />
+        <ConfirmDialog
+          open={confirmBulk}
+          onClose={() => setConfirmBulk(false)}
+          title={`Delete ${selection.count} selected lead${selection.count === 1 ? '' : 's'}?`}
+          body={`This permanently deletes ${selection.count} lead record${selection.count === 1 ? '' : 's'} from the platform-wide inventory. This cannot be undone.`}
+          busy={bulkBusy}
+          onConfirm={runBulkDelete}
+        />
       </PageContainer>
     </PageTransition>
   )

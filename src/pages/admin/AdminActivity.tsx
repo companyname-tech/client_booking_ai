@@ -7,11 +7,14 @@ import { ErrorState } from '@/components/ui/ErrorState'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { ActivityFilters, useActivityFilters } from '@/components/admin/ActivityFilters'
 import { ActivityTimeline } from '@/components/admin/ActivityTimeline'
+import { BulkActionBar } from '@/components/ui/BulkActionBar'
+import { useBulkSelection } from '@/hooks/useBulkSelection'
 
 export default function AdminActivity() {
   const { data, loading, error, reload } = useAsyncData(() => repo.getActivityLog({ limit: 200 }))
   const entries = data ?? []
   const { filters, setFilters, filtered } = useActivityFilters(entries)
+  const selection = useBulkSelection(filtered.map((e) => e.id))
 
   return (
     <PageTransition>
@@ -34,11 +37,17 @@ export default function AdminActivity() {
         ) : (
           <>
             <ActivityFilters value={filters} onChange={setFilters} total={filtered.length} />
+            <BulkActionBar
+              count={selection.count}
+              noun="events"
+              onClear={selection.clear}
+              deleteHint="Activity delete needs a backend endpoint @backend is adding — wiring follows the contract."
+            />
             {filtered.length === 0 ? (
               <EmptyState title="No matching events" description="Try a different search or stream filter." />
             ) : (
               <div className="surface p-4">
-                <ActivityTimeline entries={filtered} />
+                <ActivityTimeline entries={filtered} selection={selection} />
               </div>
             )}
           </>

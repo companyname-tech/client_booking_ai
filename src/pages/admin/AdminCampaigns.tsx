@@ -7,6 +7,9 @@ import { PageTransition } from '@/components/motion/PageTransition'
 import { PageContainer, PageHeader, WorkspaceEyebrow } from '@/components/layout/PageHeader'
 import { Input } from '@/components/ui/Input'
 import { CampaignTable } from '@/components/campaigns/CampaignTable'
+import { BulkActionBar } from '@/components/ui/BulkActionBar'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
+import { useBulkSelection } from '@/hooks/useBulkSelection'
 import { Reveal } from '@/components/motion/Reveal'
 import { cn } from '@/lib/utils'
 import { LoadingState } from '@/components/ui/LoadingState'
@@ -54,6 +57,34 @@ export default function AdminCampaigns() {
     return list
   }, [campaigns, metas, search, filter])
 
+  const selection = useBulkSelection(filtered.map((c) => c.id))
+  const [confirmBulk, setConfirmBulk] = useState(false)
+  const [bulkBusy, setBulkBusy] = useState(false)
+  const [bulkNotice, setBulkNotice] = useState('')
+
+  const runBulkDelete = async () => {
+    const ids = filtered.filter((c) => selection.selected.has(c.id)).map((c) => c.id)
+    if (ids.length === 0) return
+    setBulkBusy(true)
+    setBulkNotice('')
+    try {
+      const res = await repo.bulkDeleteCampaigns(ids)
+      setBulkNotice(
+        res.failed
+          ? `Deleted ${res.affected}, ${res.failed} failed`
+          : `Deleted ${res.affected} campaign${res.affected === 1 ? '' : 's'}`,
+      )
+      selection.clear()
+      setConfirmBulk(false)
+      void reload()
+    } catch (e) {
+      setBulkNotice(`Bulk delete failed: ${e instanceof Error ? e.message : String(e)}`)
+      setConfirmBulk(false)
+    } finally {
+      setBulkBusy(false)
+    }
+  }
+
   const submit = async () => {
     if (!form.name.trim()) return
     setSaving(true)
@@ -93,13 +124,21 @@ export default function AdminCampaigns() {
             </Button>
           </div>
         </div>
+        <BulkActionBar
+          count={selection.count}
+          noun="campaigns"
+          onClear={selection.clear}
+          onDelete={() => setConfirmBulk(true)}
+          busy={bulkBusy}
+        />
+        {bulkNotice && <p aria-live="polite" className="text-xs text-fg-secondary">{bulkNotice}</p>}
         {loading ? (
           <LoadingState rows={5} />
         ) : error ? (
           <ErrorState message={error} onRetry={reload} />
         ) : (
           <Reveal>
-            <CampaignTable campaigns={filtered} zone="admin" />
+            <CampaignTable campaigns={filtered} zone="admin" selection={selection} />
           </Reveal>
         )}
         <p className="text-xs text-fg-muted">
@@ -154,6 +193,14 @@ export default function AdminCampaigns() {
             </div>
           </form>
         </Modal>
+        <ConfirmDialog
+          open={confirmBulk}
+          onClose={() => setConfirmBulk(false)}
+          title={`Delete ${selection.count} selected campaign${selection.count === 1 ? '' : 's'}?`}
+          body={`This permanently deletes ${selection.count} campaign${selection.count === 1 ? '' : 's'} and their associated agents, leads and recordings. This cannot be undone.`}
+          busy={bulkBusy}
+          onConfirm={runBulkDelete}
+        />
       </PageContainer>
     </PageTransition>
   )
