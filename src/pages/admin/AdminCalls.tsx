@@ -11,6 +11,7 @@ import { EmptyState } from '@/components/ui/EmptyState'
 import { SelectCheckbox } from '@/components/ui/SelectCheckbox'
 import { BulkActionBar } from '@/components/ui/BulkActionBar'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
+import { RecordingAudio } from '@/components/recordings/RecordingAudio'
 import { useBulkSelection } from '@/hooks/useBulkSelection'
 import { Input } from '@/components/ui/Input'
 import { StatusBadge } from '@/components/ui/StatusBadge'
@@ -169,7 +170,7 @@ export default function AdminCalls() {
                         </td>
                         <td className="px-5 py-3">
                           {c.audioUrl ? (
-                            <audio controls preload="none" src={c.audioUrl} className="h-8 max-w-[280px]" />
+                            <RecordingAudio src={c.audioUrl} rowKey={c.id} className="max-w-[280px]" />
                           ) : (
                             <span className="text-fg-muted">—</span>
                           )}
@@ -212,7 +213,7 @@ export default function AdminCalls() {
                       <span>{c.durationSec ? formatDuration(c.durationSec) : '—'}</span>
                     </div>
                     {c.audioUrl && (
-                      <audio controls preload="none" src={c.audioUrl} className="mt-2 h-8 w-full" />
+                      <RecordingAudio src={c.audioUrl} rowKey={c.id} className="mt-2 w-full" />
                     )}
                   </div>
                 ))}

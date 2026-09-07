@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import type { CallHistoryEntry } from '@/types'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { Input } from '@/components/ui/Input'
+import { RecordingAudio } from '@/components/recordings/RecordingAudio'
 import { callOutcomeLabel, fmtDuration, fmtWhen } from '@/lib/callHistory'
 
 function newestFirst(recordings: CallHistoryEntry[]): CallHistoryEntry[] {
@@ -94,7 +95,7 @@ export function CallHistoryList({ recordings }: { recordings: CallHistoryEntry[]
                   <td className="whitespace-nowrap px-3 py-2 text-fg-secondary">{fmtDuration(rec.durationSec)}</td>
                   <td className="px-3 py-2">
                     {rec.audioUrl ? (
-                      <audio controls preload="none" src={rec.audioUrl} className="h-8 max-w-[280px]" />
+                      <RecordingAudio src={rec.audioUrl} rowKey={rec.id} className="max-w-[280px]" />
                     ) : (
                       <span className="text-fg-faint">—</span>
                     )}
