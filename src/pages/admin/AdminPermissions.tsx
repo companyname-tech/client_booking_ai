@@ -33,18 +33,24 @@ function RoleBadge({ role }: { role: AdminUser['role'] }) {
   )
 }
 
-/** Section chips + action count for a role-admin grant set. */
+/** Section chips + action count for a grant set (admin + client_user). */
 function AccessSummary({ user, catalog }: { user: AdminUser; catalog: PermissionCatalog | null }) {
   if (user.role === 'super_admin') {
     return <span className="text-xs text-fg-secondary">Full access — every area</span>
   }
-  if (user.role !== 'admin') {
+  const isClient = user.role === 'client_user'
+  const grants = user.permissions ?? []
+  if (isClient && grants.length === 0) {
     const n = user.clientIds.length
-    return <span className="text-xs text-fg-muted">{n === 0 ? 'No client access' : `${n} client${n === 1 ? '' : 's'} (workspace)`}</span>
+    return (
+      <span className="text-xs text-fg-muted">
+        {n === 0 ? 'No client access' : `${n} client${n === 1 ? '' : 's'} (workspace)`} — full access
+      </span>
+    )
   }
   const sections = (catalog?.permissions ?? []).filter((p): p is PermissionDescriptor => p.kind === 'section')
-  const grantedSections = sections.filter((s) => (user.permissions ?? []).includes(s.key))
-  const actionCount = (user.permissions ?? []).filter((k) => !sections.some((s) => s.key === k)).length
+  const grantedSections = sections.filter((s) => grants.includes(s.key))
+  const actionCount = grants.filter((k) => !sections.some((s) => s.key === k)).length
   if (grantedSections.length === 0) {
     return (
       <span className="text-xs text-fg-muted">

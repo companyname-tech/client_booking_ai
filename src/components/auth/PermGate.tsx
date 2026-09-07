@@ -25,6 +25,21 @@ export function firstAllowedAdminPath(session: AccessSession | null): string | n
   return null
 }
 
+/** First client-workspace path a restricted session may open (fallback). */
+export function firstAllowedClientPath(session: AccessSession | null): string | null {
+  const order: Array<[string, string | undefined]> = [
+    ['/client/overview', undefined],
+    ['/client/campaigns', 'campaigns.view'],
+    ['/client/recordings', 'calls.view'],
+    ['/client/ai', 'ai_training.view'],
+    ['/client/settings', 'settings.view'],
+  ]
+  for (const [to, perm] of order) {
+    if (canUse(session, perm)) return to
+  }
+  return null
+}
+
 function NoAccess() {
   const location = useLocation()
   return (
@@ -45,17 +60,24 @@ function NoAccess() {
 }
 
 /**
- * Route-level permission gate for the /admin console. super_admin and
- * client_user sessions pass through unchanged (client_user keeps its legacy
- * behaviour — the BE still enforces the admin-only families). A role "admin"
- * session is redirected to its first allowed screen when it lacks `perm`.
+ * Route-level permission gate for console areas. super_admin and
+ * unrestricted client_user (no stored grants → legacy full scoped access)
+ * pass through. Role "admin" and client_user sessions WITH grants are
+ * redirected to their first allowed screen when they lack `perm`; NoAccess
+ * when nothing is reachable.
  */
 export function PermGate({ perm, children }: { perm?: string; children: ReactNode }) {
   const { session } = useAuth()
+  const location = useLocation()
   if (!session) return <Navigate to="/login" replace />
-  if (session.role !== 'admin') return <>{children}</>
+  if (session.role === 'super_admin') return <>{children}</>
+  const perms = session.permissions ?? []
+  const restrictedClientUser = session.role === 'client_user' && perms.length > 0
+  if (session.role !== 'admin' && !restrictedClientUser) return <>{children}</>
   if (canUse(session, perm)) return <>{children}</>
-  const fallback = firstAllowedAdminPath(session)
+  const fallback = location.pathname.startsWith('/admin')
+    ? firstAllowedAdminPath(session)
+    : firstAllowedClientPath(session)
   if (fallback) return <Navigate to={fallback} replace />
   return <NoAccess />
 }

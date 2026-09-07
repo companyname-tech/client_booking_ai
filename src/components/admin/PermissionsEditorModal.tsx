@@ -56,7 +56,9 @@ export function PermissionsEditorModal({ open, user, catalog, onClose, onSaved }
   useEffect(() => {
     if (!open || !user) return
     setRole(user.role)
-    setChecked(user.role === 'admin' ? [...(user.permissions ?? [])] : [])
+    // Grants are stored for role "admin" AND "client_user" (client_user:
+    // empty list = full scoped access, non-empty = restricted to those areas).
+    setChecked(user.role === 'super_admin' ? [] : [...(user.permissions ?? [])])
     setError('')
   }, [open, user])
 
@@ -85,8 +87,11 @@ export function PermissionsEditorModal({ open, user, catalog, onClose, onSaved }
     setError('')
     try {
       const patch: Parameters<typeof repo.updateUser>[1] = { role }
-      // Grants are only stored for role "admin"; other roles clear them.
-      patch.permissions = role === 'admin' ? checked : []
+      // Grants are stored for role "admin" AND "client_user". For a client
+      // user an empty list means FULL scoped access (legacy) — it restricts
+      // them only once a selection is saved. super_admin clears them.
+      patch.permissions =
+        role === 'admin' || role === 'client_user' ? checked : []
       const saved = await repo.updateUser(user.id, patch)
       onSaved(saved)
       onClose()
@@ -98,7 +103,7 @@ export function PermissionsEditorModal({ open, user, catalog, onClose, onSaved }
   }
 
   const selected = (key: string) => checked.includes(key)
-  const isAdminRole = role === 'admin'
+  const grantableRole = role === 'admin' || role === 'client_user'
   const roleHint = (catalog?.roles ?? []).find((r) => r.value === role)?.description
 
   return (
@@ -131,15 +136,24 @@ export function PermissionsEditorModal({ open, user, catalog, onClose, onSaved }
           <p className="text-2xs text-fg-muted">{roleHint}</p>
         </FieldGroup>
 
-        {!isAdminRole && (
+        {role === 'super_admin' && (
           <div className="rounded-md border border-line-strong bg-surface-2 px-3 py-2.5 text-xs text-fg-secondary">
-            {role === 'super_admin'
-              ? 'Super admins have full access to every area — permissions are role-based and no individual grants apply.'
-              : 'Client users access the client workspace scoped to their assigned clients (managed on the Users screen). Console grants do not apply to this role.'}
+            Super admins have full access to every area — permissions are role-based and no individual grants apply.
           </div>
         )}
 
-        {isAdminRole && (
+        {role === 'client_user' && (
+          <div className="rounded-md border border-line-strong bg-surface-2 px-3 py-2.5 text-xs text-fg-secondary">
+            Client-workspace account — scoped to the assigned clients (managed on the Users screen; contact data is
+            masked).{' '}
+            {checked.length === 0
+              ? 'No grants selected: this user keeps full access to their assigned clients.'
+              : 'Access is limited to the granted console areas within their assigned clients.'}{' '}
+            Grants below apply inside that scope.
+          </div>
+        )}
+
+        {grantableRole && (
           <div className="space-y-3">
             {groups.length === 0 && (
               <p className="text-xs text-fg-muted">Permission catalog unavailable.</p>
@@ -182,7 +196,9 @@ export function PermissionsEditorModal({ open, user, catalog, onClose, onSaved }
               )
             })}
             <p className="text-2xs text-fg-faint">
-              An action grant always includes its section view. Users without any grant can't open console areas.
+              {role === 'client_user'
+                ? 'An action grant always includes its section view. No grants = full access to the assigned clients.'
+                : "An action grant always includes its section view. Users without any grant can't open console areas."}
             </p>
           </div>
         )}

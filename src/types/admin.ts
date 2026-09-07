@@ -205,9 +205,13 @@ export interface AdminUser {
   name: string
   email: string
   role: AdminUserRole
-  /** Client workspaces a client_user is scoped to; [] for super_admin. */
+  /** Client workspaces a client_user is scoped to; [] for other roles. */
   clientIds: string[]
-  /** Console grants for role "admin" (catalog keys; [] for other roles). */
+  /**
+   * Console grants (catalog keys). Role "admin" AND "client_user". For a
+   * client_user an empty list means FULL access within the assigned clients
+   * (legacy); a non-empty list restricts them to those console areas.
+   */
   permissions: string[]
   active: boolean
   tokenVersion: number
@@ -221,7 +225,10 @@ export interface AdminUserCreateInput {
   password: string
   role: AdminUserRole
   clientIds: string[]
-  /** Optional console grants for role "admin". */
+  /**
+   * Optional console grants (role "admin" or "client_user"; for client_user
+   * an empty list = full access within the assigned clients).
+   */
   permissions?: string[]
 }
 
@@ -233,7 +240,8 @@ export interface AdminUserUpdateInput {
   password?: string
   role?: AdminUserRole
   clientIds?: string[]
-  /** Replace the whole console grant set (role "admin" only). */
+  /** Replace the whole console grant set (roles "admin" / "client_user"; for
+   *  client_user [] = full access within the assigned clients). */
   permissions?: string[]
   /** false soft-disables the user and revokes their JWTs. */
   active?: boolean

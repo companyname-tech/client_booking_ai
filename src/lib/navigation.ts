@@ -45,16 +45,16 @@ export const clientNavigation: NavSection[] = [
     label: 'Command Center',
     items: [
       { label: 'Overview', to: '/client/overview', icon: LayoutGrid },
-      { label: 'Campaigns', to: '/client/campaigns', icon: Megaphone },
+      { label: 'Campaigns', to: '/client/campaigns', icon: Megaphone, perm: 'campaigns.view' },
     ],
   },
   {
     label: 'AI',
     items: [
-      { label: 'AI Command Center', to: '/client/ai', icon: Bot, badge: 'Live', badgeTone: 'accent' },
-      { label: 'Conversations', to: '/client/ai/conversations', icon: MessageSquare },
-      { label: 'Learning', to: '/client/ai/learning', icon: GraduationCap },
-      { label: 'Performance', to: '/client/ai/performance', icon: Activity },
+      { label: 'AI Command Center', to: '/client/ai', icon: Bot, badge: 'Live', badgeTone: 'accent', perm: 'ai_training.view' },
+      { label: 'Conversations', to: '/client/ai/conversations', icon: MessageSquare, perm: 'ai_training.view' },
+      { label: 'Learning', to: '/client/ai/learning', icon: GraduationCap, perm: 'ai_training.view' },
+      { label: 'Performance', to: '/client/ai/performance', icon: Activity, perm: 'ai_training.view' },
     ],
   },
   {
@@ -64,7 +64,7 @@ export const clientNavigation: NavSection[] = [
   {
     label: 'Operations',
     items: [
-      { label: 'Calls & Recordings', to: '/client/recordings', icon: Phone },
+      { label: 'Calls & Recordings', to: '/client/recordings', icon: Phone, perm: 'calls.view' },
       { label: 'Calendar', to: '/client/calendar', icon: Calendar },
       { label: 'Bookings', to: '/client/bookings', icon: Calendar },
       { label: 'Downloads', to: '/client/downloads', icon: Download },
@@ -73,7 +73,7 @@ export const clientNavigation: NavSection[] = [
   {
     label: 'Management',
     items: [
-      { label: 'Settings', to: '/client/settings', icon: Settings },
+      { label: 'Settings', to: '/client/settings', icon: Settings, perm: 'settings.view' },
     ],
   },
 ]
@@ -107,10 +107,21 @@ export const adminNavigation: NavSection[] = [
   },
 ]
 
+/**
+ * Navigation for a zone, filtered by the session's grants when the session is
+ * permission-restricted: role "admin" in the admin zone (deny-by-default) and
+ * client_user sessions WITH stored grants in the client zone (empty grants =
+ * legacy full scoped access). super_admin and unrestricted client_user see
+ * everything. Items without a `perm` (workspace internals / overview) stay
+ * visible for restricted client_user sessions that hold any console view.
+ */
 export function navigationFor(zone: Zone, session?: import('@/lib/permissions').AccessSession | null) {
   const sections = zone === 'admin' ? adminNavigation : clientNavigation
-  if (zone !== 'admin' || session?.role !== 'admin') return sections
-  // Role "admin": show only the console areas the session is granted.
+  const perms = session?.permissions ?? []
+  const restricted =
+    (session?.role === 'admin' && zone === 'admin') ||
+    (session?.role === 'client_user' && zone === 'client' && perms.length > 0)
+  if (!restricted) return sections
   return sections
     .map((section) => ({
       ...section,
