@@ -12,7 +12,6 @@ import { campaignSubRoutes } from './client.routes'
 const AdminOverview = lazy(() => import('@/pages/admin/AdminOverview'))
 const AdminCampaigns = lazy(() => import('@/pages/admin/AdminCampaigns'))
 const AdminCampaignReview = lazy(() => import('@/pages/admin/AdminCampaignReview'))
-const AdminApprovals = lazy(() => import('@/pages/admin/AdminApprovals'))
 const AdminAITraining = lazy(() => import('@/pages/admin/AdminAITraining'))
 const AdminClients = lazy(() => import('@/pages/admin/AdminClients'))
 const AdminClientDetail = lazy(() => import('@/pages/admin/AdminClientDetail'))
@@ -33,7 +32,7 @@ export const adminRoutes = [
       ...campaignSubRoutes.slice(0, 4),
     ],
   },
-  { path: 'approvals', element: <AdminApprovals /> },
+  { path: 'approvals', element: <Navigate to="/admin/campaigns" replace /> },
   { path: 'ai-training', element: <AdminAITraining /> },
   { path: 'clients', element: <AdminClients /> },
   { path: 'clients/:id', element: <AdminClientDetail /> },

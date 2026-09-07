@@ -16,7 +16,13 @@ import { ErrorState } from '@/components/ui/ErrorState'
 
 export default function AdminOverview() {
   const { data, loading, error, reload } = useAsyncData(() =>
-    Promise.all([repo.getSuperAdminUser(), repo.getCampaigns(), repo.getClients(), repo.getAllAdminMeta()]),
+    Promise.all([
+      repo.getSuperAdminUser(),
+      repo.getCampaigns(),
+      repo.getClients(),
+      repo.getAllAdminMeta(),
+      repo.getAdminOverview(),
+    ]),
   )
 
   if (loading) {
@@ -37,16 +43,16 @@ export default function AdminOverview() {
 
   if (!data) return null
 
-  const [user, campaigns, clients, metas] = data
+  const [user, campaigns, clients, metas, overview] = data
   const pending = metas.filter((m) => ['awaiting_approval', 'submitted', 'compliance_review'].includes(m.workflowStatus)).length
 
   const metrics = [
-    { label: 'Pending Review', value: pending, delta: '+2' },
-    { label: 'Active Campaigns', value: campaigns.filter((c) => c.status === 'active').length, delta: '+4' },
-    { label: 'Campaigns Launching', value: metas.filter((m) => m.workflowStatus === 'launching').length, delta: '3' },
-    { label: 'Clients', value: clients.length, delta: '+1' },
-    { label: 'Leads Processing', value: 18492, delta: '+12%' },
-    { label: 'Bookings Today', value: 126, delta: '+8' },
+    { label: 'Pending Review', value: pending },
+    { label: 'Active Campaigns', value: campaigns.filter((c) => c.status === 'active').length },
+    { label: 'Campaigns Launching', value: metas.filter((m) => m.workflowStatus === 'launching').length },
+    { label: 'Clients', value: clients.length },
+    { label: 'Leads Processing', value: overview.leads ?? 0 },
+    { label: 'Bookings Today', value: overview.meetings_booked ?? 0 },
   ]
 
   return (
@@ -57,7 +63,7 @@ export default function AdminOverview() {
           title={`Good morning, ${user.name.split(' ')[0]}`}
           description="Here's what needs your attention."
           actions={
-            <Link to="/admin/approvals">
+            <Link to="/admin/campaigns">
               <Button variant="primary" trailingIcon={<ArrowRight />}>Review queue</Button>
             </Link>
           }
@@ -68,7 +74,6 @@ export default function AdminOverview() {
             <Reveal key={m.label} className="bg-surface-2 p-4 sm:p-5">
               <div className="text-xs text-fg-muted">{m.label}</div>
               <AnimatedNumber value={m.value} format={formatNumber} className="mt-2 text-2xl font-semibold tabular text-fg sm:text-3xl" />
-              <div className="mt-1 text-2xs text-success">{m.delta} this week</div>
             </Reveal>
           ))}
         </Stagger>

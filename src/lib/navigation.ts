@@ -3,7 +3,6 @@ import {
   Activity,
   Bot,
   Building2,
-  CheckCircle2,
   GraduationCap,
   LayoutGrid,
   Megaphone,
@@ -81,7 +80,6 @@ export const adminNavigation: NavSection[] = [
       { label: 'Clients', to: '/admin/clients', icon: Building2 },
       { label: 'Campaigns', to: '/admin/campaigns', icon: Megaphone, badge: 8, badgeTone: 'warning' },
       { label: 'AI Training', to: '/admin/ai-training', icon: GraduationCap },
-      { label: 'Approvals', to: '/admin/approvals', icon: CheckCircle2, badge: 3, badgeTone: 'warning' },
     ],
   },
   {
