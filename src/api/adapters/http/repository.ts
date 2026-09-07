@@ -438,10 +438,10 @@ export const httpRepository = {
     return res?.fields ?? []
   },
   async getRuntimeSettings(): Promise<Record<string, unknown>> {
-    return apiClient.get<Record<string, unknown>>('/settings/runtime')
+    return apiClient.get<Record<string, unknown>>('/settings')
   },
   async saveSettingsSchema(patch: Record<string, unknown>): Promise<void> {
-    await apiClient.put('/settings/runtime', patch)
+    await apiClient.put('/settings', patch)
   },
   async getFishVoices(): Promise<FishVoice[]> {
     const res = await apiClient.get<FishVoicesWire>('/fish-voices')
