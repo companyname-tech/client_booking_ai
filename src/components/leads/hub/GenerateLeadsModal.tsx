@@ -97,11 +97,22 @@ const GEN_SAMPLES: { label: string; text: string }[] = [
 
 const GEN_PLATFORMS: { value: string; label: string; disabled?: boolean; title?: string }[] = [
   { value: 'web', label: 'Web' },
-  { value: 'reddit', label: 'Reddit' },
+  { value: 'linkedin', label: 'LinkedIn' },
   { value: 'facebook', label: 'Facebook' },
   { value: 'instagram', label: 'Instagram' },
+  { value: 'x', label: 'X (Twitter)' },
+  { value: 'google_business', label: 'Google Business/Maps' },
+  { value: 'reddit', label: 'Reddit' },
   { value: 'telegram', label: 'Telegram', disabled: true, title: 'Feature-flagged off' },
 ]
+
+/** Human labels for coverage chips (fall back to the raw platform key). */
+const PLATFORM_LABEL: Record<string, string> = Object.fromEntries(
+  GEN_PLATFORMS.map((p) => [p.value, p.label]),
+)
+
+/** Default scan = every runnable social source (matches the BE default). */
+const DEFAULT_SCAN_PLATFORMS = GEN_PLATFORMS.filter((p) => !p.disabled).map((p) => p.value)
 
 const GEN_CONTACT_TYPES: { value: string; label: string }[] = [
   { value: 'phone', label: 'Phone' },
@@ -153,7 +164,7 @@ export function GenerateLeadsModal({
   const [countryIso, setCountryIso] = useState('')
   const [industry, setIndustry] = useState('')
   const [phoneType, setPhoneType] = useState('')
-  const [platforms, setPlatforms] = useState<string[]>(['web'])
+  const [platforms, setPlatforms] = useState<string[]>(DEFAULT_SCAN_PLATFORMS)
   const [contactTypes, setContactTypes] = useState<string[]>(['phone'])
   const [recencyDays, setRecencyDays] = useState(90)
   const [maxResults, setMaxResults] = useState(20)
@@ -585,7 +596,7 @@ function GenResultBox({ result }: { result: GenResultView }) {
                       c.status !== 'searched' && c.status !== 'unavailable' && c.status !== 'disabled' && 'border-danger/30 bg-danger-soft text-danger',
                     )}
                   >
-                    {c.platform}: {c.status === 'searched' ? `${c.results} results` : c.status}
+                    {PLATFORM_LABEL[c.platform] ?? c.platform}: {c.status === 'searched' ? `${c.results} results` : c.status}
                   </span>
                 ))}
               </div>

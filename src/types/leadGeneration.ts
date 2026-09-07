@@ -45,6 +45,12 @@ export interface SmartSearchRequest {
   country_code?: string
   industry?: string
   phone_type?: string
+  /**
+   * Social sources to scan. Canonical values: 'web', 'reddit', 'linkedin',
+   * 'facebook', 'instagram', 'x', 'google_business' (aliases 'twitter' and
+   * 'google_maps'/'google' are canonicalized server-side). 'telegram' is
+   * feature-flagged off. Omitted → every runnable source is scanned.
+   */
   platforms?: string[]
   contact_types?: string[]
   recency_days?: number
