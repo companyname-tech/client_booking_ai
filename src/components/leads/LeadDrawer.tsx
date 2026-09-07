@@ -2,6 +2,7 @@ import { useEffect, useState, type ChangeEvent } from 'react'
 import type { LeadDetail, LeadStatus } from '@/types'
 import { repo } from '@/api/repository'
 import { DetailDrawer } from '@/components/ui/DetailDrawer'
+import { Select } from '@/components/ui/Select'
 import { LeadScore } from './LeadScore'
 import { LeadStatusBadge } from './LeadStatusBadge'
 import { AILeadAnalysis } from './AILeadAnalysis'
@@ -172,17 +173,14 @@ export function LeadDrawer({
             </div>
             <div>
               <span className="text-fg-muted">Status</span>
-              <select
-                className={inputClass}
+              <Select
                 value={form.status}
-                onChange={(e) => setForm((f) => ({ ...f, status: e.target.value as LeadStatus }))}
-              >
-                {LEAD_STATUSES.map((s) => (
-                  <option key={s} value={s}>
-                    {s.replaceAll('_', ' ')}
-                  </option>
-                ))}
-              </select>
+                onChange={(v) => setForm((f) => ({ ...f, status: v as LeadStatus }))}
+                ariaLabel="Status"
+                placeholder="— Status —"
+                options={LEAD_STATUSES.map((s) => ({ value: s, label: s.replaceAll('_', ' ') }))}
+                className="mt-1 w-full"
+              />
             </div>
             <Button type="submit" variant="primary" size="sm" className="w-full" disabled={saving}>
               {saving ? 'Saving…' : 'Save changes'}

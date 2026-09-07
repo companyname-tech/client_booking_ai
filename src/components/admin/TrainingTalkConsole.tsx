@@ -10,6 +10,7 @@ import {
   TriangleAlert,
 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
+import { Select } from '@/components/ui/Select'
 import { repo } from '@/api/repository'
 import type {
   TrainingCampaignRow,
@@ -396,38 +397,36 @@ export function TrainingTalkConsole({
       <div className="mt-4 grid gap-2 sm:grid-cols-2">
         <label className="block">
           <span className="mb-1.5 block text-xs font-medium text-fg-secondary">Campaign to train</span>
-          <select
+          <Select
             value={campaignId}
-            onChange={(e) => {
-              setCampaignId(e.target.value)
+            onChange={(v) => {
+              setCampaignId(v)
               setResult(null)
             }}
             disabled={inTalk}
-            className="w-full rounded-md border border-line bg-surface-1 px-3 py-2 text-sm text-fg outline-none focus:border-accent"
-          >
-            <option value="">Choose a campaign…</option>
-            {campaigns.map((c) => (
-              <option key={c.offerCampaignId} value={c.offerCampaignId}>
-                {c.title || c.offerCampaignId} — {trainingLabel(c.status)}
-              </option>
-            ))}
-          </select>
+            ariaLabel="Campaign to train"
+            placeholder="Choose a campaign…"
+            options={[
+              { value: '', label: 'Choose a campaign…' },
+              ...campaigns.map((c) => ({
+                value: c.offerCampaignId,
+                label: `${c.title || c.offerCampaignId} — ${trainingLabel(c.status)}`,
+              })),
+            ]}
+            className="w-full"
+          />
         </label>
         <label className="block">
           <span className="mb-1.5 block text-xs font-medium text-fg-secondary">Agent to talk to</span>
-          <select
+          <Select
             value={agentId}
-            onChange={(e) => setAgentId(e.target.value)}
+            onChange={(v) => setAgentId(v)}
             disabled={inTalk}
-            className="w-full rounded-md border border-line bg-surface-1 px-3 py-2 text-sm text-fg outline-none focus:border-accent"
-          >
-            {agents.length === 0 && <option value="">No agents yet</option>}
-            {agents.map((a) => (
-              <option key={a.agentId} value={a.agentId}>
-                {a.name || '(unnamed)'}
-              </option>
-            ))}
-          </select>
+            ariaLabel="Agent to talk to"
+            placeholder={agents.length === 0 ? 'No agents yet' : 'Choose an agent…'}
+            options={agents.map((a) => ({ value: a.agentId, label: a.name || '(unnamed)' }))}
+            className="w-full"
+          />
         </label>
       </div>
 

@@ -1,6 +1,7 @@
 import type { AnalyticsFilters, CampaignAnalyticsData } from '@/types/campaignAnalytics'
 import { Drawer } from '@/components/ui/Drawer'
 import { Button } from '@/components/ui/Button'
+import { Select } from '@/components/ui/Select'
 
 function FilterSelect({
   label,
@@ -16,13 +17,13 @@ function FilterSelect({
   return (
     <label className="block">
       <span className="text-xs font-medium text-fg-muted">{label}</span>
-      <select
-        value={value ?? 'All'}
-        onChange={(e) => onChange(e.target.value === 'All' ? undefined : e.target.value)}
-        className="mt-1 w-full rounded-md border border-line-strong bg-surface-1 px-3 py-2 text-sm"
-      >
-        {options.map((o) => <option key={o}>{o}</option>)}
-      </select>
+      <Select
+        value={value ?? ''}
+        onChange={(v) => onChange(v === '' ? undefined : v)}
+        placeholder="All"
+        options={options.map((o) => ({ value: o, label: o }))}
+        className="mt-1 w-full"
+      />
     </label>
   )
 }

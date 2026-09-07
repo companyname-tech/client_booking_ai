@@ -3,6 +3,7 @@ import { repo } from '@/api/repository'
 import { Modal } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { FieldError } from '@/components/ui/Field'
+import { Select } from '@/components/ui/Select'
 import type { Client } from '@/types'
 
 const inputClass =
@@ -94,14 +95,17 @@ export function NewCampaignModal({ open, onClose, onCreated, fixedClient, client
         ) : (
           <div>
             <span className="text-xs text-fg-muted">Client *</span>
-            <select className={inputClass} value={clientId} onChange={(e) => setClientId(e.target.value)}>
-              <option value="">Select a client…</option>
-              {clients.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
+            <Select
+              value={clientId}
+              onChange={(v) => setClientId(v)}
+              ariaLabel="Client"
+              placeholder="Select a client…"
+              options={[
+                { value: '', label: 'Select a client…' },
+                ...clients.map((c) => ({ value: c.id, label: c.name })),
+              ]}
+              className="mt-1 w-full"
+            />
             <p className="mt-1 text-2xs text-fg-muted">The campaign is attached to this client.</p>
           </div>
         )}

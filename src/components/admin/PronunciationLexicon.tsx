@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Plus, Trash2, Globe2, UserRound, Upload, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
+import { Select } from '@/components/ui/Select'
 import { repo } from '@/api/repository'
 import { groupByLanguage, newEntryId } from '@/lib/pronunciation'
 import type {
@@ -214,18 +215,15 @@ export function PronunciationLexicon() {
           <label htmlFor="agent-select" className="mb-1.5 block text-xs font-medium text-fg-secondary">
             Agent
           </label>
-          <select
+          <Select
             id="agent-select"
             value={agentId}
-            onChange={(e) => setAgentId(e.target.value)}
-            className="w-full rounded-md border border-line bg-surface-1 px-3 py-2 text-sm text-fg outline-none focus:border-accent"
-          >
-            {agents.map((a) => (
-              <option key={a.agentId} value={a.agentId}>
-                {a.name?.trim() || '(unnamed)'}
-              </option>
-            ))}
-          </select>
+            onChange={(v) => setAgentId(v)}
+            ariaLabel="Agent"
+            placeholder={agents.length === 0 ? 'No agents yet' : 'Choose an agent…'}
+            options={agents.map((a) => ({ value: a.agentId, label: a.name?.trim() || '(unnamed)' }))}
+            className="w-full"
+          />
           {selectedAgent && (
             <p className="mt-1 text-2xs text-fg-faint">
               Showing words for <span className="text-fg-muted">{selectedAgent.name?.trim() || '(unnamed)'}</span>
@@ -248,15 +246,16 @@ export function PronunciationLexicon() {
           value={pronounceAs}
           onChange={(e) => setPronounceAs(e.target.value)}
         />
-        <select
+        <Select
           value={language}
-          onChange={(e) => setLanguage(e.target.value)}
-          className="rounded-md border border-line bg-surface-1 px-3 py-2 text-sm text-fg outline-none focus:border-accent"
-          aria-label="Language"
-        >
-          <option value="en">English</option>
-          <option value="he">Hebrew</option>
-        </select>
+          onChange={(v) => setLanguage(v)}
+          ariaLabel="Language"
+          options={[
+            { value: 'en', label: 'English' },
+            { value: 'he', label: 'Hebrew' },
+          ]}
+          className="min-w-[7rem]"
+        />
         <input
           ref={fileRef}
           type="file"

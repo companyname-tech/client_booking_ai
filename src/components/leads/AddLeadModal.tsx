@@ -3,6 +3,7 @@ import { repo } from '@/api/repository'
 import type { OfferCampaign } from '@/types'
 import { Modal } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
+import { Select } from '@/components/ui/Select'
 
 const inputClass =
   'mt-1 w-full rounded-md border border-border bg-card px-3 py-2 text-sm text-fg placeholder:text-fg-muted focus:outline-none focus:ring-1 focus:ring-accent'
@@ -110,14 +111,17 @@ export function AddLeadModal({
               {fixedCampaignName || fixedOfferId}
             </div>
           ) : (
-            <select className={inputClass} value={form.offerId} onChange={set('offerId')}>
-              <option value="">Unallocated — no campaign</option>
-              {campaigns.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
+            <Select
+              value={form.offerId}
+              onChange={(v) => setForm((f) => ({ ...f, offerId: v }))}
+              ariaLabel="Campaign"
+              placeholder="Unallocated — no campaign"
+              options={[
+                { value: '', label: 'Unallocated — no campaign' },
+                ...campaigns.map((c) => ({ value: c.id, label: c.name })),
+              ]}
+              className="mt-1 w-full"
+            />
           )}
           {fixedOfferId ? (
             <p className="mt-1 text-2xs text-fg-muted">This lead will be allocated to this campaign.</p>

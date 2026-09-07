@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Modal } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { Textarea } from '@/components/ui/Textarea'
+import { Select } from '@/components/ui/Select'
 
 const CHANGE_AREAS = ['Targeting', 'Offer', 'Budget', 'Booking', 'Integrations', 'Other'] as const
 
@@ -82,17 +83,22 @@ export function RejectCampaignModal({
         <>
           <Button variant="ghost" onClick={onClose}>Cancel</Button>
           <Button variant="primary" className="bg-danger hover:bg-danger/90" disabled={!detail.trim()} onClick={() => { onSubmit(reason, detail); onClose() }}>
-            Reject OfferCampaign
+            Reject Offer Campaign
           </Button>
         </>
       }
     >
       <div className="space-y-4 px-5 py-4">
-        <select value={reason} onChange={(e) => setReason(e.target.value)} className="w-full rounded-md border border-line-strong bg-surface-1 px-3 py-2 text-sm">
-          {['Compliance concern', 'Insufficient targeting', 'Offer unclear', 'Budget mismatch', 'Other'].map((r) => (
-            <option key={r}>{r}</option>
-          ))}
-        </select>
+        <Select
+          value={reason}
+          onChange={(v) => setReason(v)}
+          ariaLabel="Rejection reason"
+          placeholder="Choose a reason…"
+          options={['Compliance concern', 'Insufficient targeting', 'Offer unclear', 'Budget mismatch', 'Other'].map(
+            (r) => ({ value: r, label: r }),
+          )}
+          className="w-full"
+        />
         <Textarea rows={4} value={detail} onChange={(e) => setDetail(e.target.value)} placeholder="Explain why this campaign cannot be approved." />
       </div>
     </Modal>
@@ -132,12 +138,12 @@ export function ApproveCampaignModal({
   }
 
   return (
-    <Modal open={open} onClose={onClose} title={success ? 'OfferCampaign approved' : 'Approve campaign?'} size="md">
+    <Modal open={open} onClose={onClose} title={success ? 'Offer Campaign approved' : 'Approve campaign?'} size="md">
       <div className="px-5 py-4">
         {success ? (
           <div className="flex flex-col items-center py-8 text-center">
             <div className="flex size-12 items-center justify-center rounded-full bg-success-soft text-success">✓</div>
-            <p className="mt-4 font-medium text-fg">OfferCampaign approved</p>
+            <p className="mt-4 font-medium text-fg">Offer Campaign approved</p>
             <p className="mt-1 text-sm text-fg-muted">Entering launch queue…</p>
           </div>
         ) : (

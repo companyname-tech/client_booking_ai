@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { DetailDrawer } from '@/components/ui/DetailDrawer'
+import { Select } from '@/components/ui/Select'
 import { AISummary } from './AISummary'
 import { RecordingPlayer } from './RecordingPlayer'
 import { Transcript } from './Transcript'
@@ -35,16 +36,18 @@ export function RecordingList({ recordings }: { recordings: Recording[] }) {
     <>
       <div className="mb-4 flex flex-col gap-3 sm:flex-row">
         <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search recordings…" className="sm:max-w-xs" />
-        <select
+        <Select
           value={outcome}
-          onChange={(e) => setOutcome(e.target.value)}
-          className="rounded-md border border-line-strong bg-surface-1 px-3 py-2 text-sm"
-        >
-          <option value="all">All outcomes</option>
-          <option value="booked">Booked</option>
-          <option value="interested">Interested</option>
-          <option value="details_requested">Details requested</option>
-        </select>
+          onChange={(v) => setOutcome(v)}
+          ariaLabel="Filter by outcome"
+          options={[
+            { value: 'all', label: 'All outcomes' },
+            { value: 'booked', label: 'Booked' },
+            { value: 'interested', label: 'Interested' },
+            { value: 'details_requested', label: 'Details requested' },
+          ]}
+          className="w-full sm:w-44"
+        />
       </div>
 
       <div className="space-y-2">

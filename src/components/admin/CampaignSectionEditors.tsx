@@ -11,6 +11,7 @@ import { useState } from 'react'
 import { Input } from '@/components/ui/Input'
 import { Textarea } from '@/components/ui/Textarea'
 import { Button } from '@/components/ui/Button'
+import { Select } from '@/components/ui/Select'
 import { FieldLabel } from '@/components/ui/Field'
 import type { Agent } from '@/types'
 import type { LeadCriteria } from '@/types'
@@ -222,19 +223,18 @@ export function AgentSelectEditor({
         <FieldLabel htmlFor="review-agent-select" hint="The agent runs this campaign's calls. Voice, language and persona are configured on the agent itself.">
           Assigned AI agent
         </FieldLabel>
-        <select
+        <Select
           id="review-agent-select"
           value={agentId}
-          onChange={(e) => setAgentId(e.target.value)}
-          className="interactive w-full rounded-md border border-line-strong bg-surface-1 px-3 py-2 text-sm text-fg focus:border-accent/60 focus:outline-none focus:ring-2 focus:ring-accent/25"
-        >
-          <option value="">Choose an agent…</option>
-          {agents.map((a) => (
-            <option key={a.id} value={a.id}>
-              {a.name || a.id}
-            </option>
-          ))}
-        </select>
+          onChange={(v) => setAgentId(v)}
+          ariaLabel="Assigned AI agent"
+          placeholder="Choose an agent…"
+          options={[
+            { value: '', label: 'Choose an agent…' },
+            ...agents.map((a) => ({ value: a.id, label: a.name || a.id })),
+          ]}
+          className="w-full"
+        />
         {selected && (
           <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-fg-secondary">
             <div className="capitalize">Voice</div>

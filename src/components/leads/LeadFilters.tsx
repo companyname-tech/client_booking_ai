@@ -3,6 +3,7 @@ import { Search, X } from 'lucide-react'
 import type { Lead, LeadStatus } from '@/types'
 import { leadStatusMeta } from '@/lib/status'
 import { Input } from '@/components/ui/Input'
+import { Select } from '@/components/ui/Select'
 
 export interface LeadFiltersState {
   search: string
@@ -39,28 +40,28 @@ export function LeadFilters({
             aria-label="Search leads"
           />
         </div>
-        <select
+        <Select
           value={value.statuses[0] ?? ''}
-          onChange={(e) => onChange({ ...value, statuses: e.target.value ? [e.target.value as LeadStatus] : [] })}
-          className="rounded-md border border-line-strong bg-surface-1 px-3 py-2 text-sm text-fg"
-          aria-label="Filter by status"
-        >
-          <option value="">All statuses</option>
-          {statusOptions.map((s) => (
-            <option key={s} value={s}>{leadStatusMeta[s].label}</option>
-          ))}
-        </select>
-        <select
-          value={value.minScore ?? ''}
-          onChange={(e) => onChange({ ...value, minScore: e.target.value ? Number(e.target.value) : null })}
-          className="rounded-md border border-line-strong bg-surface-1 px-3 py-2 text-sm text-fg"
-          aria-label="Filter by score"
-        >
-          <option value="">Any score</option>
-          <option value="80">80+</option>
-          <option value="70">70+</option>
-          <option value="60">60+</option>
-        </select>
+          onChange={(v) => onChange({ ...value, statuses: v ? ([v] as LeadStatus[]) : [] })}
+          ariaLabel="Filter by status"
+          options={[
+            { value: '', label: 'All statuses' },
+            ...statusOptions.map((s) => ({ value: s, label: leadStatusMeta[s].label })),
+          ]}
+          className="w-full sm:w-44"
+        />
+        <Select
+          value={value.minScore ? String(value.minScore) : ''}
+          onChange={(v) => onChange({ ...value, minScore: v ? Number(v) : null })}
+          ariaLabel="Filter by score"
+          options={[
+            { value: '', label: 'Any score' },
+            { value: '80', label: '80+' },
+            { value: '70', label: '70+' },
+            { value: '60', label: '60+' },
+          ]}
+          className="w-full sm:w-36"
+        />
       </div>
       {chips.length > 0 && (
         <div className="flex flex-wrap items-center gap-2">

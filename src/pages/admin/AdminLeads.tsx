@@ -13,6 +13,7 @@ import { ErrorState } from '@/components/ui/ErrorState'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { DetailDrawer } from '@/components/ui/DetailDrawer'
 import { SelectCheckbox } from '@/components/ui/SelectCheckbox'
+import { Select } from '@/components/ui/Select'
 import { BulkActionBar } from '@/components/ui/BulkActionBar'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { useBulkSelection } from '@/hooks/useBulkSelection'
@@ -285,17 +286,14 @@ function LeadExtraDrawer({
           </div>
           <div>
             <span className="text-xs text-fg-muted">Status</span>
-            <select
-              className={inputClass}
+            <Select
               value={form.status}
-              onChange={(e) => setForm((f) => ({ ...f, status: e.target.value as LeadStatus }))}
-            >
-              {LEAD_STATUSES.map((s) => (
-                <option key={s} value={s}>
-                  {s.replaceAll('_', ' ')}
-                </option>
-              ))}
-            </select>
+              onChange={(v) => setForm((f) => ({ ...f, status: v as LeadStatus }))}
+              ariaLabel="Lead status"
+              placeholder="— Status —"
+              options={LEAD_STATUSES.map((s) => ({ value: s, label: s.replaceAll('_', ' ') }))}
+              className="w-full"
+            />
           </div>
           <Button type="submit" variant="primary" size="sm" className="w-full" disabled={saving}>
             {saving ? 'Saving…' : 'Save changes'}
@@ -503,8 +501,8 @@ export default function AdminLeads() {
   /** Active order-preset value for the dropdown, or '' while a column-header sort is active. */
   const orderValue = ORDER_OPTIONS.find((o) => o.sort.key === sort.key && o.sort.dir === sort.dir)?.value ?? ''
 
-  const onOrderChange = (e: ChangeEvent<HTMLSelectElement>) => {
-    const preset = ORDER_OPTIONS.find((o) => o.value === e.target.value)
+  const onOrderChange = (v: string) => {
+    const preset = ORDER_OPTIONS.find((o) => o.value === v)
     if (!preset) return
     setSort({ ...preset.sort })
     setPage(1)
@@ -533,23 +531,14 @@ export default function AdminLeads() {
               aria-label="Search leads"
             />
           </div>
-          <select
-            aria-label="Order leads"
+          <Select
+            ariaLabel="Order leads"
             value={orderValue}
             onChange={onOrderChange}
-            className="interactive shrink-0 rounded-md border border-line-strong bg-surface-1 px-3 py-2 text-sm text-fg"
-          >
-            {orderValue === '' && (
-              <option value="" disabled>
-                Order…
-              </option>
-            )}
-            {ORDER_OPTIONS.map((o) => (
-              <option key={o.value} value={o.value}>
-                {o.label}
-              </option>
-            ))}
-          </select>
+            placeholder="Order…"
+            options={ORDER_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
+            className="w-full shrink-0 sm:w-40"
+          />
           <Button variant="primary" size="sm" leadingIcon={<Plus className="size-3.5" />} onClick={() => setAdding(true)}>
             Add lead
           </Button>

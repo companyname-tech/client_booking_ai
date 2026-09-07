@@ -19,9 +19,7 @@ import { Card, SectionHeader } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { Textarea } from '@/components/ui/Textarea'
-
-const selectClass =
-  'interactive w-full appearance-none rounded-md border border-line-strong bg-surface-1 px-3 py-2 text-sm text-fg hover:border-white/15 focus:border-accent/60 focus:outline-none focus:ring-2 focus:ring-accent/25'
+import { Select } from '@/components/ui/Select'
 
 const ROLE_OPTIONS: { value: AgentRole; label: string }[] = AGENT_ROLE_ORDER.map((r) => ({
   value: r,
@@ -231,62 +229,53 @@ export default function AgentTab() {
                       </div>
                       <div>
                         <label className="mb-1.5 block text-sm font-medium text-fg">Voice</label>
-                        <select
-                          className={selectClass}
+                        <Select
                           value={draft.voice}
-                          onChange={(e) => patchDraft(agent.id, { voice: e.target.value })}
-                        >
-                          <option value="">— Select voice —</option>
-                          {voices.map((v) => (
-                            <option key={v.value} value={v.value}>
-                              {v.label}
-                            </option>
-                          ))}
-                        </select>
+                          onChange={(v) => patchDraft(agent.id, { voice: v })}
+                          ariaLabel="Voice"
+                          placeholder="— Select voice —"
+                          options={voices.map((v) => ({ value: v.value, label: v.label }))}
+                          className="w-full"
+                        />
                       </div>
                       <div>
                         <label className="mb-1.5 block text-sm font-medium text-fg">Audio (TTS) model</label>
-                        <select
-                          className={selectClass}
+                        <Select
                           value={draft.audio_model}
-                          onChange={(e) => patchDraft(agent.id, { audio_model: e.target.value })}
-                        >
-                          <option value="">— Default —</option>
-                          {models.audio.map((m) => (
-                            <option key={m.value} value={m.value}>
-                              {m.label}
-                            </option>
-                          ))}
-                        </select>
+                          onChange={(v) => patchDraft(agent.id, { audio_model: v })}
+                          ariaLabel="Audio (TTS) model"
+                          placeholder="— Default —"
+                          options={models.audio.map((m) => ({ value: m.value, label: m.label }))}
+                          className="w-full"
+                        />
                       </div>
                       <div>
                         <label className="mb-1.5 block text-sm font-medium text-fg">Transcription (STT) model</label>
-                        <select
-                          className={selectClass}
+                        <Select
                           value={draft.transcription_model}
-                          onChange={(e) => patchDraft(agent.id, { transcription_model: e.target.value })}
-                        >
-                          <option value="">— Default —</option>
-                          {models.transcription.map((m) => (
-                            <option key={m.value} value={m.value}>
-                              {m.label}
-                            </option>
-                          ))}
-                        </select>
+                          onChange={(v) => patchDraft(agent.id, { transcription_model: v })}
+                          ariaLabel="Transcription (STT) model"
+                          placeholder="— Default —"
+                          options={models.transcription.map((m) => ({ value: m.value, label: m.label }))}
+                          className="w-full"
+                        />
                       </div>
                       <div>
                         <label className="mb-1.5 block text-sm font-medium text-fg">Language</label>
-                        <select
-                          className={selectClass}
+                        <Select
                           value={draft.language}
-                          onChange={(e) => patchDraft(agent.id, { language: e.target.value })}
-                        >
-                          <option value="he">Hebrew</option>
-                          <option value="en">English</option>
-                          <option value="ar">Arabic</option>
-                          <option value="ru">Russian</option>
-                          <option value="es">Spanish</option>
-                        </select>
+                          onChange={(v) => patchDraft(agent.id, { language: v })}
+                          ariaLabel="Language"
+                          placeholder="Choose…"
+                          options={[
+                            { value: 'he', label: 'Hebrew' },
+                            { value: 'en', label: 'English' },
+                            { value: 'ar', label: 'Arabic' },
+                            { value: 'ru', label: 'Russian' },
+                            { value: 'es', label: 'Spanish' },
+                          ]}
+                          className="w-full"
+                        />
                       </div>
                       <div>
                         <label className="mb-1.5 block text-sm font-medium text-fg">Agent model</label>
@@ -298,17 +287,13 @@ export default function AgentTab() {
                       </div>
                       <div>
                         <label className="mb-1.5 block text-sm font-medium text-fg">Role</label>
-                        <select
-                          className={selectClass}
+                        <Select
                           value={draft.role}
-                          onChange={(e) => patchDraft(agent.id, { role: e.target.value as AgentRole })}
-                        >
-                          {ROLE_OPTIONS.map((r) => (
-                            <option key={r.value} value={r.value}>
-                              {r.label}
-                            </option>
-                          ))}
-                        </select>
+                          onChange={(v) => patchDraft(agent.id, { role: v as AgentRole })}
+                          ariaLabel="Role"
+                          options={ROLE_OPTIONS.map((r) => ({ value: r.value, label: r.label }))}
+                          className="w-full"
+                        />
                       </div>
                       <div className="sm:col-span-2">
                         <label className="mb-1.5 block text-sm font-medium text-fg">Identity</label>

@@ -1,8 +1,12 @@
-import { useMemo, useState } from 'react'
+import { Fragment, useMemo, useState } from 'react'
+import { MessageSquareText } from 'lucide-react'
 import type { CallHistoryEntry } from '@/types'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { Input } from '@/components/ui/Input'
 import { RecordingAudio } from '@/components/recordings/RecordingAudio'
+import { RawTranscript } from '@/components/recordings/RawTranscript'
+import { Button } from '@/components/ui/Button'
+import { Select } from '@/components/ui/Select'
 import { callOutcomeLabel, fmtDuration, fmtWhen } from '@/lib/callHistory'
 
 function newestFirst(recordings: CallHistoryEntry[]): CallHistoryEntry[] {
@@ -14,6 +18,7 @@ function newestFirst(recordings: CallHistoryEntry[]): CallHistoryEntry[] {
 export function CallHistoryList({ recordings }: { recordings: CallHistoryEntry[] }) {
   const [search, setSearch] = useState('')
   const [outcome, setOutcome] = useState('all')
+  const [transcriptOpen, setTranscriptOpen] = useState<string | null>(null)
 
   const distinctOutcomes = useMemo(
     () => Array.from(new Set(recordings.map((r) => r.outcome))).filter(Boolean).sort(),
@@ -50,19 +55,16 @@ export function CallHistoryList({ recordings }: { recordings: CallHistoryEntry[]
           placeholder="Search by lead or phone…"
           className="sm:max-w-xs"
         />
-        <select
+        <Select
           value={outcome}
-          onChange={(e) => setOutcome(e.target.value)}
-          className="rounded-md border border-line-strong bg-surface-1 px-3 py-2 text-sm text-fg outline-none focus:border-accent"
-          aria-label="Filter by outcome"
-        >
-          <option value="all">All outcomes</option>
-          {distinctOutcomes.map((o) => (
-            <option key={o} value={o}>
-              {callOutcomeLabel(o)}
-            </option>
-          ))}
-        </select>
+          onChange={(v) => setOutcome(v)}
+          ariaLabel="Filter by outcome"
+          options={[
+            { value: 'all', label: 'All outcomes' },
+            ...distinctOutcomes.map((o) => ({ value: o, label: callOutcomeLabel(o) })),
+          ]}
+          className="w-full sm:w-44"
+        />
         <span className="self-center text-xs text-fg-muted">
           {filtered.length} of {recordings.length} recordings
         </span>
@@ -75,7 +77,7 @@ export function CallHistoryList({ recordings }: { recordings: CallHistoryEntry[]
           <table className="w-full border-collapse text-sm">
             <thead>
               <tr className="border-b border-line bg-surface-1">
-                {['When', 'Lead', 'Phone', 'Outcome', 'Duration', 'Recording'].map((h) => (
+                {['When', 'Lead', 'Phone', 'Outcome', 'Duration', 'Recording', 'Transcript'].map((h) => (
                   <th
                     key={h}
                     className="px-3 py-2 text-left text-2xs font-semibold uppercase tracking-wider text-fg-muted"
@@ -86,22 +88,52 @@ export function CallHistoryList({ recordings }: { recordings: CallHistoryEntry[]
               </tr>
             </thead>
             <tbody>
-              {filtered.map((rec) => (
-                <tr key={rec.id} className="border-b border-line/50 last:border-0">
-                  <td className="whitespace-nowrap px-3 py-2 text-fg-secondary">{fmtWhen(rec.startedAt)}</td>
-                  <td className="px-3 py-2 font-medium text-fg">{rec.leadName || '—'}</td>
-                  <td className="whitespace-nowrap px-3 py-2 text-fg-secondary">{rec.phone || '—'}</td>
-                  <td className="whitespace-nowrap px-3 py-2 text-fg-secondary">{callOutcomeLabel(rec.outcome)}</td>
-                  <td className="whitespace-nowrap px-3 py-2 text-fg-secondary">{fmtDuration(rec.durationSec)}</td>
-                  <td className="px-3 py-2">
-                    {rec.audioUrl ? (
-                      <RecordingAudio src={rec.audioUrl} rowKey={rec.id} className="max-w-[280px]" />
-                    ) : (
-                      <span className="text-fg-faint">—</span>
-                    )}
-                  </td>
-                </tr>
-              ))}
+              {filtered.map((rec) => {
+                const hasTranscript = Boolean(rec.transcript?.trim())
+                const open = transcriptOpen === rec.id
+                return (
+                  <Fragment key={rec.id}>
+                    <tr className="border-b border-line/50 last:border-0">
+                      <td className="whitespace-nowrap px-3 py-2 text-fg-secondary">{fmtWhen(rec.startedAt)}</td>
+                      <td className="px-3 py-2 font-medium text-fg">{rec.leadName || '—'}</td>
+                      <td className="whitespace-nowrap px-3 py-2 text-fg-secondary">{rec.phone || '—'}</td>
+                      <td className="whitespace-nowrap px-3 py-2 text-fg-secondary">{callOutcomeLabel(rec.outcome)}</td>
+                      <td className="whitespace-nowrap px-3 py-2 text-fg-secondary">{fmtDuration(rec.durationSec)}</td>
+                      <td className="px-3 py-2">
+                        {rec.audioUrl ? (
+                          <RecordingAudio src={rec.audioUrl} rowKey={rec.id} className="max-w-[280px]" />
+                        ) : (
+                          <span className="text-fg-faint">—</span>
+                        )}
+                      </td>
+                      <td className="px-3 py-2">
+                        {hasTranscript ? (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            leadingIcon={<MessageSquareText className="size-3.5" />}
+                            onClick={() => setTranscriptOpen(open ? null : rec.id)}
+                          >
+                            {open ? 'Hide' : 'View'}
+                          </Button>
+                        ) : (
+                          <span className="text-fg-faint">—</span>
+                        )}
+                      </td>
+                    </tr>
+                    {open ? (
+                      <tr className="border-b border-line/50 bg-surface-1/50 last:border-0">
+                        <td colSpan={7} className="px-4 py-3">
+                          <h4 className="mb-2 text-2xs font-semibold uppercase tracking-wider text-fg-muted">
+                            Conversation transcript
+                          </h4>
+                          <RawTranscript transcript={rec.transcript ?? ''} />
+                        </td>
+                      </tr>
+                    ) : null}
+                  </Fragment>
+                )
+              })}
             </tbody>
           </table>
         </div>

@@ -15,6 +15,7 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Textarea } from '@/components/ui/Textarea'
 import { FieldLabel } from '@/components/ui/Field'
+import { Select } from '@/components/ui/Select'
 import { cn } from '@/lib/utils'
 import {
   buildClassicPayload,
@@ -133,9 +134,6 @@ const GEN_DEDUP: { value: string; label: string }[] = [
   { value: 'skip', label: 'Skip duplicates (recommended)' },
   { value: 'import_anyway', label: 'Import anyway' },
 ]
-
-const selectClassName =
-  'interactive w-full rounded-md border border-line-strong bg-surface-1 px-3 py-2 text-sm text-fg hover:border-white/15 focus:border-accent/60 focus:outline-none focus:ring-2 focus:ring-accent/25 disabled:opacity-50'
 
 function errorMessage(e: unknown): string {
   if (e instanceof ApiError && typeof e.body === 'object' && e.body && 'detail' in e.body) {
@@ -290,19 +288,18 @@ export function GenerateLeadsModal({
             <FieldLabel htmlFor="gen-campaign" required>
               Campaign
             </FieldLabel>
-            <select
+            <Select
               id="gen-campaign"
-              className={selectClassName}
               value={campaignId}
-              onChange={(e) => setCampaignId(e.target.value)}
-            >
-              <option value="">Select a campaign…</option>
-              {campaigns.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
+              onChange={(v) => setCampaignId(v)}
+              ariaLabel="Campaign"
+              placeholder="Select a campaign…"
+              options={[
+                { value: '', label: 'Select a campaign…' },
+                ...campaigns.map((c) => ({ value: c.id, label: c.name })),
+              ]}
+              className="w-full"
+            />
           </div>
         )}
 
@@ -359,30 +356,37 @@ export function GenerateLeadsModal({
             <div className="grid gap-3 sm:grid-cols-3">
               <div>
                 <FieldLabel htmlFor="gen-country">Country</FieldLabel>
-                <select
+                <Select
                   id="gen-country"
-                  className={selectClassName}
                   value={country}
-                  onChange={(e) => {
-                    setCountry(e.target.value)
-                    setCountryIso(COUNTRIES.find((c) => c.name === e.target.value)?.iso ?? '')
+                  onChange={(v) => {
+                    setCountry(v)
+                    setCountryIso(COUNTRIES.find((c) => c.name === v)?.iso ?? '')
                   }}
-                >
-                  <option value="">Any</option>
-                  {COUNTRIES.map((c) => (
-                    <option key={c.iso} value={c.name}>
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
+                  ariaLabel="Country"
+                  placeholder="Any"
+                  options={[
+                    { value: '', label: 'Any' },
+                    ...COUNTRIES.map((c) => ({ value: c.name, label: c.name })),
+                  ]}
+                  className="w-full"
+                />
               </div>
               <div>
                 <FieldLabel htmlFor="gen-phone">Phone type</FieldLabel>
-                <select id="gen-phone" className={selectClassName} value={phoneType} onChange={(e) => setPhoneType(e.target.value)}>
-                  <option value="">Any</option>
-                  <option value="mobile">Mobile</option>
-                  <option value="landline">Landline</option>
-                </select>
+                <Select
+                  id="gen-phone"
+                  value={phoneType}
+                  onChange={(v) => setPhoneType(v)}
+                  ariaLabel="Phone type"
+                  placeholder="Any"
+                  options={[
+                    { value: '', label: 'Any' },
+                    { value: 'mobile', label: 'Mobile' },
+                    { value: 'landline', label: 'Landline' },
+                  ]}
+                  className="w-full"
+                />
               </div>
               <div>
                 <FieldLabel htmlFor="gen-industry">Industry (optional)</FieldLabel>
@@ -439,18 +443,14 @@ export function GenerateLeadsModal({
             <div className="grid gap-3 sm:grid-cols-3">
               <div>
                 <FieldLabel htmlFor="gen-recency">Recency</FieldLabel>
-                <select
+                <Select
                   id="gen-recency"
-                  className={selectClassName}
                   value={String(recencyDays)}
-                  onChange={(e) => setRecencyDays(Number(e.target.value) || 0)}
-                >
-                  {GEN_RECENCY.map((r) => (
-                    <option key={r.value} value={r.value}>
-                      {r.label}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(v) => setRecencyDays(Number(v) || 0)}
+                  ariaLabel="Recency"
+                  options={GEN_RECENCY.map((r) => ({ value: r.value, label: r.label }))}
+                  className="w-full"
+                />
               </div>
               <div>
                 <FieldLabel htmlFor="gen-max">Max results</FieldLabel>
@@ -465,13 +465,14 @@ export function GenerateLeadsModal({
               </div>
               <div>
                 <FieldLabel htmlFor="gen-dedup">Duplicate handling</FieldLabel>
-                <select id="gen-dedup" className={selectClassName} value={dedupMode} onChange={(e) => setDedupMode(e.target.value)}>
-                  {GEN_DEDUP.map((d) => (
-                    <option key={d.value} value={d.value}>
-                      {d.label}
-                    </option>
-                  ))}
-                </select>
+                <Select
+                  id="gen-dedup"
+                  value={dedupMode}
+                  onChange={(v) => setDedupMode(v)}
+                  ariaLabel="Duplicate handling"
+                  options={GEN_DEDUP.map((d) => ({ value: d.value, label: d.label }))}
+                  className="w-full"
+                />
               </div>
             </div>
           </div>
@@ -482,19 +483,18 @@ export function GenerateLeadsModal({
                 <FieldLabel htmlFor="classic-country" required>
                   Country
                 </FieldLabel>
-                <select
+                <Select
                   id="classic-country"
-                  className={selectClassName}
                   value={classicCountry}
-                  onChange={(e) => setClassicCountry(e.target.value)}
-                >
-                  <option value="">Select…</option>
-                  {COUNTRIES.map((c) => (
-                    <option key={c.iso} value={c.name}>
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(v) => setClassicCountry(v)}
+                  ariaLabel="Country"
+                  placeholder="Select…"
+                  options={[
+                    { value: '', label: 'Select…' },
+                    ...COUNTRIES.map((c) => ({ value: c.name, label: c.name })),
+                  ]}
+                  className="w-full"
+                />
               </div>
               <div>
                 <FieldLabel htmlFor="classic-industry" required>
@@ -522,21 +522,30 @@ export function GenerateLeadsModal({
             <div className="grid gap-3 sm:grid-cols-2">
               <div>
                 <FieldLabel htmlFor="classic-phone">Phone type</FieldLabel>
-                <select id="classic-phone" className={selectClassName} value={phoneType} onChange={(e) => setPhoneType(e.target.value)}>
-                  <option value="">Any</option>
-                  <option value="mobile">Mobile</option>
-                  <option value="landline">Landline</option>
-                </select>
+                <Select
+                  id="classic-phone"
+                  value={phoneType}
+                  onChange={(v) => setPhoneType(v)}
+                  ariaLabel="Phone type"
+                  placeholder="Any"
+                  options={[
+                    { value: '', label: 'Any' },
+                    { value: 'mobile', label: 'Mobile' },
+                    { value: 'landline', label: 'Landline' },
+                  ]}
+                  className="w-full"
+                />
               </div>
               <div>
                 <FieldLabel htmlFor="classic-dedup">Duplicate handling</FieldLabel>
-                <select id="classic-dedup" className={selectClassName} value={dedupMode} onChange={(e) => setDedupMode(e.target.value)}>
-                  {GEN_DEDUP.map((d) => (
-                    <option key={d.value} value={d.value}>
-                      {d.label}
-                    </option>
-                  ))}
-                </select>
+                <Select
+                  id="classic-dedup"
+                  value={dedupMode}
+                  onChange={(v) => setDedupMode(v)}
+                  ariaLabel="Duplicate handling"
+                  options={GEN_DEDUP.map((d) => ({ value: d.value, label: d.label }))}
+                  className="w-full"
+                />
               </div>
             </div>
           </div>

@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react'
-import { Phone } from 'lucide-react'
+import { Fragment, useMemo, useState } from 'react'
+import { MessageSquareText, Phone } from 'lucide-react'
 import { repo } from '@/data/repository'
 import { useAsyncData } from '@/hooks/useAsyncData'
 import { PageTransition } from '@/components/motion/PageTransition'
@@ -12,7 +12,10 @@ import { SelectCheckbox } from '@/components/ui/SelectCheckbox'
 import { BulkActionBar } from '@/components/ui/BulkActionBar'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { RecordingAudio } from '@/components/recordings/RecordingAudio'
+import { RawTranscript } from '@/components/recordings/RawTranscript'
 import { useBulkSelection } from '@/hooks/useBulkSelection'
+import { Button } from '@/components/ui/Button'
+import { Select } from '@/components/ui/Select'
 import { Input } from '@/components/ui/Input'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { formatDuration } from '@/lib/utils'
@@ -31,6 +34,7 @@ export default function AdminCalls() {
   const [confirmBulk, setConfirmBulk] = useState(false)
   const [bulkBusy, setBulkBusy] = useState(false)
   const [bulkNotice, setBulkNotice] = useState('')
+  const [transcriptOpen, setTranscriptOpen] = useState<string | null>(null)
 
   const outcomeOptions = useMemo(() => {
     const seen = new Set<string>()
@@ -100,18 +104,16 @@ export default function AdminCalls() {
                 placeholder="Search lead or phone…"
                 className="sm:max-w-xs"
               />
-              <select
+              <Select
                 value={outcome}
-                onChange={(e) => setOutcome(e.target.value)}
-                className="interactive rounded-md border border-line-strong bg-surface-1 px-3 py-2 text-sm text-fg"
-              >
-                <option value="all">All outcomes</option>
-                {outcomeOptions.map((o) => (
-                  <option key={o} value={o}>
-                    {callHistoryOutcomeLabel(o)}
-                  </option>
-                ))}
-              </select>
+                onChange={(v) => setOutcome(v)}
+                ariaLabel="Filter by outcome"
+                options={[
+                  { value: 'all', label: 'All outcomes' },
+                  ...outcomeOptions.map((o) => ({ value: o, label: callHistoryOutcomeLabel(o) })),
+                ]}
+                className="w-full sm:w-44"
+              />
               <span className="self-center text-xs text-fg-muted sm:ml-auto">
                 {filtered.length} of {calls.length} calls
               </span>
@@ -145,38 +147,69 @@ export default function AdminCalls() {
                       <th className="px-3 py-2.5 font-medium">Outcome</th>
                       <th className="px-3 py-2.5 font-medium">Duration</th>
                       <th className="px-5 py-2.5 font-medium">Recording</th>
+                      <th className="px-3 py-2.5 font-medium">Transcript</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {filtered.map((c) => (
-                      <tr key={c.id} className="border-b border-line last:border-0 hover:bg-white/[0.02]">
-                        <td className="px-3 py-3">
-                          <SelectCheckbox
-                            checked={selection.selected.has(c.id)}
-                            onChange={() => selection.toggle(c.id)}
-                            label={`Select call with ${c.leadName || c.phone || c.id}`}
-                          />
-                        </td>
-                        <td className="px-5 py-3 text-xs tabular text-fg-muted">{fmtWhen(c.startedAt)}</td>
-                        <td className="px-3 py-3 font-medium text-fg">{c.leadName || '—'}</td>
-                        <td className="px-3 py-3 tabular text-fg-secondary">{c.phone || '—'}</td>
-                        <td className="px-3 py-3">
-                          <StatusBadge tone={callHistoryOutcomeTone(c.outcome)}>
-                            {callHistoryOutcomeLabel(c.outcome)}
-                          </StatusBadge>
-                        </td>
-                        <td className="px-3 py-3 tabular text-fg-secondary">
-                          {c.durationSec ? formatDuration(c.durationSec) : '—'}
-                        </td>
-                        <td className="px-5 py-3">
-                          {c.audioUrl ? (
-                            <RecordingAudio src={c.audioUrl} rowKey={c.id} className="max-w-[280px]" />
-                          ) : (
-                            <span className="text-fg-muted">—</span>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
+                    {filtered.map((c) => {
+                      const hasTranscript = Boolean(c.transcript?.trim())
+                      const open = transcriptOpen === c.id
+                      return (
+                        <Fragment key={c.id}>
+                          <tr className="border-b border-line last:border-0 hover:bg-white/[0.02]">
+                            <td className="px-3 py-3">
+                              <SelectCheckbox
+                                checked={selection.selected.has(c.id)}
+                                onChange={() => selection.toggle(c.id)}
+                                label={`Select call with ${c.leadName || c.phone || c.id}`}
+                              />
+                            </td>
+                            <td className="px-5 py-3 text-xs tabular text-fg-muted">{fmtWhen(c.startedAt)}</td>
+                            <td className="px-3 py-3 font-medium text-fg">{c.leadName || '—'}</td>
+                            <td className="px-3 py-3 tabular text-fg-secondary">{c.phone || '—'}</td>
+                            <td className="px-3 py-3">
+                              <StatusBadge tone={callHistoryOutcomeTone(c.outcome)}>
+                                {callHistoryOutcomeLabel(c.outcome)}
+                              </StatusBadge>
+                            </td>
+                            <td className="px-3 py-3 tabular text-fg-secondary">
+                              {c.durationSec ? formatDuration(c.durationSec) : '—'}
+                            </td>
+                            <td className="px-5 py-3">
+                              {c.audioUrl ? (
+                                <RecordingAudio src={c.audioUrl} rowKey={c.id} className="max-w-[280px]" />
+                              ) : (
+                                <span className="text-fg-muted">—</span>
+                              )}
+                            </td>
+                            <td className="px-3 py-3">
+                              {hasTranscript ? (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  leadingIcon={<MessageSquareText className="size-3.5" />}
+                                  onClick={() => setTranscriptOpen(open ? null : c.id)}
+                                >
+                                  {open ? 'Hide' : 'View'}
+                                </Button>
+                              ) : (
+                                <span className="text-fg-faint">—</span>
+                              )}
+                            </td>
+                          </tr>
+                          {open ? (
+                            <tr className="border-b border-line bg-surface-1/50 last:border-0">
+                              <td colSpan={8} className="px-5 py-4">
+                                <h4 className="mb-2 text-2xs font-semibold uppercase tracking-wider text-fg-muted">
+                                  Conversation transcript
+                                </h4>
+                                <RawTranscript transcript={c.transcript ?? ''} />
+                              </td>
+                            </tr>
+                          ) : null}
+                        </Fragment>
+                      )
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -215,6 +248,19 @@ export default function AdminCalls() {
                     {c.audioUrl && (
                       <RecordingAudio src={c.audioUrl} rowKey={c.id} className="mt-2 w-full" />
                     )}
+                    {c.transcript?.trim() ? (
+                      <div className="mt-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          leadingIcon={<MessageSquareText className="size-3.5" />}
+                          onClick={() => setTranscriptOpen(transcriptOpen === c.id ? null : c.id)}
+                        >
+                          {transcriptOpen === c.id ? 'Hide transcript' : 'View transcript'}
+                        </Button>
+                        {transcriptOpen === c.id && <RawTranscript transcript={c.transcript ?? ''} className="mt-2" />}
+                      </div>
+                    ) : null}
                   </div>
                 ))}
               </div>

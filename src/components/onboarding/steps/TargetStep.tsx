@@ -10,6 +10,7 @@ import { FieldGroup, FieldLabel } from '@/components/ui/Field'
 import { Input } from '@/components/ui/Input'
 import { Textarea } from '@/components/ui/Textarea'
 import { MultiSelect } from '@/components/ui/MultiSelect'
+import { Select } from '@/components/ui/Select'
 import { RangeSlider } from '@/components/ui/RangeSlider'
 import { TargetSummary } from '../TargetSummary'
 
@@ -54,19 +55,15 @@ export function TargetStep({
           <FieldLabel htmlFor="company-size" required>
             Company size
           </FieldLabel>
-          <select
+          <Select
             id="company-size"
             value={t.companySize}
-            onChange={(e) => onChange({ companySize: e.target.value })}
-            className="interactive w-full rounded-md border border-line-strong bg-surface-1 px-3 py-2 text-sm text-fg focus:border-accent/60 focus:outline-none focus:ring-2 focus:ring-accent/25"
-          >
-            <option value="">Select company size…</option>
-            {COMPANY_SIZE_OPTIONS.map((o) => (
-              <option key={o} value={o}>
-                {o} employees
-              </option>
-            ))}
-          </select>
+            onChange={(v) => onChange({ companySize: v })}
+            ariaLabel="Company size"
+            placeholder="Select company size…"
+            options={COMPANY_SIZE_OPTIONS.map((o) => ({ value: o, label: `${o} employees` }))}
+            className="w-full"
+          />
           {errors.companySize && <p className="mt-1 text-xs text-danger">{errors.companySize}</p>}
         </FieldGroup>
 

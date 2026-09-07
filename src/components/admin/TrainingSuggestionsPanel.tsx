@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Check, Loader2, MessageSquarePlus, X } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
+import { Select } from '@/components/ui/Select'
 import { repo } from '@/api/repository'
 import type { TrainingSuggestion } from '@/types/training'
 import { cn } from '@/lib/utils'
@@ -124,29 +125,29 @@ export function TrainingSuggestionsPanel({
               <div className="mt-3 grid gap-2 rounded-md border border-line bg-bg/40 p-3 sm:grid-cols-[auto_1fr_auto_auto_auto]">
                 <label className="block">
                   <span className="mb-1 block text-2xs font-medium text-fg-secondary">Into</span>
-                  <select
+                  <Select
                     value={scope}
-                    onChange={(e) => setScope(e.target.value as 'main' | 'agent')}
-                    className="rounded-md border border-line bg-surface-1 px-2 py-1.5 text-xs text-fg outline-none focus:border-accent"
-                  >
-                    <option value="agent">Agent's list</option>
-                    <option value="main">Main list (all agents)</option>
-                  </select>
+                    onChange={(v) => setScope(v as 'main' | 'agent')}
+                    ariaLabel="Accept into"
+                    size="sm"
+                    options={[
+                      { value: 'agent', label: "Agent's list" },
+                      { value: 'main', label: 'Main list (all agents)' },
+                    ]}
+                    className="w-full"
+                  />
                 </label>
                 {scope === 'agent' ? (
                   <label className="block">
                     <span className="mb-1 block text-2xs font-medium text-fg-secondary">Agent</span>
-                    <select
+                    <Select
                       value={targetAgentId}
-                      onChange={(e) => setTargetAgentId(e.target.value)}
-                      className="w-full rounded-md border border-line bg-surface-1 px-2 py-1.5 text-xs text-fg outline-none focus:border-accent"
-                    >
-                      {agents.map((a) => (
-                        <option key={a.agentId} value={a.agentId}>
-                          {a.name || '(unnamed)'}
-                        </option>
-                      ))}
-                    </select>
+                      onChange={(v) => setTargetAgentId(v)}
+                      ariaLabel="Target agent"
+                      size="sm"
+                      options={agents.map((a) => ({ value: a.agentId, label: a.name || '(unnamed)' }))}
+                      className="w-full"
+                    />
                   </label>
                 ) : null}
                 <label className="block">
@@ -160,14 +161,17 @@ export function TrainingSuggestionsPanel({
                 </label>
                 <label className="block">
                   <span className="mb-1 block text-2xs font-medium text-fg-secondary">Lang</span>
-                  <select
+                  <Select
                     value={language}
-                    onChange={(e) => setLanguage(e.target.value)}
-                    className="rounded-md border border-line bg-surface-1 px-2 py-1.5 text-xs text-fg outline-none focus:border-accent"
-                  >
-                    <option value="he">Hebrew</option>
-                    <option value="en">English</option>
-                  </select>
+                    onChange={(v) => setLanguage(v)}
+                    ariaLabel="Language"
+                    size="sm"
+                    options={[
+                      { value: 'he', label: 'Hebrew' },
+                      { value: 'en', label: 'English' },
+                    ]}
+                    className="w-full"
+                  />
                 </label>
                 <div className="flex items-end gap-1.5">
                   <Button

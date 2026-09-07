@@ -4,6 +4,7 @@ import { Modal } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { FieldGroup, FieldLabel, FieldError } from '@/components/ui/Field'
+import { Select } from '@/components/ui/Select'
 import type { Client } from '@/types'
 
 interface ClientFormModalProps {
@@ -94,16 +95,18 @@ export function ClientFormModal({ open, onClose, client, onSaved }: ClientFormMo
           </FieldGroup>
           <FieldGroup>
             <FieldLabel htmlFor="cf-plan">Plan</FieldLabel>
-            <select
+            <Select
               id="cf-plan"
               value={plan}
-              onChange={(e) => setPlan(e.target.value as typeof plan)}
-              className="interactive w-full rounded-md border border-line-strong bg-surface-1 px-3 py-2 text-sm text-fg"
-            >
-              <option value="starter">starter</option>
-              <option value="growth">growth</option>
-              <option value="enterprise">enterprise</option>
-            </select>
+              onChange={(v) => setPlan(v as typeof plan)}
+              ariaLabel="Plan"
+              options={[
+                { value: 'starter', label: 'starter' },
+                { value: 'growth', label: 'growth' },
+                { value: 'enterprise', label: 'enterprise' },
+              ]}
+              className="w-full"
+            />
           </FieldGroup>
         </div>
         <FieldGroup>
