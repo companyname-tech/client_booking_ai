@@ -80,6 +80,24 @@ export interface SettingsSchemaField {
 export type TtsProvider = 'openai' | 'fish'
 export type AutoHangup = 'true' | 'false'
 
+/**
+ * One configured WhatsApp message template. `key` is the stable id send
+ * flows pass as `template_key` to pick WHICH template to use at send time.
+ */
+export interface MessageTemplate {
+  key: string
+  name: string
+  body: string
+}
+
+/** One configured email template (subject + body pair). */
+export interface EmailTemplate {
+  key: string
+  name: string
+  subject: string
+  body: string
+}
+
 export interface AppSettings {
   whatsapp_from_phone: string
   whatsapp_message_template: string
@@ -91,6 +109,11 @@ export interface AppSettings {
   caller_company_name: string
   auto_hangup: AutoHangup
   tts_provider: TtsProvider
+  // Message-template lists (multi-template support). The first record of a
+  // channel is the default template and is mirrored onto the flat
+  // `*_template` fields above for legacy consumers.
+  whatsapp_templates: MessageTemplate[]
+  email_templates: EmailTemplate[]
   // Computed flags returned by GET /settings:
   whatsapp_configured: boolean
   email_configured: boolean
