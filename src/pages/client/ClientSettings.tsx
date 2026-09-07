@@ -11,16 +11,18 @@ import { Tabs } from '@/components/ui/Tabs'
 import { cn } from '@/lib/utils'
 import AgentTab from '@/components/settings/AgentTab'
 import { ConnectionSettings } from '@/components/settings/ConnectionSettings'
+import { TwilioTab } from '@/components/settings/TwilioTab'
 import { FishVoicesTab } from '@/components/settings/FishVoicesTab'
 import { TemplatesTab } from '@/components/settings/TemplatesTab'
 import { ApplicationTab } from '@/components/settings/ApplicationTab'
 
-type Section = 'agent' | 'connection' | 'fish' | 'templates' | 'application'
+type Section = 'agent' | 'connection' | 'twilio' | 'fish' | 'templates' | 'application'
 
 /** Sections reachable by the `?tab=` search param (deep links from other pages). */
 const SECTION_FROM_PARAM: Record<string, Section> = {
   agent: 'agent',
   connection: 'connection',
+  twilio: 'twilio',
   fish: 'fish',
   templates: 'templates',
   application: 'application',
@@ -105,6 +107,7 @@ export default function ClientSettings() {
             items={[
               { id: 'agent', label: 'Agent' },
               { id: 'connection', label: 'Connection' },
+              { id: 'twilio', label: 'Twilio' },
               { id: 'fish', label: 'Fish voices' },
               { id: 'templates', label: 'Templates' },
               { id: 'application', label: 'Application' },
@@ -114,6 +117,7 @@ export default function ClientSettings() {
 
         {section === 'agent' && <AgentTab />}
         {section === 'connection' && <ConnectionSettings />}
+        {section === 'twilio' && <TwilioTab />}
 
         {section === 'fish' && <FishVoicesTab />}
 

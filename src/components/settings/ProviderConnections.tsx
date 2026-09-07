@@ -225,7 +225,19 @@ function FieldHint({ children }: { children: ReactNode }) {
   return <div className="mb-1 text-xs text-fg-muted">{children}</div>
 }
 
-export function ProviderConnections() {
+export function ProviderConnections({
+  only,
+  exclude,
+  title = 'Providers',
+  description = 'Connect the model, channel and meeting providers the AI uses. Tokens are stored encrypted and never shown in full.',
+}: {
+  /** When set, only these connection cards render (e.g. ['twilio'] on the Twilio tab). */
+  only?: ConnectionKey[]
+  /** Cards to skip (e.g. ['twilio'] so the Connection tab keeps the other providers). */
+  exclude?: ConnectionKey[]
+  title?: string
+  description?: string
+}) {
   const { data, loading, error, reload } = useAsyncData(() => repo.getConnections())
   const [state, setState] = useState<ConnectionsState | null>(null)
 
@@ -243,25 +255,29 @@ export function ProviderConnections() {
   if (!data) return <EmptyState title="No data" />
 
   const connections = state ?? data
+  const visible = connections.connections.filter(
+    (conn) => (!only || only.includes(conn.key)) && !(exclude ?? []).includes(conn.key),
+  )
 
   return (
     <Card flush className="px-5">
       <div className="py-4">
-        <SectionHeader
-          title="Providers"
-          description="Connect the model, channel and meeting providers the AI uses. Tokens are stored encrypted and never shown in full."
-        />
+        <SectionHeader title={title} description={description} />
       </div>
       <div className="divide-y divide-line">
-        {connections.connections.map((conn) => (
-          <ConnectionRow
-            key={conn.key}
-            conn={conn}
-            email={connections.email}
-            onSave={handleSave}
-            onDisconnect={() => handleDisconnect(conn.key)}
-          />
-        ))}
+        {visible.length === 0 ? (
+          <div className="py-3 text-sm text-fg-muted">Nothing to configure here.</div>
+        ) : (
+          visible.map((conn) => (
+            <ConnectionRow
+              key={conn.key}
+              conn={conn}
+              email={connections.email}
+              onSave={handleSave}
+              onDisconnect={() => handleDisconnect(conn.key)}
+            />
+          ))
+        )}
       </div>
     </Card>
   )
