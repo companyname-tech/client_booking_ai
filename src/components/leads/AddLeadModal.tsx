@@ -137,7 +137,7 @@ export function AddLeadModal({
             className="mt-1"
             value={form.phone}
             onChange={(v) => setForm((f) => ({ ...f, phone: v }))}
-            placeholder="e.g. +972545551234"
+            placeholder="e.g. +972 54 555 1234"
           />
         </div>
         <div>
