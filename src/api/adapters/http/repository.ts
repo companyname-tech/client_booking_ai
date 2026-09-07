@@ -204,6 +204,7 @@ interface ActivityLogWire {
   source: string
   kind: string
   action: string
+  title?: string
   actor: string
   target_type?: string
   target_id?: string
@@ -247,6 +248,27 @@ function toLeadStatus(be: string | undefined): LeadStatus {
 
 function toBeLeadStatus(fe: LeadStatus): string {
   return LEAD_STATUS_TO_BE[fe] ?? 'NEW'
+}
+
+/** Feed-row → dashboard Activity shape. Exposes the campaign association
+ * (BE wire `offer_id` → FE `offerCampaignId`) so feed entries can deep-link
+ * into the campaign's activity view, and derives a tone from the row source
+ * (same tones the ActivityTimeline uses for each stream). */
+function toActivity(w: ActivityLogWire): Activity {
+  const toneBySource: Record<string, Activity['tone']> = {
+    audit: 'violet',
+    cost: 'info',
+    call: 'success',
+  }
+  return {
+    id: w.id,
+    kind: (w.kind ?? '') as Activity['kind'],
+    title: w.title || w.action || '',
+    description: w.description || '',
+    offerCampaignId: w.offer_id || undefined,
+    timestamp: w.timestamp ?? '',
+    tone: toneBySource[w.source] ?? 'neutral',
+  }
 }
 
 function toAgent(wire: AgentWire): Agent {
@@ -690,12 +712,14 @@ export const httpRepository = {
     }
   },
   async getActivity(limit = 7): Promise<Activity[]> {
-    return apiClient.get<Activity[]>(`/activity?limit=${limit}`)
+    const rows = await apiClient.get<ActivityLogWire[]>(`/activity?limit=${limit}`)
+    return (rows ?? []).map(toActivity)
   },
-  async getActivityLog(filters: { source?: ActivitySource | 'all'; search?: string; limit?: number } = {}): Promise<ActivityLogEntry[]> {
+  async getActivityLog(filters: { source?: ActivitySource | 'all'; search?: string; offerId?: string; limit?: number } = {}): Promise<ActivityLogEntry[]> {
     const params = new URLSearchParams()
     if (filters.limit) params.set('limit', String(filters.limit))
     if (filters.source && filters.source !== 'all') params.set('source', filters.source)
+    if (filters.offerId?.trim()) params.set('offer_id', filters.offerId.trim())
     if (filters.search?.trim()) params.set('search', filters.search.trim())
     const qs = params.toString()
     const rows = await apiClient.get<ActivityLogWire[]>(`/activity${qs ? `?${qs}` : ''}`)

@@ -179,7 +179,7 @@ export default function CampaignDetailOverview() {
               </Card>
             </Reveal>
             <Reveal>
-              <AIActivityFeed items={activity} className="h-full" />
+              <AIActivityFeed items={activity} zone={zone} className="h-full" />
             </Reveal>
           </div>
 

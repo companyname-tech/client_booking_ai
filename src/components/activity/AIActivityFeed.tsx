@@ -27,7 +27,17 @@ const toneText: Record<Tone, string> = {
   violet: 'text-violet bg-violet-soft ring-violet/15',
 }
 
-const Item = memo(function Item({ activity, isLatest, isLast }: { activity: Activity; isLatest: boolean; isLast: boolean }) {
+const Item = memo(function Item({
+  activity,
+  isLatest,
+  isLast,
+  zone,
+}: {
+  activity: Activity
+  isLatest: boolean
+  isLast: boolean
+  zone: 'client' | 'admin'
+}) {
   const Icon = kindIcon[activity.kind] ?? Bot
   const inner = (
     <>
@@ -50,7 +60,7 @@ const Item = memo(function Item({ activity, isLatest, isLast }: { activity: Acti
       {!isLast && <span aria-hidden className="absolute left-[13px] top-9 h-[calc(100%-22px)] w-px bg-line" />}
       {activity.offerCampaignId ? (
         <Link
-          to={`/client/campaigns/${activity.offerCampaignId}`}
+          to={`/${zone}/campaigns/${activity.offerCampaignId}/activity`}
           className="interactive ring-focus -mx-2 flex items-start gap-3 rounded-md px-2 py-2 outline-none hover:bg-white/[0.03]"
         >
           {inner}
@@ -62,7 +72,18 @@ const Item = memo(function Item({ activity, isLatest, isLast }: { activity: Acti
   )
 })
 
-export function AIActivityFeed({ items, className }: { items: Activity[]; className?: string }) {
+export function AIActivityFeed({
+  items,
+  className,
+  zone = 'client',
+}: {
+  items: Activity[]
+  className?: string
+  /** Route zone the feed is rendered in — campaign links resolve to
+   * `/{zone}/campaigns/{id}/activity`. The feed is used on the client
+   * dashboard (always client) and the campaign detail (both zones). */
+  zone?: 'client' | 'admin'
+}) {
   return (
     <section className={cn('surface flex min-w-0 flex-col p-5', className)} aria-labelledby="ai-activity-title">
       <div className="mb-3 flex items-center justify-between">
@@ -80,14 +101,14 @@ export function AIActivityFeed({ items, className }: { items: Activity[]; classN
       </div>
       <Stagger as="ul" stagger={0.05} className="-my-1 flex-1">
         {items.map((a, i) => (
-          <Item key={a.id} activity={a} isLatest={i === 0} isLast={i === items.length - 1} />
+          <Item key={a.id} activity={a} isLatest={i === 0} isLast={i === items.length - 1} zone={zone} />
         ))}
       </Stagger>
       <Link
-        to="/client/agents"
+        to={zone === 'admin' ? '/admin/activity' : '/client/agents'}
         className="interactive mt-3 self-start text-xs font-medium text-fg-muted hover:text-fg-secondary"
       >
-        View all agent activity →
+        {zone === 'admin' ? 'View all activity →' : 'View all agent activity →'}
       </Link>
     </section>
   )

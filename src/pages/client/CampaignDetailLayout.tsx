@@ -28,6 +28,7 @@ const clientTabs: Tab[] = [
   { to: '', label: 'Overview', end: true },
   { to: 'leads', label: 'Leads' },
   { to: 'calls', label: 'Calls & Recordings' },
+  { to: 'activity', label: 'Activity' },
   { to: 'analytics', label: 'Analytics' },
   { to: 'integrations', label: 'Integrations' },
 ]

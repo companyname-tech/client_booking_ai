@@ -34,14 +34,21 @@ const Item = memo(function Item({
   entry,
   selected,
   onToggle,
+  rowTo,
 }: {
   entry: ActivityLogEntry
   selected?: boolean
   onToggle?: (id: string) => void
+  rowTo?: (entry: ActivityLogEntry) => string | undefined
 }) {
   const meta = ACTIVITY_SOURCE_META[entry.source] ?? ACTIVITY_SOURCE_META.audit
   const Icon = meta.icon
   const label = formatTimestamp(entry.timestamp)
+  const href = entry.offerId
+    ? rowTo
+      ? rowTo(entry)
+      : `/admin/campaigns/${entry.offerId}/activity`
+    : undefined
 
   const body = (
     <>
@@ -74,9 +81,9 @@ const Item = memo(function Item({
     </>
   )
 
-  const row = entry.offerId ? (
+  const row = href ? (
     <Link
-      to={`/admin/campaigns/${entry.offerId}`}
+      to={href}
       className="interactive -mx-2 flex min-w-0 flex-1 items-start gap-3 rounded-md px-2 py-2.5 hover:bg-white/[0.03]"
     >
       {body}
@@ -97,7 +104,18 @@ const Item = memo(function Item({
   )
 })
 
-export function ActivityTimeline({ entries, selection }: { entries: ActivityLogEntry[]; selection?: TimelineSelection }) {
+export function ActivityTimeline({
+  entries,
+  selection,
+  rowTo,
+}: {
+  entries: ActivityLogEntry[]
+  selection?: TimelineSelection
+  /** Per-row link target for entries that carry an offer id. Defaults to the
+   * campaign's Activity view (/admin/campaigns/{id}/activity); pass
+   * `() => undefined` to render a scoped log without links. */
+  rowTo?: (entry: ActivityLogEntry) => string | undefined
+}) {
   return (
     <div>
       {selection ? (
@@ -118,6 +136,7 @@ export function ActivityTimeline({ entries, selection }: { entries: ActivityLogE
             entry={e}
             selected={selection?.selected.has(e.id)}
             onToggle={selection?.toggle}
+            rowTo={rowTo}
           />
         ))}
       </ol>

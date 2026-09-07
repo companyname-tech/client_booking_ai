@@ -13,6 +13,7 @@ const CampaignDetailLayout = lazy(() => import('@/pages/client/CampaignDetailLay
 const CampaignDetailOverview = lazy(() => import('@/pages/client/CampaignDetailOverview'))
 const CampaignLeads = lazy(() => import('@/pages/client/CampaignLeads'))
 const CampaignRecordings = lazy(() => import('@/pages/client/CampaignRecordings'))
+const CampaignActivity = lazy(() => import('@/pages/client/CampaignActivity'))
 const CampaignAnalytics = lazy(() => import('@/pages/client/CampaignAnalytics'))
 const CampaignIntegrations = lazy(() => import('@/pages/client/CampaignIntegrations'))
 const ClientSettings = lazy(() => import('@/pages/client/ClientSettings'))
@@ -32,6 +33,7 @@ const ClientAnalytics = lazy(() => import('@/pages/client/ClientAnalytics'))
 export const campaignSubRoutes = [
   { path: 'leads', element: <CampaignLeads /> },
   { path: 'calls', element: <CampaignRecordings /> },
+  { path: 'activity', element: <CampaignActivity /> },
   { path: 'analytics', element: <CampaignAnalytics /> },
   { path: 'integrations', element: <CampaignIntegrations /> },
 ]
