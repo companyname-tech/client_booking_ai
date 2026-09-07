@@ -14,7 +14,6 @@ const AdminCampaigns = lazy(() => import('@/pages/admin/AdminCampaigns'))
 const AdminCampaignReview = lazy(() => import('@/pages/admin/AdminCampaignReview'))
 const AdminApprovals = lazy(() => import('@/pages/admin/AdminApprovals'))
 const AdminAITraining = lazy(() => import('@/pages/admin/AdminAITraining'))
-const AdminCompliance = lazy(() => import('@/pages/admin/AdminCompliance'))
 const AdminClients = lazy(() => import('@/pages/admin/AdminClients'))
 const AdminClientDetail = lazy(() => import('@/pages/admin/AdminClientDetail'))
 const AdminSettings = lazy(() => import('@/pages/admin/AdminSettings'))
@@ -36,7 +35,6 @@ export const adminRoutes = [
   },
   { path: 'approvals', element: <AdminApprovals /> },
   { path: 'ai-training', element: <AdminAITraining /> },
-  { path: 'compliance', element: <AdminCompliance /> },
   { path: 'clients', element: <AdminClients /> },
   { path: 'clients/:id', element: <AdminClientDetail /> },
   { path: 'activity', element: <PlaceholderPage zone="admin" title="Activity" description="Platform-wide audit trail and system events." icon={<Activity />} /> },

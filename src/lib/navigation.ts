@@ -10,7 +10,6 @@ import {
   MessageSquare,
   Phone,
   Settings,
-  ShieldCheck,
   Users,
 } from 'lucide-react'
 
@@ -90,7 +89,6 @@ export const adminNavigation: NavSection[] = [
     items: [
       { label: 'Leads', to: '/admin/leads', icon: Users },
       { label: 'Calls', to: '/admin/calls', icon: Phone },
-      { label: 'Compliance', to: '/admin/compliance', icon: ShieldCheck },
       { label: 'Activity', to: '/admin/activity', icon: Activity },
     ],
   },
