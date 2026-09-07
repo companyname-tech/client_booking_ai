@@ -1,5 +1,6 @@
 import type { Lead } from '@/types'
 import { NOW } from '@/data/time'
+import { Pencil, Phone } from 'lucide-react'
 import { formatRelativeCompact, initials } from '@/lib/utils'
 import { LeadScore } from './LeadScore'
 import { LeadStatusBadge } from './LeadStatusBadge'
@@ -9,12 +10,18 @@ import { EmptyState } from '@/components/ui/EmptyState'
 export function LeadsTable({
   leads,
   onSelect,
+  onDial,
+  onEdit,
   page,
   pageSize = 15,
   onPageChange,
 }: {
   leads: Lead[]
   onSelect: (lead: Lead) => void
+  /** When provided, renders a Call (dial) action on each row. */
+  onDial?: (lead: Lead) => void
+  /** When provided, renders an Edit action on each row. */
+  onEdit?: (lead: Lead) => void
   page: number
   pageSize?: number
   onPageChange: (p: number) => void
@@ -64,7 +71,19 @@ export function LeadsTable({
                   {lead.lastContactAt ? formatRelativeCompact(lead.lastContactAt, NOW) : '—'}
                 </td>
                 <td className="px-5 py-3">
-                  <Button variant="ghost" size="sm" onClick={() => onSelect(lead)}>View</Button>
+                  <div className="flex items-center justify-end gap-1">
+                    {onDial && (
+                      <Button variant="secondary" size="sm" leadingIcon={<Phone className="size-3.5" />} onClick={() => onDial(lead)}>
+                        Call
+                      </Button>
+                    )}
+                    {onEdit && (
+                      <Button variant="ghost" size="sm" leadingIcon={<Pencil className="size-3.5" />} onClick={() => onEdit(lead)}>
+                        Edit
+                      </Button>
+                    )}
+                    <Button variant="ghost" size="sm" onClick={() => onSelect(lead)}>View</Button>
+                  </div>
                 </td>
               </tr>
             ))}

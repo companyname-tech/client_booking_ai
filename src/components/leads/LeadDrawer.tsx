@@ -1,4 +1,4 @@
-import { useState, type ChangeEvent } from 'react'
+import { useEffect, useState, type ChangeEvent } from 'react'
 import type { LeadDetail, LeadStatus } from '@/types'
 import { repo } from '@/api/repository'
 import { DetailDrawer } from '@/components/ui/DetailDrawer'
@@ -44,11 +44,14 @@ export function LeadDrawer({
   open,
   onClose,
   onUpdate,
+  startInEdit,
 }: {
   lead: LeadDetail | null
   open: boolean
   onClose: () => void
   onUpdate?: (lead: LeadDetail) => void
+  /** Open the drawer already in edit mode (row-level Edit action). */
+  startInEdit?: boolean
 }) {
   const [editing, setEditing] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -62,6 +65,22 @@ export function LeadDrawer({
     email: '',
     location: '',
   })
+
+  // When opened via a row-level Edit action, enter edit mode once the detail loads.
+  useEffect(() => {
+    if (!open || !lead || !startInEdit) return
+    setForm({
+      name: lead.name,
+      title: lead.title,
+      company: lead.company,
+      industry: lead.industry ?? '',
+      status: lead.status,
+      phone: lead.phone ?? '',
+      email: lead.email ?? '',
+      location: lead.location,
+    })
+    setEditing(true)
+  }, [open, lead, startInEdit])
 
   if (!lead) return null
 

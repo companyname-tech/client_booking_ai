@@ -31,10 +31,15 @@ export function AddLeadModal({
   open,
   onClose,
   onAdded,
+  fixedOfferId,
+  fixedCampaignName,
 }: {
   open: boolean
   onClose: () => void
   onAdded: () => void
+  /** Preset the campaign (lead is allocated to it) and hide the dropdown. */
+  fixedOfferId?: string
+  fixedCampaignName?: string
 }) {
   const [saving, setSaving] = useState(false)
   const [formError, setFormError] = useState('')
@@ -43,7 +48,7 @@ export function AddLeadModal({
 
   useEffect(() => {
     if (!open) return
-    setForm(emptyForm)
+    setForm({ ...emptyForm, offerId: fixedOfferId ?? '' })
     setFormError('')
     let active = true
     repo
@@ -100,16 +105,26 @@ export function AddLeadModal({
         </div>
         <div>
           <span className="text-xs text-fg-muted">Campaign</span>
-          <select className={inputClass} value={form.offerId} onChange={set('offerId')}>
-            <option value="">Unallocated — no campaign</option>
-            {campaigns.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
-          {!form.offerId && (
-            <p className="mt-1 text-2xs text-fg-muted">Pick a campaign to allocate this lead to an offer.</p>
+          {fixedOfferId ? (
+            <div className="mt-1 rounded-md border border-line bg-surface-1 px-3 py-2 text-sm text-fg">
+              {fixedCampaignName || fixedOfferId}
+            </div>
+          ) : (
+            <select className={inputClass} value={form.offerId} onChange={set('offerId')}>
+              <option value="">Unallocated — no campaign</option>
+              {campaigns.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          )}
+          {fixedOfferId ? (
+            <p className="mt-1 text-2xs text-fg-muted">This lead will be allocated to this campaign.</p>
+          ) : (
+            !form.offerId && (
+              <p className="mt-1 text-2xs text-fg-muted">Pick a campaign to allocate this lead to an offer.</p>
+            )
           )}
         </div>
         <div>

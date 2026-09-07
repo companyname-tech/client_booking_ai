@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Sparkles } from 'lucide-react'
 import { motion } from 'motion/react'
 import { BrandLogo } from '@/components/shell/BrandLogo'
 import { Button } from '@/components/ui/Button'
@@ -96,17 +95,6 @@ export default function LoginPage() {
               {loading ? 'Signing in…' : 'Sign in'}
             </Button>
           </form>
-
-          <div className="mt-6 rounded-lg border border-line bg-surface-1 px-4 py-3">
-            <div className="flex items-center gap-2 text-2xs text-fg-muted">
-              <Sparkles className="size-3.5 text-violet" />
-              <span>Default credentials</span>
-            </div>
-            <p className="mt-2 text-xs text-fg-secondary">
-              The default single-admin account is <span className="font-mono text-fg-muted">admin</span> /{' '}
-              <span className="font-mono text-fg-muted">admin</span> (override via ADMIN_USERNAME / ADMIN_PASSWORD).
-            </p>
-          </div>
         </div>
       </motion.div>
     </div>
