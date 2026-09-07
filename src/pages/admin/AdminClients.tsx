@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
-import { Plus, ChevronLeft, ChevronRight } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { Pencil, Plus, ChevronLeft, ChevronRight } from 'lucide-react'
 import { repo } from '@/api/repository'
 import { useAsyncData } from '@/hooks/useAsyncData'
 import { PageTransition } from '@/components/motion/PageTransition'
@@ -21,6 +21,7 @@ import type { Client } from '@/types'
 const PAGE_SIZE = 10
 
 export default function AdminClients() {
+  const navigate = useNavigate()
   const [search, setSearch] = useState('')
   const [q, setQ] = useState('')
   const [page, setPage] = useState(1)
@@ -135,8 +136,17 @@ export default function AdminClients() {
                   {clients.map((client) => (
                     <tr
                       key={client.id}
-                      className="interactive cursor-pointer border-b border-line last:border-0 hover:bg-white/[0.03]"
-                      onClick={() => setModal({ open: true, client })}
+                      role="link"
+                      tabIndex={0}
+                      onClick={() => navigate(`/admin/clients/${client.id}`)}
+                      onKeyDown={(e: React.KeyboardEvent) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault()
+                          navigate(`/admin/clients/${client.id}`)
+                        }
+                      }}
+                      aria-label={`Open ${client.name}`}
+                      className="interactive ring-focus cursor-pointer border-b border-line outline-none last:border-0 hover:bg-white/[0.03] focus-visible:bg-white/[0.04]"
                     >
                       <td className="px-3 py-3">
                         <SelectCheckbox
@@ -164,13 +174,18 @@ export default function AdminClients() {
                         {client.createdAt ? new Date(client.createdAt).toLocaleDateString() : '—'}
                       </td>
                       <td className="px-5 py-3 text-right">
-                        <Link
-                          to={`/admin/clients/${client.id}`}
-                          onClick={(e) => e.stopPropagation()}
-                          className="text-xs font-medium text-accent"
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          leadingIcon={<Pencil className="size-3.5" />}
+                          aria-label={`Edit ${client.name}`}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setModal({ open: true, client })
+                          }}
                         >
-                          View →
-                        </Link>
+                          Edit
+                        </Button>
                       </td>
                     </tr>
                   ))}
