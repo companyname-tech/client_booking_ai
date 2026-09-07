@@ -9,6 +9,7 @@ import { Card, SectionHeader } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { StatusBadge } from '@/components/ui/StatusBadge'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 
 const emptyForm = { label: '', phone: '', voice: true, whatsapp: false }
 
@@ -19,6 +20,8 @@ export function TwilioNumbers() {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [removeTarget, setRemoveTarget] = useState<string | null>(null)
+  const [removing, setRemoving] = useState(false)
 
   function startEdit(n: TwilioNumber) {
     setEditingId(n.id)
@@ -55,10 +58,16 @@ export function TwilioNumbers() {
     }
   }
 
-  async function handleRemove(id: string) {
-    if (!window.confirm('Remove this Twilio number?')) return
-    setNumbers(await repo.removeTwilioNumber(id))
-    if (editingId === id) resetForm()
+  async function confirmRemove() {
+    if (!removeTarget) return
+    setRemoving(true)
+    try {
+      setNumbers(await repo.removeTwilioNumber(removeTarget))
+      if (editingId === removeTarget) resetForm()
+    } finally {
+      setRemoving(false)
+      setRemoveTarget(null)
+    }
   }
 
   if (loading) return <LoadingState rows={4} />
@@ -94,7 +103,7 @@ export function TwilioNumbers() {
               <Button size="sm" variant="ghost" onClick={() => startEdit(n)}>
                 Edit
               </Button>
-              <Button size="sm" variant="ghost" onClick={() => handleRemove(n.id)}>
+              <Button size="sm" variant="ghost" onClick={() => setRemoveTarget(n.id)}>
                 Remove
               </Button>
             </div>
@@ -153,6 +162,15 @@ export function TwilioNumbers() {
           </Button>
         </div>
       </div>
+      <ConfirmDialog
+        open={!!removeTarget}
+        onClose={() => setRemoveTarget(null)}
+        title="Remove Twilio number?"
+        body="This removes the number from your available senders. Existing calls are not affected."
+        confirmLabel="Remove"
+        busy={removing}
+        onConfirm={() => void confirmRemove()}
+      />
     </Card>
   )
 }

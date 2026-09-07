@@ -404,6 +404,7 @@ export default function AdminLeads() {
   const [busyId, setBusyId] = useState<string | null>(null)
   const [confirmBulk, setConfirmBulk] = useState(false)
   const [bulkBusy, setBulkBusy] = useState(false)
+  const [confirmAction, setConfirmAction] = useState<{ lead: AdminLead; action: 'dial' | 'delete' } | null>(null)
 
   const runAction = async (lead: AdminLead, action: LeadAction) => {
     setBusyId(lead.id)
@@ -413,7 +414,6 @@ export default function AdminLeads() {
         await repo.verifyLead(lead.id)
         setActionMsg(`Verification queued for ${lead.name}`)
       } else if (action === 'dial') {
-        if (!window.confirm(`Call ${lead.name} at ${lead.phone || 'their number'}? This places a real outbound call.`)) return
         const r = await repo.dialLead(lead.id, lead.offerCampaignId)
         setActionMsg(`Calling ${r.to || 'lead'}${r.callSid ? ` — SID ${r.callSid}` : ''}`)
       } else if (action === 'approve') {
@@ -423,7 +423,6 @@ export default function AdminLeads() {
         await repo.manualVerifyLead(lead.id, 'reject')
         setActionMsg(`Rejected ${lead.name}`)
       } else if (action === 'delete') {
-        if (!window.confirm(`Delete "${lead.name}"? This permanently removes the lead record.`)) return
         await repo.deleteLead(lead.id)
         setActionMsg(`Deleted ${lead.name}`)
       }
@@ -433,6 +432,15 @@ export default function AdminLeads() {
     } finally {
       setBusyId(null)
     }
+  }
+
+  /** Destructive/side-effecting actions ask first via the themed ConfirmDialog. */
+  const requestAction = (lead: AdminLead, action: LeadAction) => {
+    if (action === 'dial' || action === 'delete') {
+      setConfirmAction({ lead, action })
+      return
+    }
+    void runAction(lead, action)
   }
 
   const filtered = useMemo(() => {
@@ -629,7 +637,7 @@ export default function AdminLeads() {
                           {lead.lastContactAt ? formatRelativeCompact(lead.lastContactAt, NOW) : '—'}
                         </td>
                         <td className="px-4 py-3">
-                          <LeadRowActions lead={lead} busy={busyId === lead.id} onAction={runAction} onView={() => setPreview(lead)} />
+                          <LeadRowActions lead={lead} busy={busyId === lead.id} onAction={requestAction} onView={() => setPreview(lead)} />
                         </td>
                       </tr>
                     ))}
@@ -679,7 +687,7 @@ export default function AdminLeads() {
                       </div>
                     </button>
                     <div className="mt-2 border-t border-line pt-2">
-                      <LeadRowActions lead={lead} busy={busyId === lead.id} onAction={runAction} onView={() => setPreview(lead)} />
+                      <LeadRowActions lead={lead} busy={busyId === lead.id} onAction={requestAction} onView={() => setPreview(lead)} />
                     </div>
                   </div>
                 ))}
@@ -711,6 +719,28 @@ export default function AdminLeads() {
           body={`This permanently deletes ${selection.count} lead record${selection.count === 1 ? '' : 's'} from the platform-wide inventory. This cannot be undone.`}
           busy={bulkBusy}
           onConfirm={runBulkDelete}
+        />
+        <ConfirmDialog
+          open={!!confirmAction}
+          onClose={() => setConfirmAction(null)}
+          title={
+            confirmAction?.action === 'dial'
+              ? `Call ${confirmAction.lead.name}?`
+              : `Delete "${confirmAction?.lead.name ?? ''}"?`
+          }
+          body={
+            confirmAction?.action === 'dial'
+              ? `Call ${confirmAction.lead.name} at ${confirmAction.lead.phone || 'their number'}? This places a real outbound call.`
+              : 'This permanently removes the lead record. This cannot be undone.'
+          }
+          confirmLabel={confirmAction?.action === 'dial' ? 'Call' : 'Delete'}
+          variant={confirmAction?.action === 'dial' ? 'primary' : 'danger'}
+          busy={confirmAction ? busyId === confirmAction.lead.id : false}
+          onConfirm={() => {
+            const pending = confirmAction
+            setConfirmAction(null)
+            if (pending) void runAction(pending.lead, pending.action)
+          }}
         />
       </PageContainer>
     </PageTransition>

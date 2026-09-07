@@ -8,6 +8,7 @@ import type { FishVoice } from '@/types/settings'
 import { Card, SectionHeader } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 
 /**
  * Settings → Fish voices tab — named Fish Audio voice registry.
@@ -21,6 +22,8 @@ export function FishVoicesTab() {
   const [referenceId, setReferenceId] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [removeRef, setRemoveRef] = useState<string | null>(null)
+  const [removing, setRemoving] = useState(false)
 
   async function handleAdd() {
     const rid = referenceId.trim()
@@ -39,9 +42,15 @@ export function FishVoicesTab() {
     }
   }
 
-  async function handleRemove(referenceId: string) {
-    if (!window.confirm('Remove this Fish voice?')) return
-    setVoices(await repo.removeFishVoice(referenceId))
+  async function confirmRemove() {
+    if (!removeRef) return
+    setRemoving(true)
+    try {
+      setVoices(await repo.removeFishVoice(removeRef))
+    } finally {
+      setRemoving(false)
+      setRemoveRef(null)
+    }
   }
 
   if (loading) return <LoadingState rows={4} />
@@ -74,7 +83,7 @@ export function FishVoicesTab() {
                 {v.name}
                 <span className="ml-2 font-mono text-xs text-fg-muted">{v.reference_id}</span>
               </span>
-              <Button size="sm" variant="ghost" onClick={() => handleRemove(v.reference_id)}>
+              <Button size="sm" variant="ghost" onClick={() => setRemoveRef(v.reference_id)}>
                 Remove
               </Button>
             </div>
@@ -114,6 +123,15 @@ export function FishVoicesTab() {
           </Button>
         </div>
       </div>
+      <ConfirmDialog
+        open={!!removeRef}
+        onClose={() => setRemoveRef(null)}
+        title="Remove Fish voice?"
+        body="This removes the named voice from the registry. Voices already used by agents keep working until reassigned."
+        confirmLabel="Remove"
+        busy={removing}
+        onConfirm={() => void confirmRemove()}
+      />
     </Card>
   )
 }

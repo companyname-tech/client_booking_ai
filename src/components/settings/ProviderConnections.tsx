@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Textarea } from '@/components/ui/Textarea'
 import { SegmentedControl } from '@/components/ui/SegmentedControl'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { SecretInput } from './SecretInput'
 
 interface FieldSpec {
@@ -240,14 +241,22 @@ export function ProviderConnections({
 }) {
   const { data, loading, error, reload } = useAsyncData(() => repo.getConnections())
   const [state, setState] = useState<ConnectionsState | null>(null)
+  const [disconnectKey, setDisconnectKey] = useState<ConnectionKey | null>(null)
+  const [disconnecting, setDisconnecting] = useState(false)
 
   async function handleSave(patch: Record<string, string>) {
     setState(await repo.saveConnection(patch))
   }
 
-  async function handleDisconnect(key: ConnectionKey) {
-    if (!window.confirm(`Disconnect ${key}? Its stored credentials will be cleared.`)) return
-    setState(await repo.disconnectConnection(key))
+  async function confirmDisconnect() {
+    if (!disconnectKey) return
+    setDisconnecting(true)
+    try {
+      setState(await repo.disconnectConnection(disconnectKey))
+    } finally {
+      setDisconnecting(false)
+      setDisconnectKey(null)
+    }
   }
 
   if (loading) return <LoadingState rows={4} />
@@ -274,11 +283,22 @@ export function ProviderConnections({
               conn={conn}
               email={connections.email}
               onSave={handleSave}
-              onDisconnect={() => handleDisconnect(conn.key)}
+              onDisconnect={async () => {
+                setDisconnectKey(conn.key)
+              }}
             />
           ))
         )}
       </div>
+      <ConfirmDialog
+        open={!!disconnectKey}
+        onClose={() => setDisconnectKey(null)}
+        title={`Disconnect ${disconnectKey ?? 'provider'}?`}
+        body="Its stored credentials will be cleared. Reconnect any time from this screen."
+        confirmLabel="Disconnect"
+        busy={disconnecting}
+        onConfirm={() => void confirmDisconnect()}
+      />
     </Card>
   )
 }

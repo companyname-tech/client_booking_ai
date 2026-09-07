@@ -6,13 +6,24 @@ interface ConfirmDialogProps {
   title: string
   body: string
   confirmLabel?: string
+  /** 'danger' (red) for destructive actions, 'primary' (accent) otherwise. */
+  variant?: 'danger' | 'primary'
   busy?: boolean
   onConfirm: () => void
   onClose: () => void
 }
 
-/** Danger confirm dialog for destructive bulk actions. */
-export function ConfirmDialog({ open, title, body, confirmLabel = 'Delete', busy, onConfirm, onClose }: ConfirmDialogProps) {
+/** Themed confirm dialog — never the browser's native confirm()/alert(). */
+export function ConfirmDialog({
+  open,
+  title,
+  body,
+  confirmLabel = 'Delete',
+  variant = 'danger',
+  busy,
+  onConfirm,
+  onClose,
+}: ConfirmDialogProps) {
   return (
     <Modal
       open={open}
@@ -24,7 +35,7 @@ export function ConfirmDialog({ open, title, body, confirmLabel = 'Delete', busy
           <Button variant="secondary" onClick={onClose} disabled={busy}>
             Cancel
           </Button>
-          <Button variant="danger" onClick={onConfirm} disabled={busy}>
+          <Button variant={variant} onClick={onConfirm} disabled={busy}>
             {busy ? 'Working…' : confirmLabel}
           </Button>
         </div>
