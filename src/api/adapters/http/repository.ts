@@ -580,7 +580,14 @@ export const httpRepository = {
     return res?.voices ?? []
   },
   async listAgentModels(): Promise<AgentModels> {
-    return apiClient.get<AgentModels>('/agents/models')
+    const res = await apiClient.get<AgentModels>('/agents/models')
+    // Safe default — a partial/absent BE payload must never leak undefined
+    // into the UI (a missing sub-array would crash the Agent tab render).
+    return {
+      audio: res?.audio ?? [],
+      transcription: res?.transcription ?? [],
+      chat: res?.chat ?? [],
+    }
   },
 
   // --- Settings / connections ----------------------------------------------

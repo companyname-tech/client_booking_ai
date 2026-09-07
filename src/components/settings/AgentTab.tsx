@@ -234,7 +234,7 @@ export default function AgentTab() {
                           onChange={(v) => patchDraft(agent.id, { voice: v })}
                           ariaLabel="Voice"
                           placeholder="— Select voice —"
-                          options={voices.map((v) => ({ value: v.value, label: v.label }))}
+                          options={(voices ?? []).map((v) => ({ value: v.value, label: v.label }))}
                           className="w-full"
                         />
                       </div>
@@ -245,7 +245,7 @@ export default function AgentTab() {
                           onChange={(v) => patchDraft(agent.id, { audio_model: v })}
                           ariaLabel="Audio (TTS) model"
                           placeholder="— Default —"
-                          options={models.audio.map((m) => ({ value: m.value, label: m.label }))}
+                          options={(models.audio ?? []).map((m) => ({ value: m.value, label: m.label }))}
                           className="w-full"
                         />
                       </div>
@@ -256,7 +256,7 @@ export default function AgentTab() {
                           onChange={(v) => patchDraft(agent.id, { transcription_model: v })}
                           ariaLabel="Transcription (STT) model"
                           placeholder="— Default —"
-                          options={models.transcription.map((m) => ({ value: m.value, label: m.label }))}
+                          options={(models.transcription ?? []).map((m) => ({ value: m.value, label: m.label }))}
                           className="w-full"
                         />
                       </div>
@@ -285,11 +285,11 @@ export default function AgentTab() {
                           ariaLabel="Agent model"
                           placeholder="— Default —"
                           options={[
-                            ...models.chat.map((m) => ({ value: m.value, label: m.label })),
+                            ...(models.chat ?? []).map((m) => ({ value: m.value, label: m.label })),
                             // Keep a previously-stored value selectable even when it is no
                             // longer on the system roster (legacy free-text agents).
                             ...(draft.agent_model &&
-                            !models.chat.some((m) => m.value === draft.agent_model)
+                            !(models.chat ?? []).some((m) => m.value === draft.agent_model)
                               ? [{ value: draft.agent_model, label: `${draft.agent_model} (custom)` }]
                               : []),
                           ]}
