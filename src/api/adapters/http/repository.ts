@@ -13,7 +13,7 @@
 import { apiClient } from './client'
 import { env } from '@/config/environment'
 import { ensureEntryIds, stripEntryIds } from '@/lib/pronunciation'
-import type { Agent, OfferCampaign, User, Client, Lead, Call, Booking, CallDetail, LeadDetail, Recording, CallHistoryEntry, CampaignFunnelStage, CampaignInsight, CampaignAttentionAlert, CampaignPerformancePoint, CampaignHealthSnapshot, CampaignHealth, Analytics, Activity, AttentionItem, Integration, LeadStatus } from '@/types'
+import type { Agent, OfferCampaign, User, Client, ClientInput, ClientPage, Lead, Call, Booking, CallDetail, LeadDetail, Recording, CallHistoryEntry, CampaignFunnelStage, CampaignInsight, CampaignAttentionAlert, CampaignPerformancePoint, CampaignHealthSnapshot, CampaignHealth, Analytics, Activity, AttentionItem, Integration, LeadStatus } from '@/types'
 import type { AppSettings, ConnectionsState, ConnectionKey, TwilioNumber, FishVoice, SettingsSchemaField, AgentModels, AgentVoiceOption, AgentRole } from '@/types/settings'
 import type { AdminCampaignMeta, AdminLead, CampaignReviewData, AuditEvent, AdminNotification, TrainingStatus, ActivityLogEntry, ActivitySource } from '@/types/admin'
 import type { CampaignAnalyticsData, AnalyticsFilters } from '@/types/campaignAnalytics'
@@ -38,6 +38,7 @@ interface OfferWire {
   agent_id?: string
   category?: string
   company?: string
+  client_id?: string
   phone?: string
   contact_name?: string
   currency?: string
@@ -277,7 +278,7 @@ function toCampaign(wire: OfferWire): OfferCampaign {
   const status = leadCount > 0 ? 'active' : 'draft'
   return {
     id: wire.id,
-    clientId: '',
+    clientId: wire.client_id ?? '',
     name: wire.name || wire.title,
     offerName: wire.title,
     status,
@@ -326,8 +327,18 @@ export const httpRepository = {
   async getCurrentClient(): Promise<Client> {
     return apiClient.get<Client>('/workspace')
   },
-  async getClients(): Promise<Client[]> {
-    return apiClient.get<Client[]>('/admin/clients')
+  async getClients(params?: { q?: string; page?: number; pageSize?: number }): Promise<ClientPage> {
+    const qs = new URLSearchParams()
+    if (params?.q) qs.set('q', params.q)
+    if (params?.page) qs.set('page', String(params.page))
+    if (params?.pageSize) qs.set('page_size', String(params.pageSize))
+    const wire = await apiClient.get<{ items?: Client[]; total?: number; page?: number; page_size?: number }>(`/admin/clients?${qs.toString()}`)
+    return {
+      items: wire?.items ?? [],
+      total: wire?.total ?? 0,
+      page: wire?.page ?? 1,
+      pageSize: wire?.page_size ?? 20,
+    }
   },
 
   // --- Campaigns (→ BE offers) -------------------------------------------
@@ -379,6 +390,12 @@ export const httpRepository = {
     const res = await apiClient.get<{ leads?: LeadWire[]; total?: number }>('/leads?limit=10000')
     return (res?.leads ?? []).map(toAdminLead)
   },
+  async generateLeads(request: LeadGenerateRequest): Promise<LeadImportResult> {
+    return apiClient.post<LeadImportResult>('/leads/generate', request)
+  },
+  async smartSearch(request: SmartSearchRequest): Promise<SmartSearchResponse> {
+    return apiClient.post<SmartSearchResponse>('/leads/smart-search', request)
+  },
   async getCalls(_offerCampaignId?: string): Promise<Call[]> {
     const calls = await apiClient.get<CallWire[]>('/calls')
     return (calls ?? []).map(toCall)
@@ -406,10 +423,25 @@ export const httpRepository = {
     return (res?.recordings ?? []).map(toCallHistoryEntry)
   },
   async getCampaignFunnel(_offerCampaignId: string): Promise<CampaignFunnelStage[]> {
-    return apiClient.get<CampaignFunnelStage[]>(`/offers/${_offerCampaignId}/funnel`)
+    const res = await apiClient.get<{ stages?: { id: string; label: string; count: number; conversion_from_prev?: number | null }[] }>(`/offers/${_offerCampaignId}/funnel`)
+    return (res?.stages ?? []).map((s) => ({
+      id: s.id,
+      label: s.label,
+      count: s.count,
+      conversionFromPrev: s.conversion_from_prev ?? undefined,
+    }))
   },
   async getCampaignHealthSnapshot(_offerCampaignId: string): Promise<CampaignHealthSnapshot> {
-    return apiClient.get<CampaignHealthSnapshot>(`/offers/${_offerCampaignId}/health`)
+    const res = await apiClient.get<{ overall?: CampaignHealthSnapshot['overall']; lead_quality?: CampaignHealthSnapshot['leadQuality']; booking_rate?: number; message?: string }>(`/offers/${_offerCampaignId}/health`)
+    const br = res?.booking_rate ?? 0
+    return {
+      overall: res?.overall ?? 'fair',
+      aiPerformance: 'good',
+      leadQuality: res?.lead_quality ?? 'moderate',
+      bookingRate: br >= 0.2 ? 'above_target' : br >= 0.1 ? 'on_target' : 'below_target',
+      budgetEfficiency: 'healthy',
+      message: res?.message ?? '',
+    }
   },
   async getCampaignInsights(_offerCampaignId: string): Promise<CampaignInsight[]> {
     return apiClient.get<CampaignInsight[]>(`/offers/${_offerCampaignId}/insights`)
@@ -418,7 +450,8 @@ export const httpRepository = {
     return apiClient.get<CampaignAttentionAlert[]>(`/offers/${_offerCampaignId}/alerts`)
   },
   async getCampaignPerformance(_offerCampaignId: string, _days: 7 | 14 | 30 = 14): Promise<CampaignPerformancePoint[]> {
-    return apiClient.get<CampaignPerformancePoint[]>(`/offers/${_offerCampaignId}/performance?days=${_days}`)
+    const res = await apiClient.get<{ points?: { date: string; leads: number; meetings_booked?: number }[] }>(`/offers/${_offerCampaignId}/performance?days=${_days}`)
+    return (res?.points ?? []).map((p) => ({ date: p.date, leads: p.leads, calls: 0, bookings: p.meetings_booked ?? 0 }))
   },
   async getCampaignAnalytics(_offerCampaignId: string, _filters: AnalyticsFilters): Promise<CampaignAnalyticsData> {
     return apiClient.get<CampaignAnalyticsData>(`/campaigns/${_offerCampaignId}/analytics`)
@@ -613,8 +646,16 @@ export const httpRepository = {
     })
     return toCampaign(wire)
   },
-  async getClient(id: string): Promise<Client | undefined> {
-    return apiClient.get<Client>(`/admin/clients/${id}`)
+  async getClient(id: string): Promise<{ client: Client; campaigns: OfferCampaign[] } | undefined> {
+    const wire = await apiClient.get<{ client?: Client; campaigns?: OfferWire[] }>(`/admin/clients/${id}`)
+    if (!wire?.client) return undefined
+    return { client: wire.client, campaigns: (wire.campaigns ?? []).map(toCampaign) }
+  },
+  async createClient(payload: ClientInput): Promise<Client> {
+    return apiClient.post<Client>('/admin/clients', payload)
+  },
+  async updateClient(id: string, payload: Partial<ClientInput>): Promise<Client> {
+    return apiClient.put<Client>(`/admin/clients/${id}`, payload)
   },
 
   // --- AI Command Center ------------------------------------------------------
@@ -665,9 +706,6 @@ export const httpRepository = {
   },
   async markConversationViewed(id: string): Promise<void> {
     await apiClient.post(`/ai/conversations/${id}/viewed`)
-  },
-  async addSimulatedActivity(event: AIActivityEvent): Promise<void> {
-    await apiClient.post('/ai/activity', event)
   },
 
   // --- Lead Intelligence Hub ---------------------------------------------------
