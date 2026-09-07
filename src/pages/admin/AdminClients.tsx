@@ -15,6 +15,7 @@ import { SelectCheckbox } from '@/components/ui/SelectCheckbox'
 import { BulkActionBar } from '@/components/ui/BulkActionBar'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { useBulkSelection } from '@/hooks/useBulkSelection'
+import { cn } from '@/lib/utils'
 import { ClientFormModal } from '@/components/admin/ClientFormModal'
 import type { Client } from '@/types'
 
@@ -24,6 +25,7 @@ export default function AdminClients() {
   const navigate = useNavigate()
   const [search, setSearch] = useState('')
   const [q, setQ] = useState('')
+  const [plan, setPlan] = useState<'all' | Client['plan']>('all')
   const [page, setPage] = useState(1)
   const [modal, setModal] = useState<{ open: boolean; client: Client | null }>({ open: false, client: null })
   const [confirmBulk, setConfirmBulk] = useState(false)
@@ -49,10 +51,11 @@ export default function AdminClients() {
   const pages = Math.max(1, Math.ceil(total / PAGE_SIZE))
   const campaignCount = (clientId: string) => (campaigns ?? []).filter((c) => c.clientId === clientId).length
 
-  const selection = useBulkSelection(clients.map((c) => c.id))
+  const planFiltered = plan === 'all' ? clients : clients.filter((c) => c.plan === plan)
+  const selection = useBulkSelection(planFiltered.map((c) => c.id))
 
   const runBulkDelete = async () => {
-    const ids = clients.filter((c) => selection.selected.has(c.id)).map((c) => c.id)
+    const ids = planFiltered.filter((c) => selection.selected.has(c.id)).map((c) => c.id)
     if (ids.length === 0) return
     setBulkBusy(true)
     setBulkNotice('')
@@ -63,7 +66,7 @@ export default function AdminClients() {
       )
       selection.clear()
       setConfirmBulk(false)
-      if (page > 1 && clients.length === ids.length) setPage(page - 1)
+      if (page > 1 && planFiltered.length === ids.length) setPage(page - 1)
       void reload()
     } catch (e) {
       setBulkNotice(`Bulk delete failed: ${e instanceof Error ? e.message : String(e)}`)
@@ -86,15 +89,32 @@ export default function AdminClients() {
             </Button>
           }
         />
-        <div className="flex items-center gap-3">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
           <Input
             aria-label="Search clients"
             placeholder="Search name, industry or contact email"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="max-w-sm"
+            className="w-full lg:max-w-sm"
           />
-          <Button variant="ghost" onClick={reload}>Refresh</Button>
+          <div className="flex flex-wrap items-center gap-2">
+            {(['all', 'starter', 'growth', 'enterprise'] as const).map((p) => (
+              <button
+                key={p}
+                type="button"
+                onClick={() => setPlan(p)}
+                className={cn(
+                  'rounded-full border px-2.5 py-1 text-xs font-medium capitalize transition-colors',
+                  plan === p ? 'border-line-strong bg-surface-3 text-fg' : 'border-line text-fg-muted hover:text-fg',
+                )}
+              >
+                {p === 'all' ? 'All plans' : p}
+              </button>
+            ))}
+          </div>
+          <Button variant="ghost" onClick={reload} className="lg:ml-auto">
+            Refresh
+          </Button>
         </div>
         <BulkActionBar
           count={selection.count}
@@ -108,90 +128,72 @@ export default function AdminClients() {
           <LoadingState rows={6} />
         ) : error ? (
           <ErrorState message={error} onRetry={reload} />
-        ) : clients.length === 0 ? (
-          <EmptyState title="No clients found" description="Try a different search, or add a client workspace." />
+        ) : planFiltered.length === 0 ? (
+          <EmptyState title="No clients found" description="Try a different search or filter, or add a client workspace." />
         ) : (
-          <div className="surface overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-line text-left text-2xs text-fg-muted">
-                    <th className="w-10 px-3 py-2.5">
-                      <SelectCheckbox
-                        checked={selection.allChecked}
-                        indeterminate={selection.someChecked}
-                        onChange={selection.toggleAll}
-                        label="Select all clients on this page"
-                      />
-                    </th>
-                    <th className="px-5 py-2.5">Client</th>
-                    <th className="px-3 py-2.5">Contact</th>
-                    <th className="px-3 py-2.5">Plan</th>
-                    <th className="px-3 py-2.5">Campaigns</th>
-                    <th className="px-3 py-2.5">Created</th>
-                    <th className="px-5 py-2.5" />
-                  </tr>
-                </thead>
-                <tbody>
-                  {clients.map((client) => (
-                    <tr
-                      key={client.id}
-                      role="link"
-                      tabIndex={0}
-                      onClick={() => navigate(`/admin/clients/${client.id}`)}
-                      onKeyDown={(e: React.KeyboardEvent) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                          e.preventDefault()
-                          navigate(`/admin/clients/${client.id}`)
-                        }
-                      }}
-                      aria-label={`Open ${client.name}`}
-                      className="interactive ring-focus cursor-pointer border-b border-line outline-none last:border-0 hover:bg-white/[0.03] focus-visible:bg-white/[0.04]"
+          <div className="grid gap-3 xl:grid-cols-2">
+            {planFiltered.map((client) => (
+              <div
+                key={client.id}
+                className="surface group flex flex-col gap-3 p-4"
+              >
+                <div className="flex items-start gap-3">
+                  <div className="pt-0.5">
+                    <SelectCheckbox
+                      checked={selection.selected.has(client.id)}
+                      onChange={() => selection.toggle(client.id)}
+                      label={`Select ${client.name}`}
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => navigate(`/admin/clients/${client.id}`)}
+                    className="interactive ring-focus flex min-w-0 flex-1 items-center gap-3 rounded-md text-left outline-none"
+                    aria-label={`Open ${client.name}`}
+                  >
+                    <Avatar name={client.name} size="lg" className="rounded-md" />
+                    <span className="min-w-0">
+                      <span className="block truncate font-medium text-fg">{client.name}</span>
+                      <span className="block truncate text-xs text-fg-muted">{client.industry || 'No industry set'}</span>
+                    </span>
+                  </button>
+                  <div className="flex shrink-0 items-center gap-1">
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      aria-label={`Edit ${client.name}`}
+                      onClick={() => setModal({ open: true, client })}
                     >
-                      <td className="px-3 py-3">
-                        <SelectCheckbox
-                          checked={selection.selected.has(client.id)}
-                          onChange={() => selection.toggle(client.id)}
-                          label={`Select ${client.name}`}
-                        />
-                      </td>
-                      <td className="px-5 py-3">
-                        <div className="flex items-center gap-3">
-                          <Avatar name={client.name} size="md" className="rounded-md" />
-                          <div>
-                            <div className="font-medium text-fg">{client.name}</div>
-                            <div className="text-xs text-fg-muted">{client.industry || '—'}</div>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-3 py-3 text-fg-secondary">
-                        {client.primaryContact?.name || '—'}{' '}
-                        {client.primaryContact?.email ? `· ${client.primaryContact.email}` : ''}
-                      </td>
-                      <td className="px-3 py-3 capitalize text-fg-secondary">{client.plan}</td>
-                      <td className="px-3 py-3 tabular text-fg-secondary">{campaignCount(client.id)}</td>
-                      <td className="px-3 py-3 text-fg-muted">
-                        {client.createdAt ? new Date(client.createdAt).toLocaleDateString() : '—'}
-                      </td>
-                      <td className="px-5 py-3 text-right">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          leadingIcon={<Pencil className="size-3.5" />}
-                          aria-label={`Edit ${client.name}`}
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            setModal({ open: true, client })
-                          }}
-                        >
-                          Edit
-                        </Button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                      <Pencil className="size-3.5" />
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Per-client statistics + meta (kept from the M-0002 guardrail). */}
+                <div className="grid grid-cols-3 gap-2 border-t border-line pt-3">
+                  <div>
+                    <div className="text-2xs uppercase tracking-wide text-fg-muted">Plan</div>
+                    <div className="mt-0.5 text-sm capitalize text-fg">{client.plan}</div>
+                  </div>
+                  <div>
+                    <div className="text-2xs uppercase tracking-wide text-fg-muted">Campaigns</div>
+                    <div className="mt-0.5 text-sm font-semibold tabular text-fg">{campaignCount(client.id)}</div>
+                  </div>
+                  <div>
+                    <div className="text-2xs uppercase tracking-wide text-fg-muted">Created</div>
+                    <div className="mt-0.5 text-sm text-fg-muted">
+                      {client.createdAt ? new Date(client.createdAt).toLocaleDateString() : '—'}
+                    </div>
+                  </div>
+                </div>
+
+                <p className="truncate text-xs text-fg-muted">
+                  {client.primaryContact?.name
+                    ? `${client.primaryContact.name}${client.primaryContact.email ? ` · ${client.primaryContact.email}` : ''}`
+                    : client.primaryContact?.email || 'No primary contact'}
+                </p>
+              </div>
+            ))}
           </div>
         )}
         {total > 0 && (
