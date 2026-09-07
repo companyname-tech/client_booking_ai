@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Sparkles } from 'lucide-react'
 import { repo } from '@/data/repository'
 import type { EnrichedLead, LeadHubFilters } from '@/types/leadIntelligence'
 import { useAsyncData } from '@/hooks/useAsyncData'
@@ -7,12 +8,14 @@ import { ErrorState } from '@/components/ui/ErrorState'
 import { PageContainer, PageHeader, WorkspaceEyebrow } from '@/components/layout/PageHeader'
 import { PageTransition } from '@/components/motion/PageTransition'
 import { Reveal } from '@/components/motion/Reveal'
+import { Button } from '@/components/ui/Button'
 import { LeadHubMetrics } from '@/components/leads/hub/LeadHubMetrics'
 import { LeadHubFiltersBar, LeadHubTable } from '@/components/leads/hub/LeadHubTable'
 import { LeadSegments, RecommendedLeads } from '@/components/leads/hub/LeadSegments'
 import { LeadHubCharts, PriorityLeads } from '@/components/leads/hub/LeadHubCharts'
 import { LeadPreviewDrawer } from '@/components/leads/hub/LeadPreviewDrawer'
 import { LeadBulkActions, LeadExportButton } from '@/components/leads/hub/LeadBulkActions'
+import { GenerateLeadsModal } from '@/components/leads/hub/GenerateLeadsModal'
 
 const DEFAULT_FILTERS: LeadHubFilters = { search: '', status: 'all', intent: 'all' }
 
@@ -35,6 +38,7 @@ export default function LeadHub() {
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [preview, setPreview] = useState<EnrichedLead | null>(null)
   const [toast, setToast] = useState('')
+  const [genOpen, setGenOpen] = useState(false)
 
   const filtered = useAsyncData(
     () => repo.filterLeads(allLeads.data ?? [], { ...filters, segment }),
@@ -79,7 +83,14 @@ export default function LeadHub() {
           eyebrow={<WorkspaceEyebrow name={clientData.data?.name ?? 'Workspace'} context="Lead Intelligence" />}
           title="Lead Intelligence"
           description="Every prospect, conversation and opportunity in one place."
-          actions={<LeadExportButton onExport={() => notify('Lead export prepared.')} />}
+          actions={
+            <>
+              <Button variant="primary" size="sm" leadingIcon={<Sparkles className="size-3.5" />} onClick={() => setGenOpen(true)}>
+                Generate leads
+              </Button>
+              <LeadExportButton onExport={() => notify('Lead export prepared.')} />
+            </>
+          }
         />
 
         {toast && (
@@ -185,6 +196,13 @@ export default function LeadHub() {
         </Reveal>
 
         <LeadPreviewDrawer lead={preview} open={!!preview} onClose={() => setPreview(null)} />
+
+        <GenerateLeadsModal
+          open={genOpen}
+          onClose={() => setGenOpen(false)}
+          campaigns={campaigns.data ?? []}
+          onGenerated={allLeads.reload}
+        />
       </PageContainer>
     </PageTransition>
   )

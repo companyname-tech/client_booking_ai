@@ -21,6 +21,7 @@ import type { EnrichedLead, LeadHubMetrics, LeadHubStats, LeadSegment, LeadHubFi
 import type { AICommandOverview, AIActivityEvent, AIConversationSummary, AIConversationDetail, AIObjection, AILearningPattern, AIImprovement, AIFollowUp, AIEscalation, AIBookingConversation, AIInsight, AIHealthSnapshot, AIAgentProfile, AIPerformanceSnapshot, AICommandFilters } from '@/types/aiCommand'
 import type { CampaignDraft } from '@/types/campaignDraft'
 import type { PronunciationAgentOption, PronunciationConfigDto, PronunciationLexiconEntry, TranscribePronunciationReply } from '@/types/pronunciation'
+import type { LeadGenerateRequest, LeadImportResult, SmartSearchRequest, SmartSearchResponse } from '@/types/leadGeneration'
 
 // ---------------------------------------------------------------------------
 // Wire DTOs (snake_case) for the Tier B domains.
@@ -350,6 +351,12 @@ export const httpRepository = {
   async getLead(_offerCampaignId: string, leadId: string): Promise<LeadDetail> {
     const lead = await apiClient.get<LeadWire>(`/leads/${leadId}`)
     return { ...toLead(lead), timeline: [], analysis: { summary: lead.last_call_summary ?? '', signals: [], confidence: 0 } }
+  },
+  async generateLeads(request: LeadGenerateRequest): Promise<LeadImportResult> {
+    return apiClient.post<LeadImportResult>('/leads/generate', request)
+  },
+  async smartSearch(request: SmartSearchRequest): Promise<SmartSearchResponse> {
+    return apiClient.post<SmartSearchResponse>('/leads/smart-search', request)
   },
   async getAdminLeads(): Promise<AdminLead[]> {
     // Platform-wide inventory: all leads across every campaign. The backend

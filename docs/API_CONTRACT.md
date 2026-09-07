@@ -60,6 +60,8 @@ the adapter derives status/stage from lead count and zero-fills the rest.
 | `getRecommendedLeads` | `GET /leads/recommended` | ✅ |
 | `getPriorityLeads` | `GET /leads/priority` | ✅ |
 | `getLeadIntelligence` | `GET /leads/{lead_id}/intelligence` | ✅ |
+| `generateLeads` | `POST /leads/generate` | ✅ |
+| `smartSearch` | `POST /leads/smart-search` | ✅ |
 | `getLeadNotes` / `addLeadNote` / `updateLeadNote` / `deleteLeadNote` | `/leads/{id}/notes*` | ⚠️ not built |
 | `getLeadTags` / `toggleLeadTag` | `/leads/{id}/tags*` | ⚠️ not built |
 | `filterLeads` | client-side (no call) | n/a |
