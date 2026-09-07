@@ -82,7 +82,7 @@ export function RejectCampaignModal({
         <>
           <Button variant="ghost" onClick={onClose}>Cancel</Button>
           <Button variant="primary" className="bg-danger hover:bg-danger/90" disabled={!detail.trim()} onClick={() => { onSubmit(reason, detail); onClose() }}>
-            Reject Campaign
+            Reject OfferCampaign
           </Button>
         </>
       }
@@ -132,12 +132,12 @@ export function ApproveCampaignModal({
   }
 
   return (
-    <Modal open={open} onClose={onClose} title={success ? 'Campaign approved' : 'Approve campaign?'} size="md">
+    <Modal open={open} onClose={onClose} title={success ? 'OfferCampaign approved' : 'Approve campaign?'} size="md">
       <div className="px-5 py-4">
         {success ? (
           <div className="flex flex-col items-center py-8 text-center">
             <div className="flex size-12 items-center justify-center rounded-full bg-success-soft text-success">✓</div>
-            <p className="mt-4 font-medium text-fg">Campaign approved</p>
+            <p className="mt-4 font-medium text-fg">OfferCampaign approved</p>
             <p className="mt-1 text-sm text-fg-muted">Entering launch queue…</p>
           </div>
         ) : (

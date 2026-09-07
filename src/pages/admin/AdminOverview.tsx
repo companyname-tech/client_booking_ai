@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { ArrowRight } from 'lucide-react'
 import { repo } from '@/data/repository'
+import { useAsyncData } from '@/hooks/useAsyncData'
 import { formatNumber } from '@/lib/utils'
 import { PageTransition } from '@/components/motion/PageTransition'
 import { AnimatedNumber } from '@/components/motion/AnimatedNumber'
@@ -10,12 +11,33 @@ import { Button } from '@/components/ui/Button'
 import { SectionHeader } from '@/components/ui/Card'
 import { PriorityQueue } from '@/components/admin/PriorityQueue'
 import { CampaignTable } from '@/components/campaigns/CampaignTable'
+import { LoadingState } from '@/components/ui/LoadingState'
+import { ErrorState } from '@/components/ui/ErrorState'
 
 export default function AdminOverview() {
-  const user = repo.getSuperAdminUser()
-  const campaigns = repo.getCampaigns()
-  const clients = repo.getClients()
-  const metas = repo.getAllAdminMeta()
+  const { data, loading, error, reload } = useAsyncData(() =>
+    Promise.all([repo.getSuperAdminUser(), repo.getCampaigns(), repo.getClients(), repo.getAllAdminMeta()]),
+  )
+
+  if (loading) {
+    return (
+      <PageTransition>
+        <PageContainer><LoadingState rows={6} /></PageContainer>
+      </PageTransition>
+    )
+  }
+
+  if (error) {
+    return (
+      <PageTransition>
+        <PageContainer><ErrorState message={error} onRetry={reload} /></PageContainer>
+      </PageTransition>
+    )
+  }
+
+  if (!data) return null
+
+  const [user, campaigns, clients, metas] = data
   const pending = metas.filter((m) => ['awaiting_approval', 'submitted', 'compliance_review'].includes(m.workflowStatus)).length
 
   const metrics = [

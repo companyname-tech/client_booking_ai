@@ -28,7 +28,7 @@ export function ConversationTranscript({ messages }: { messages: AIConversationD
           </div>
         </Reveal>
       ))}
-      <p className="text-2xs text-fg-faint">Mock conversation — illustrative demo data</p>
+      <p className="text-2xs text-fg-faint">Conversation</p>
     </div>
   )
 }
@@ -37,7 +37,7 @@ export function AIDecisionLayer({ decisions }: { decisions: AIConversationDetail
   return (
     <div className="space-y-3">
       <h3 className="text-sm font-semibold text-fg">AI Decision Layer</h3>
-      <p className="text-2xs text-fg-muted">Operational explanations — simulated AI metrics</p>
+      <p className="text-2xs text-fg-muted">Operational explanations</p>
       {decisions.map((d) => (
         <div key={d.id} className="rounded-lg border border-line bg-surface-1 p-4">
           <div className="grid grid-cols-2 gap-2 text-xs sm:grid-cols-3">

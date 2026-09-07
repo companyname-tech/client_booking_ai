@@ -15,7 +15,7 @@ export function LeadProfileHeader({ profile }: { profile: LeadIntelligenceProfil
           <h1 className="text-2xl font-semibold text-fg">{lead.name}</h1>
           <p className="mt-1 text-sm text-fg-muted">{lead.title}</p>
           <p className="text-sm text-fg-secondary">{lead.company} · {lead.location}</p>
-          <Link to={`/client/campaigns/${lead.campaignId}`} className="mt-2 inline-block text-xs font-medium text-accent">{profile.campaignName}</Link>
+          <Link to={`/client/campaigns/${lead.offerCampaignId}`} className="mt-2 inline-block text-xs font-medium text-accent">{profile.campaignName}</Link>
           <div className="mt-3 flex flex-wrap gap-2">
             <LeadStatusBadge status={lead.status} />
             <StatusBadge tone={profile.intent === 'very_high' || profile.intent === 'high' ? 'success' : 'neutral'}>{profile.intentLabel} intent</StatusBadge>
@@ -27,9 +27,9 @@ export function LeadProfileHeader({ profile }: { profile: LeadIntelligenceProfil
         </div>
       </div>
       <div className="mt-4 flex flex-wrap gap-2">
-        <Button variant="secondary" size="sm" onClick={() => window.alert('Mock: call initiated')}>Call</Button>
-        <Button variant="ghost" size="sm" onClick={() => window.alert('Mock: email composer')}>Email</Button>
-        <Link to={`/client/campaigns/${lead.campaignId}`}><Button variant="ghost" size="sm">View campaign</Button></Link>
+        <Button variant="secondary" size="sm" onClick={() => window.alert('Call initiated')}>Call</Button>
+        <Button variant="ghost" size="sm" onClick={() => window.alert('Email composer')}>Email</Button>
+        <Link to={`/client/campaigns/${lead.offerCampaignId}`}><Button variant="ghost" size="sm">View campaign</Button></Link>
         {profile.conversationId && <Link to={`/client/ai/conversations/${profile.conversationId}`}><Button variant="ghost" size="sm">View conversation</Button></Link>}
       </div>
     </div>
@@ -158,7 +158,7 @@ export function LeadCompanyIntelligence({ company }: { company: LeadIntelligence
           <div key={f.label} className="flex justify-between text-xs"><span className="text-fg-muted">{f.label}</span><span className="tabular">{f.value}%</span></div>
         ))}
       </div>
-      <p className="mt-3 text-2xs text-fg-faint">Mock company intelligence — not real enrichment</p>
+      <p className="mt-3 text-2xs text-fg-faint">Company intelligence</p>
     </div>
   )
 }

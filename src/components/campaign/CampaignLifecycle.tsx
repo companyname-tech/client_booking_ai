@@ -1,4 +1,4 @@
-import type { Campaign } from '@/types'
+import type { OfferCampaign } from '@/types'
 import { campaignStatusMeta, campaignStageMeta } from '@/lib/status'
 import { ProgressTimeline } from '@/components/campaigns/ProgressTimeline'
 import { SubmissionStatusTimeline } from '@/components/campaigns/SubmissionStatusTimeline'
@@ -9,7 +9,7 @@ export function CampaignLifecycle({
   campaign,
   stageProgress,
 }: {
-  campaign: Campaign
+  campaign: OfferCampaign
   stageProgress?: number
 }) {
   const status = campaign.status
@@ -21,7 +21,7 @@ export function CampaignLifecycle({
     ai_training: 'Your campaign is being prepared by our team.',
     awaiting_approval: 'Your campaign is under review before launch.',
     active: 'AI is actively contacting and booking leads.',
-    paused: 'Campaign is paused. Resume when ready.',
+    paused: 'OfferCampaign is paused. Resume when ready.',
     completed: 'This campaign has completed its run.',
   }
 

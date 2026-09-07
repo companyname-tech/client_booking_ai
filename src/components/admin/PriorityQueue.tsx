@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
 import { ArrowRight } from 'lucide-react'
 import type { AdminCampaignMeta } from '@/types/admin'
-import type { Campaign, Client } from '@/types'
+import type { OfferCampaign, Client } from '@/types'
 import { NOW } from '@/data/time'
 import { formatRelativeCompact } from '@/lib/utils'
 import { cn } from '@/lib/utils'
@@ -50,7 +50,7 @@ export function PriorityQueue({
 }: {
   items: AdminCampaignMeta[]
   clients: Client[]
-  campaigns: Campaign[]
+  campaigns: OfferCampaign[]
 }) {
   const queue = items.filter((m) =>
     ['awaiting_approval', 'submitted', 'compliance_review', 'training', 'changes_requested', 'approved'].includes(m.workflowStatus),
@@ -63,15 +63,15 @@ export function PriorityQueue({
   return (
     <ul className="space-y-2">
       {queue.map((m) => {
-        const campaign = campaigns.find((c) => c.id === m.campaignId)
+        const campaign = campaigns.find((c) => c.id === m.offerCampaignId)
         const client = clients.find((c) => c.id === campaign?.clientId)
         if (!campaign) return null
         const tone = (WF_TONE[m.workflowStatus] ?? 'info') as 'warning' | 'violet' | 'info' | 'success' | 'danger'
         const badgeClass = WF_BADGE[m.workflowStatus] ?? 'bg-info-soft/20 text-info'
         return (
-          <li key={m.campaignId}>
+          <li key={m.offerCampaignId}>
             <Link
-              to={`/admin/campaigns/${m.campaignId}/review`}
+              to={`/admin/campaigns/${m.offerCampaignId}/review`}
               className="interactive group flex flex-col gap-3 rounded-lg border border-line bg-surface-2 p-4 transition-colors hover:border-line-strong hover:bg-surface-3/50 sm:flex-row sm:items-center sm:justify-between"
             >
               <div className="min-w-0">

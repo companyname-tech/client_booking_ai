@@ -1,16 +1,42 @@
 import { Link, useParams } from 'react-router-dom'
 import { repo } from '@/data/repository'
+import { useAsyncData } from '@/hooks/useAsyncData'
 import { PageTransition } from '@/components/motion/PageTransition'
 import { PageContainer, PageHeader, WorkspaceEyebrow } from '@/components/layout/PageHeader'
 import { Avatar } from '@/components/ui/Avatar'
 import { CampaignTable } from '@/components/campaigns/CampaignTable'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { Reveal } from '@/components/motion/Reveal'
+import { LoadingState } from '@/components/ui/LoadingState'
+import { ErrorState } from '@/components/ui/ErrorState'
 
 export default function AdminClientDetail() {
   const { id } = useParams()
-  const client = id ? repo.getClient(id) : undefined
-  const campaigns = repo.getCampaigns(client?.id)
+  const { data, loading, error, reload } = useAsyncData(async () => {
+    if (!id) return undefined
+    const client = await repo.getClient(id)
+    const campaigns = await repo.getCampaigns(client?.id)
+    return { client, campaigns }
+  }, [id])
+
+  if (loading) {
+    return (
+      <PageTransition>
+        <PageContainer><LoadingState rows={5} /></PageContainer>
+      </PageTransition>
+    )
+  }
+
+  if (error) {
+    return (
+      <PageTransition>
+        <PageContainer><ErrorState message={error} onRetry={reload} /></PageContainer>
+      </PageTransition>
+    )
+  }
+
+  const client = data?.client
+  const campaigns = data?.campaigns ?? []
 
   if (!client) {
     return (

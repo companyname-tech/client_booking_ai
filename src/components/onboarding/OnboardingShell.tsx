@@ -7,6 +7,7 @@ import { ONBOARDING_STEPS } from '@/lib/onboarding'
 import { tweenBase } from '@/lib/motion'
 import { cn } from '@/lib/utils'
 import { repo } from '@/data/repository'
+import { useAsyncData } from '@/hooks/useAsyncData'
 import { useCampaignDraft } from '@/hooks/useCampaignDraft'
 import { PageTransition } from '@/components/motion/PageTransition'
 import { PageContainer, WorkspaceEyebrow } from '@/components/layout/PageHeader'
@@ -35,7 +36,7 @@ type SubmitPhase = 'idle' | 'preparing' | 'success'
 export function OnboardingShell({ draftHook, onSubmit, editMode, backHref = '/client/campaigns' }: OnboardingShellProps) {
   const navigate = useNavigate()
   const reduce = useReducedMotion()
-  const client = repo.getCurrentClient()
+  const { data: client } = useAsyncData(() => repo.getCurrentClient(), [])
   const {
     draft,
     updateDraft,
@@ -114,11 +115,11 @@ export function OnboardingShell({ draftHook, onSubmit, editMode, backHref = '/cl
             Campaigns
           </Link>
           <ChevronRight className="size-3 shrink-0" aria-hidden />
-          <span className="text-fg-secondary">{editMode ? 'Edit campaign' : 'New Campaign'}</span>
+          <span className="text-fg-secondary">{editMode ? 'Edit campaign' : 'New OfferCampaign'}</span>
         </nav>
 
         <div>
-          <WorkspaceEyebrow name={client.name} context={editMode ? 'Edit onboarding' : 'New campaign'} />
+          <WorkspaceEyebrow name={client?.name ?? ''} context={editMode ? 'Edit onboarding' : 'New campaign'} />
           <h1 className="mt-2 text-2xl font-semibold tracking-tight text-fg sm:text-3xl">Let&apos;s build your campaign.</h1>
           <p className="mt-1.5 max-w-2xl text-sm text-fg-secondary">
             Six short steps. Your AI Booking Agent starts learning as soon as you submit.
@@ -207,7 +208,7 @@ export function OnboardingShell({ draftHook, onSubmit, editMode, backHref = '/cl
                         {submitPhase === 'preparing'
                           ? 'Preparing your campaign…'
                           : submitPhase === 'success'
-                            ? 'Campaign submitted'
+                            ? 'OfferCampaign submitted'
                             : 'Submit for review'}
                       </Button>
                     </div>

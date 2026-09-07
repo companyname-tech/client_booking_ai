@@ -63,7 +63,7 @@ export function DropOffAnalysis({ dropOffs }: { dropOffs: AnalyticsDropOff[] }) 
           <div className="label-caps text-accent">Biggest opportunity</div>
           <p className="mt-1 font-medium text-fg">{biggest.from} → {biggest.to}</p>
           <p className="mt-1 text-sm text-fg-muted">
-            Potential improvement: {biggest.potentialImprovement} · Mock AI analysis — not a scientific projection.
+            Potential improvement: {biggest.potentialImprovement} · AI analysis.
           </p>
         </div>
       )}

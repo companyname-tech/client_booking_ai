@@ -1,4 +1,4 @@
-import type { Campaign, CampaignStatus } from '@/types'
+import type { OfferCampaign, CampaignStatus } from '@/types'
 import { campaignStatusMeta } from '@/lib/status'
 import { formatCurrency, formatRelativeTime } from '@/lib/utils'
 import { NOW } from '@/data/time'
@@ -14,7 +14,7 @@ export function CampaignHeader({
   onResume,
   zone,
 }: {
-  campaign: Campaign
+  campaign: OfferCampaign
   effectiveStatus: CampaignStatus
   onPause?: () => void
   onResume?: () => void

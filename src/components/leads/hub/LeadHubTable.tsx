@@ -38,7 +38,7 @@ export function LeadHubFiltersBar({
         <Input value={filters.search} onChange={(e) => onChange({ ...filters, search: e.target.value })} placeholder="Search lead, company, campaign, location…" className="pl-9" />
       </div>
       <div className="flex flex-wrap gap-2">
-        <select value={filters.campaignId ?? ''} onChange={(e) => onChange({ ...filters, campaignId: e.target.value || undefined })} className="rounded-md border border-line-strong bg-surface-1 px-3 py-2 text-sm">
+        <select value={filters.offerCampaignId ?? ''} onChange={(e) => onChange({ ...filters, offerCampaignId: e.target.value || undefined })} className="rounded-md border border-line-strong bg-surface-1 px-3 py-2 text-sm">
           <option value="">All campaigns</option>
           {campaigns.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
@@ -93,7 +93,7 @@ export function LeadHubTable({
               <th className="px-3 py-2.5 font-medium">Lead</th>
               <th className="px-3 py-2.5 font-medium">Company</th>
               <th className="px-3 py-2.5 font-medium">Role</th>
-              <th className="px-3 py-2.5 font-medium">Campaign</th>
+              <th className="px-3 py-2.5 font-medium">OfferCampaign</th>
               <th className="px-3 py-2.5 font-medium">Score</th>
               <th className="px-3 py-2.5 font-medium">Intent</th>
               <th className="px-3 py-2.5 font-medium">Status</th>

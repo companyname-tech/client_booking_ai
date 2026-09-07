@@ -3,6 +3,9 @@ import { useNavigate } from 'react-router-dom'
 import { Plus } from 'lucide-react'
 import type { CampaignStatus } from '@/types'
 import { repo } from '@/data/repository'
+import { useAsyncData } from '@/hooks/useAsyncData'
+import { LoadingState } from '@/components/ui/LoadingState'
+import { ErrorState } from '@/components/ui/ErrorState'
 import { PageTransition } from '@/components/motion/PageTransition'
 import { Reveal } from '@/components/motion/Reveal'
 import { PageContainer, PageHeader, WorkspaceEyebrow } from '@/components/layout/PageHeader'
@@ -23,9 +26,14 @@ const filterMatch: Record<Filter, (s: CampaignStatus) => boolean> = {
 
 export default function ClientCampaigns() {
   const navigate = useNavigate()
-  const client = repo.getCurrentClient()
-  const all = repo.getCampaigns(client.id)
   const [filter, setFilter] = useState<Filter>('all')
+
+  const { data, loading, error, reload } = useAsyncData(
+    () => Promise.all([repo.getCurrentClient(), repo.getCampaigns()]),
+    [],
+  )
+  const client = data?.[0]
+  const all = data?.[1] ?? []
 
   const counts = useMemo(
     () =>
@@ -36,6 +44,28 @@ export default function ClientCampaigns() {
     [all],
   )
   const campaigns = useMemo(() => all.filter((c) => filterMatch[filter](c.status)), [all, filter])
+
+  if (loading) {
+    return (
+      <PageTransition>
+        <PageContainer>
+          <LoadingState rows={6} />
+        </PageContainer>
+      </PageTransition>
+    )
+  }
+
+  if (error) {
+    return (
+      <PageTransition>
+        <PageContainer>
+          <ErrorState message={error} onRetry={reload} />
+        </PageContainer>
+      </PageTransition>
+    )
+  }
+
+  if (!client) return null
 
   return (
     <PageTransition>

@@ -1,6 +1,7 @@
-import { useRef } from 'react'
+import { useMemo, useRef } from 'react'
 import type { CampaignDraft } from '@/types/campaignDraft'
 import { repo } from '@/data/repository'
+import { useAsyncData } from '@/hooks/useAsyncData'
 import { cn } from '@/lib/utils'
 import { FieldGroup, FieldLabel } from '@/components/ui/Field'
 import { Input } from '@/components/ui/Input'
@@ -12,11 +13,10 @@ const VARIABLES = [
   { key: '{date}', label: 'date' },
 ] as const
 
-function renderPreview(template: string, draft: CampaignDraft): string {
-  const client = repo.getCurrentClient()
+function renderPreview(template: string, draft: CampaignDraft, companyName: string): string {
   const date = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' }).format(new Date())
   return template
-    .replace(/\{company\}/g, client.name)
+    .replace(/\{company\}/g, companyName)
     .replace(/\{client\}/g, 'Sarah Johnson')
     .replace(/\{product\}/g, draft.offer.offerName || 'Product Name')
     .replace(/\{date\}/g, date)
@@ -32,7 +32,11 @@ export function BookingTitlePreview({
   error?: string
 }) {
   const inputRef = useRef<HTMLInputElement>(null)
-  const preview = renderPreview(draft.booking.titleTemplate, draft)
+  const { data: client } = useAsyncData(() => repo.getCurrentClient(), [])
+  const preview = useMemo(
+    () => renderPreview(draft.booking.titleTemplate, draft, client?.name ?? ''),
+    [draft, client],
+  )
 
   const insert = (token: string) => {
     const el = inputRef.current

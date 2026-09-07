@@ -26,7 +26,7 @@ export function BudgetIntelligence({ budget }: { budget: BudgetAnalytics }) {
 
 export function CampaignForecastPanel({ forecast }: { forecast: CampaignForecast }) {
   return (
-    <AnalyticsSection title="Campaign forecast" description={forecast.disclaimer}>
+    <AnalyticsSection title="OfferCampaign forecast" description={forecast.disclaimer}>
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
           <div className="text-xs text-fg-muted">Current bookings</div>

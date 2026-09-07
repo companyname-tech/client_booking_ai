@@ -4,6 +4,7 @@ import { PageTransition } from '@/components/motion/PageTransition'
 import { PageContainer, PageHeader, WorkspaceEyebrow } from '@/components/layout/PageHeader'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { repo } from '@/data/repository'
+import { useAsyncData } from '@/hooks/useAsyncData'
 
 export interface PlaceholderPageProps {
   title: string
@@ -20,7 +21,7 @@ export interface PlaceholderPageProps {
  * not yet designed. Keeps navigation, breadcrumbs and transitions real.
  */
 export default function PlaceholderPage({ title, description, zone = 'client', icon, plan, actions }: PlaceholderPageProps) {
-  const client = repo.getCurrentClient()
+  const { data: client } = useAsyncData(() => repo.getCurrentClient())
   return (
     <PageTransition>
       <PageContainer className="space-y-6">
@@ -29,7 +30,7 @@ export default function PlaceholderPage({ title, description, zone = 'client', i
             zone === 'admin' ? (
               <WorkspaceEyebrow name="Super Admin" context="Internal console" />
             ) : (
-              <WorkspaceEyebrow name={client.name} context="Client Workspace" />
+              <WorkspaceEyebrow name={client?.name ?? 'Client'} context="Client Workspace" />
             )
           }
           title={title}

@@ -73,7 +73,7 @@ export function AIExperiments({ experiments }: { experiments: AIExperiment[] }) 
 
 export function CampaignBenchmark({ rows }: { rows: import('@/types/campaignAnalytics').BenchmarkRow[] }) {
   return (
-    <AnalyticsSection title="How you're performing" description="Internal mock benchmark — not external industry data">
+    <AnalyticsSection title="How you're performing" description="Internal benchmark — not external industry data">
       <div className="space-y-3">
         {rows.map((r) => {
           const better = r.lowerIsBetter ? r.campaign < r.benchmark : r.campaign > r.benchmark

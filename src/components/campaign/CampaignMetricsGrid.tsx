@@ -1,9 +1,9 @@
-import type { Campaign, CampaignMetrics } from '@/types'
+import type { OfferCampaign, CampaignMetrics } from '@/types'
 import { formatCurrency, formatNumber, formatPercent } from '@/lib/utils'
 import { AnimatedNumber } from '@/components/motion/AnimatedNumber'
 import { ProgressBar } from '@/components/ui/ProgressBar'
 
-export function CampaignMetricsGrid({ metrics, budget }: { metrics: CampaignMetrics; budget: Campaign['budget'] }) {
+export function CampaignMetricsGrid({ metrics, budget }: { metrics: CampaignMetrics; budget: OfferCampaign['budget'] }) {
   const primary = [
     { label: 'Leads found', value: metrics.leadsFound, context: '+18.4% this week', emphasis: true },
     { label: 'Bookings', value: metrics.bookings, context: '+12 this week', emphasis: true },

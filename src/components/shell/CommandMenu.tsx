@@ -25,6 +25,7 @@ import { campaignStatusMeta } from '@/lib/status'
 import { Kbd } from '@/components/ui/Kbd'
 import { Modal } from '@/components/ui/Modal'
 import { StatusDot } from '@/components/ui/StatusDot'
+import { useAsyncData } from '@/hooks/useAsyncData'
 import { useShell } from './ShellContext'
 
 interface Command {
@@ -40,9 +41,13 @@ interface Command {
 function useCommands(): Command[] {
   const navigate = useNavigate()
   const { zone } = useShell()
-  return useMemo(() => {
+
+  // Static navigation commands resolve synchronously; data-backed commands
+  // (campaigns, clients, conversations, leads) are fetched async below and
+  // render as empty while loading / on error rather than crashing.
+  const nav = useMemo<Command[]>(() => {
     const base = `/${zone}`
-    const nav: Command[] = [
+    return [
       ...(zone === 'admin'
         ? [
             { id: 'approvals', label: 'Open approvals queue', icon: <CheckCircle2 />, group: 'Actions' as const, run: () => navigate('/admin/approvals') },
@@ -69,7 +74,22 @@ function useCommands(): Command[] {
         run: () => navigate(zone === 'admin' ? '/client/overview' : '/admin/overview'),
       },
     ]
-    const campaigns: Command[] = repo.getCampaigns().map((c) => ({
+  }, [navigate, zone])
+
+  const { data } = useAsyncData(
+    async () => {
+      const campaigns = await repo.getCampaigns()
+      const clients = zone === 'admin' ? await repo.getClients() : []
+      const conversations = zone === 'client' ? await repo.getAIConversations() : []
+      const leads = zone === 'client' ? await repo.getAllLeads() : []
+      return { campaigns, clients, conversations, leads }
+    },
+    [zone],
+  )
+
+  return useMemo<Command[]>(() => {
+    const base = `/${zone}`
+    const campaigns: Command[] = (data?.campaigns ?? []).map((c) => ({
       id: `c-${c.id}`,
       label: c.name,
       hint: campaignStatusMeta[c.status].label,
@@ -79,7 +99,7 @@ function useCommands(): Command[] {
       run: () => navigate(zone === 'admin' ? `/admin/campaigns/${c.id}/review` : `${base}/campaigns/${c.id}`),
     }))
     const clientCommands: Command[] = zone === 'admin'
-      ? repo.getClients().map((cl) => ({
+      ? (data?.clients ?? []).map((cl) => ({
           id: `cl-${cl.id}`,
           label: cl.name,
           hint: 'Client',
@@ -90,7 +110,7 @@ function useCommands(): Command[] {
         }))
       : []
     const conversationCommands: Command[] = zone === 'client'
-      ? repo.getAIConversations().slice(0, 8).map((c) => ({
+      ? (data?.conversations ?? []).slice(0, 8).map((c) => ({
           id: `conv-${c.id}`,
           label: c.leadName,
           hint: c.company,
@@ -101,7 +121,7 @@ function useCommands(): Command[] {
         }))
       : []
     const leadCommands: Command[] = zone === 'client'
-      ? repo.getAllLeads().slice(0, 12).map((l) => ({
+      ? (data?.leads ?? []).slice(0, 12).map((l) => ({
           id: `lead-${l.id}`,
           label: l.name,
           hint: l.company,
@@ -112,7 +132,7 @@ function useCommands(): Command[] {
         }))
       : []
     return [...nav, ...clientCommands, ...conversationCommands, ...leadCommands, ...campaigns]
-  }, [navigate, zone])
+  }, [nav, data, navigate, zone])
 }
 
 const GROUP_ORDER: Command['group'][] = ['Actions', 'Navigate', 'Leads', 'Campaigns']

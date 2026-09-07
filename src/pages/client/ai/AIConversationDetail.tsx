@@ -2,9 +2,12 @@ import { useEffect } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { ArrowLeft } from 'lucide-react'
 import { repo } from '@/data/repository'
+import { useAsyncData } from '@/hooks/useAsyncData'
 import { formatDuration } from '@/lib/utils'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { LoadingState } from '@/components/ui/LoadingState'
+import { ErrorState } from '@/components/ui/ErrorState'
 import { Reveal } from '@/components/motion/Reveal'
 import {
   ConversationTranscript,
@@ -19,11 +22,19 @@ import {
 
 export default function AIConversationDetail() {
   const { id } = useParams()
-  const conversation = id ? repo.getAIConversation(id) : undefined
+  const { data: conversation, loading, error, reload } = useAsyncData(
+    async () => (id ? repo.getAIConversation(id) : null),
+    [id],
+  )
 
   useEffect(() => {
-    if (id) repo.markConversationViewed(id)
+    if (id) {
+      repo.markConversationViewed(id).catch(() => {})
+    }
   }, [id])
+
+  if (loading) return <LoadingState rows={6} />
+  if (error) return <ErrorState message={error} onRetry={reload} />
 
   if (!conversation) {
     return <EmptyState title="Conversation not found" action={<Link to="/client/ai/conversations" className="text-accent">Back to conversations</Link>} />

@@ -6,11 +6,11 @@ import type { LeadHubMetrics } from '@/types/leadIntelligence'
 export function LeadHubMetrics({ metrics }: { metrics: LeadHubMetrics }) {
   const items = [
     { label: 'Total leads', value: metrics.total },
-    { label: 'Qualified', value: metrics.qualified },
-    { label: 'High intent', value: metrics.highIntent },
-    { label: 'Details requested', value: metrics.detailsRequested },
-    { label: 'Booked', value: metrics.booked },
-    { label: 'Follow-up', value: metrics.followUp },
+    { label: 'Qualified', value: metrics.by_status?.QUALIFIED ?? 0 },
+    { label: 'Verified', value: metrics.verified },
+    { label: 'Unverified', value: metrics.unverified },
+    { label: 'Meetings booked', value: metrics.meetings_booked },
+    { label: 'Contacted', value: metrics.contacted },
   ]
   return (
     <Stagger className="grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-line bg-line md:grid-cols-3 lg:grid-cols-6" stagger={0.03}>

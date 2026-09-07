@@ -103,7 +103,7 @@ export function AIHealthPanel({ health }: { health: AIHealthSnapshot }) {
 
 export function AIInsightDrawer({ insight, open, onClose }: { insight: AIInsight | null; open: boolean; onClose: () => void }) {
   return (
-    <DetailDrawer open={open} onClose={onClose} title={insight?.title ?? 'AI Insight'} subtitle="Mock operational insight">
+    <DetailDrawer open={open} onClose={onClose} title={insight?.title ?? 'AI Insight'} subtitle="Operational insight">
       {insight && (
         <div className="space-y-4 p-5">
           <div><div className="label-caps">Evidence</div><p className="mt-1 text-sm text-fg-secondary">{insight.evidence}</p></div>

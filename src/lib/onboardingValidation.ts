@@ -13,7 +13,7 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 export function validateTarget(draft: CampaignDraft): StepValidation {
   const errors: ValidationErrors = {}
   const { target } = draft
-  if (!target.campaignName.trim()) errors.campaignName = 'Campaign name is required'
+  if (!target.campaignName.trim()) errors.campaignName = 'OfferCampaign name is required'
   if (target.industries.length === 0) errors.industries = 'Select at least one industry'
   if (!target.companySize) errors.companySize = 'Select company size'
   if (target.geographies.length === 0) errors.geographies = 'Select at least one location'
@@ -96,12 +96,12 @@ export function maxReachableStep(draft: CampaignDraft): number {
   return max
 }
 
-/** Mock readiness score 0–100 for review step. */
+/** Readiness score 0–100 for review step. */
 export function computeReadiness(draft: CampaignDraft): { score: number; items: ReadinessItem[] } {
   const items: ReadinessItem[] = [
     { id: 'target', label: 'Target audience configured', done: validateTarget(draft).valid, optional: false },
     { id: 'offer', label: 'Offer configured', done: validateOffer(draft).valid, optional: false },
-    { id: 'video', label: 'Campaign video uploaded', done: !!draft.offer.video, optional: false },
+    { id: 'video', label: 'OfferCampaign video uploaded', done: !!draft.offer.video, optional: false },
     { id: 'budget', label: 'Budget configured', done: validateBudget(draft).valid, optional: false },
     { id: 'booking', label: 'Booking destination configured', done: validateBooking(draft).valid, optional: false },
     { id: 'calendly', label: 'Calendly connected', done: draft.integrations.calendly === 'connected', optional: false },

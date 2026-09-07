@@ -48,9 +48,9 @@ const Item = memo(function Item({ activity, isLatest, isLast }: { activity: Acti
   return (
     <Reveal as="li" className="relative">
       {!isLast && <span aria-hidden className="absolute left-[13px] top-9 h-[calc(100%-22px)] w-px bg-line" />}
-      {activity.campaignId ? (
+      {activity.offerCampaignId ? (
         <Link
-          to={`/client/campaigns/${activity.campaignId}`}
+          to={`/client/campaigns/${activity.offerCampaignId}`}
           className="interactive ring-focus -mx-2 flex items-start gap-3 rounded-md px-2 py-2 outline-none hover:bg-white/[0.03]"
         >
           {inner}

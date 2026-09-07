@@ -25,13 +25,13 @@ export function LeadPreviewDrawer({
         </div>
         <LeadScore score={lead.score} />
         <dl className="grid gap-2 text-sm">
-          <div><dt className="text-fg-muted">Campaign</dt><dd className="font-medium">{lead.campaignName}</dd></div>
+          <div><dt className="text-fg-muted">OfferCampaign</dt><dd className="font-medium">{lead.campaignName}</dd></div>
           <div><dt className="text-fg-muted">Last activity</dt><dd>{lead.lastContactAt ? new Date(lead.lastContactAt).toLocaleString() : '—'}</dd></div>
           <div><dt className="text-fg-muted">Booking</dt><dd>{lead.bookingStatus ?? '—'}</dd></div>
         </dl>
         <div className="flex flex-col gap-2">
           <Link to={`/client/leads/${lead.id}`}><Button variant="primary" className="w-full">Open full profile</Button></Link>
-          <Link to={`/client/campaigns/${lead.campaignId}`}><Button variant="secondary" className="w-full">View campaign</Button></Link>
+          <Link to={`/client/campaigns/${lead.offerCampaignId}`}><Button variant="secondary" className="w-full">View campaign</Button></Link>
         </div>
       </div>
     </DetailDrawer>

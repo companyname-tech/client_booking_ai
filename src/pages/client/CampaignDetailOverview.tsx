@@ -1,5 +1,8 @@
 import { useState } from 'react'
 import { repo } from '@/data/repository'
+import { useAsyncData } from '@/hooks/useAsyncData'
+import { LoadingState } from '@/components/ui/LoadingState'
+import { ErrorState } from '@/components/ui/ErrorState'
 import { Reveal, Stagger } from '@/components/motion/Reveal'
 import { Card, SectionHeader } from '@/components/ui/Card'
 import { CampaignStatus } from '@/components/campaigns/CampaignStatus'
@@ -20,20 +23,42 @@ import type { Lead } from '@/types'
 export default function CampaignDetailOverview() {
   const { campaign, zone, effectiveStatus } = useCampaignContext()
   const awaitingApproval = effectiveStatus === 'awaiting_approval'
-  const isOperational = ['active', 'paused', 'completed'].includes(effectiveStatus) || campaign.metrics.leadsFound > 100
-  const agent = campaign.agentId ? repo.getAgents().find((a) => a.id === campaign.agentId) : undefined
-  const activity = repo.getActivity(12).filter((a) => !a.campaignId || a.campaignId === campaign.id)
-  const stageProgress = campaign.stage === 'ai_training' && agent ? agent.trainingProgress : (campaign.progress % 17) * 5
   const [period, setPeriod] = useState<7 | 14 | 30>(14)
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null)
 
-  const leads = repo.getLeads(campaign.id)
-  const health = repo.getCampaignHealthSnapshot(campaign.id)
-  const funnel = repo.getCampaignFunnel(campaign.id, campaign.metrics)
-  const insights = repo.getCampaignInsights(campaign.id)
-  const alerts = repo.getCampaignAlerts(campaign.id)
-  const performance = repo.getCampaignPerformance(campaign.id, period)
-  const leadDetail = selectedLead ? repo.getLead(campaign.id, selectedLead.id) : null
+  const { data, loading, error, reload } = useAsyncData(
+    () =>
+      Promise.all([
+        repo.getAgents(),
+        repo.getActivity(12),
+        repo.getLeads(campaign.id),
+        repo.getCampaignHealthSnapshot(campaign.id),
+        repo.getCampaignFunnel(campaign.id),
+        repo.getCampaignInsights(campaign.id),
+        repo.getCampaignAlerts(campaign.id),
+      ]),
+    [campaign.id],
+  )
+
+  const { data: performance } = useAsyncData(
+    () => repo.getCampaignPerformance(campaign.id, period),
+    [campaign.id, period],
+  )
+
+  const { data: leadDetail } = useAsyncData(
+    () => (selectedLead ? repo.getLead(campaign.id, selectedLead.id) : Promise.resolve(null)),
+    [campaign.id, selectedLead],
+  )
+
+  if (loading) return <LoadingState rows={8} />
+  if (error) return <ErrorState message={error} onRetry={reload} />
+  if (!data) return null
+
+  const [agents, activityRaw, leads, health, funnel, insights, alerts] = data
+  const agent = campaign.agentId ? agents.find((a) => a.id === campaign.agentId) : undefined
+  const activity = activityRaw.filter((a) => !a.offerCampaignId || a.offerCampaignId === campaign.id)
+  const stageProgress = campaign.stage === 'ai_training' && agent ? agent.trainingProgress : (campaign.progress % 17) * 5
+  const isOperational = ['active', 'paused', 'completed'].includes(effectiveStatus) || campaign.metrics.leadsFound > 100
   const basePath = `/${zone}/campaigns/${campaign.id}`
 
   return (
@@ -70,10 +95,10 @@ export default function CampaignDetailOverview() {
             <Reveal className="lg:col-span-2">
               <Card className="p-5 sm:p-6">
                 <div className="flex items-center justify-between gap-4">
-                  <SectionHeader title="Campaign performance" description="Leads, calls, and bookings over time" />
+                  <SectionHeader title="OfferCampaign performance" description="Leads, calls, and bookings over time" />
                   <PerformancePeriodToggle value={period} onChange={setPeriod} />
                 </div>
-                <CampaignPerformanceChart data={performance} className="mt-6" />
+                <CampaignPerformanceChart data={performance ?? []} className="mt-6" />
               </Card>
             </Reveal>
             <Reveal>
@@ -84,7 +109,7 @@ export default function CampaignDetailOverview() {
           <div className="grid gap-6 lg:grid-cols-2">
             <Reveal>
               <Card className="p-5 sm:p-6">
-                <SectionHeader title="Campaign funnel" description="Conversion through each stage" />
+                <SectionHeader title="OfferCampaign funnel" description="Conversion through each stage" />
                 <div className="mt-6">
                   <CampaignFunnel stages={funnel} />
                 </div>

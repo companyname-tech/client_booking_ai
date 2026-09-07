@@ -1,8 +1,8 @@
 import { useOutletContext } from 'react-router-dom'
-import type { Campaign, CampaignStatus } from '@/types'
+import type { OfferCampaign, CampaignStatus } from '@/types'
 
 export interface CampaignOutletContext {
-  campaign: Campaign
+  campaign: OfferCampaign
   zone: 'client' | 'admin'
   effectiveStatus: CampaignStatus
   pauseCampaign: () => void

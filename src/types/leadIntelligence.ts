@@ -4,11 +4,11 @@ export type LeadIntent = 'very_high' | 'high' | 'medium' | 'low' | 'unknown'
 
 export interface LeadHubMetrics {
   total: number
-  qualified: number
-  highIntent: number
-  detailsRequested: number
-  booked: number
-  followUp: number
+  by_status: Record<string, number>
+  verified: number
+  unverified: number
+  meetings_booked: number
+  contacted: number
 }
 
 export interface LeadScoreBreakdown {
@@ -169,7 +169,7 @@ export interface LeadSegment {
 
 export interface LeadHubFilters {
   search: string
-  campaignId?: string
+  offerCampaignId?: string
   status?: LeadStatus | 'all'
   intent?: LeadIntent | 'all'
   minScore?: number

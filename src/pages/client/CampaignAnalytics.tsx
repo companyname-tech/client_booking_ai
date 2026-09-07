@@ -1,6 +1,9 @@
 import { useMemo, useState } from 'react'
 import { useCampaignContext } from './campaignContext'
 import { repo } from '@/data/repository'
+import { useAsyncData } from '@/hooks/useAsyncData'
+import { LoadingState } from '@/components/ui/LoadingState'
+import { ErrorState } from '@/components/ui/ErrorState'
 import type { AnalyticsFilters } from '@/types/campaignAnalytics'
 import { Reveal } from '@/components/motion/Reveal'
 import { AnalyticsHeader } from '@/components/analytics/AnalyticsHeader'
@@ -23,8 +26,13 @@ export default function CampaignAnalytics() {
   const [filters, setFilters] = useState<AnalyticsFilters>(DEFAULT_FILTERS)
   const [filtersOpen, setFiltersOpen] = useState(false)
 
+  const { data, loading, error, reload } = useAsyncData(
+    () => repo.getCampaignAnalytics(campaign.id, { ...filters, dateRange: filters.dateRange }),
+    [campaign.id, filters],
+  )
+
   const analytics = useMemo(() => {
-    const data = repo.getCampaignAnalytics(campaign.id, { ...filters, dateRange: filters.dateRange })
+    if (!data) return null
     if (effectiveStatus === 'paused' && data.availability === 'live') {
       return { ...data, availability: 'paused' as const, statusLabel: 'Paused' }
     }
@@ -32,9 +40,13 @@ export default function CampaignAnalytics() {
       return { ...data, availability: 'completed' as const, statusLabel: 'Completed' }
     }
     return data
-  }, [campaign.id, filters, effectiveStatus])
+  }, [data, effectiveStatus])
 
   const filterCount = countActiveFilters(filters)
+
+  if (loading) return <LoadingState rows={8} />
+  if (error || !analytics) return <ErrorState message={error ?? 'Failed to load analytics'} onRetry={reload} />
+
   const isPreLaunch = analytics.availability === 'pre_launch'
 
   return (
@@ -53,10 +65,10 @@ export default function CampaignAnalytics() {
       </Reveal>
 
       {analytics.availability === 'paused' && (
-        <AnalyticsStatusBanner variant="paused" message="Campaign paused — analytics remain available for review." />
+        <AnalyticsStatusBanner variant="paused" message="OfferCampaign paused — analytics remain available for review." />
       )}
       {analytics.availability === 'completed' && (
-        <AnalyticsStatusBanner variant="completed" message="Campaign completed — final performance summary below." />
+        <AnalyticsStatusBanner variant="completed" message="OfferCampaign completed — final performance summary below." />
       )}
 
       {isPreLaunch ? (

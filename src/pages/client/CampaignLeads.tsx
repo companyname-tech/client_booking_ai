@@ -1,6 +1,9 @@
 import { useState } from 'react'
 import { repo } from '@/data/repository'
 import { useCampaignContext } from './campaignContext'
+import { useAsyncData } from '@/hooks/useAsyncData'
+import { LoadingState } from '@/components/ui/LoadingState'
+import { ErrorState } from '@/components/ui/ErrorState'
 import { LeadFilters, useLeadFilters } from '@/components/leads/LeadFilters'
 import { LeadsTable } from '@/components/leads/LeadsTable'
 import { LeadDrawer } from '@/components/leads/LeadDrawer'
@@ -9,11 +12,17 @@ import { Reveal } from '@/components/motion/Reveal'
 
 export default function CampaignLeads() {
   const { campaign } = useCampaignContext()
-  const leads = repo.getLeads(campaign.id)
-  const { filters, setFilters, filtered } = useLeadFilters(leads)
+  const { data: leads, loading, error, reload } = useAsyncData(() => repo.getLeads(campaign.id), [campaign.id])
+  const { filters, setFilters, filtered } = useLeadFilters(leads ?? [])
   const [page, setPage] = useState(1)
   const [selected, setSelected] = useState<Lead | null>(null)
-  const detail = selected ? repo.getLead(campaign.id, selected.id) : null
+  const { data: detail } = useAsyncData(
+    () => (selected ? repo.getLead(campaign.id, selected.id) : Promise.resolve(null)),
+    [campaign.id, selected],
+  )
+
+  if (loading) return <LoadingState rows={6} />
+  if (error) return <ErrorState message={error} onRetry={reload} />
 
   return (
     <Reveal className="space-y-6">

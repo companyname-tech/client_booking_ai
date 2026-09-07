@@ -29,7 +29,7 @@ export function TargetStep({
       <div className="min-w-0 space-y-5">
         <FieldGroup>
           <FieldLabel htmlFor="campaign-name" required>
-            Campaign name
+            OfferCampaign name
           </FieldLabel>
           <Input
             id="campaign-name"

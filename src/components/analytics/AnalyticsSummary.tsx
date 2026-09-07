@@ -11,7 +11,7 @@ export function AnalyticsSummary({ overview }: { overview: AnalyticsOverview }) 
         <Reveal className="bg-surface-2 p-4"><StatBlock label="Booking rate" value={overview.bookingRate} format="percent" delta={overview.deltas.bookingRate} /></Reveal>
         <Reveal className="bg-surface-2 p-4"><StatBlock label="Conversion rate" value={overview.conversionRate} format="percent" delta={overview.deltas.conversionRate} /></Reveal>
         <Reveal className="bg-surface-2 p-4"><StatBlock label="Cost per booking" value={overview.costPerBooking} format="currency" delta={overview.deltas.costPerBooking} /></Reveal>
-        <Reveal className="bg-surface-2 p-4"><StatBlock label="Campaign spend" value={overview.spend} format="currency" delta={overview.deltas.spend} /></Reveal>
+        <Reveal className="bg-surface-2 p-4"><StatBlock label="OfferCampaign spend" value={overview.spend} format="currency" delta={overview.deltas.spend} /></Reveal>
         <Reveal className="bg-surface-2 p-4"><StatBlock label="Projected bookings" value={overview.projectedBookings} delta={overview.deltas.projectedBookings} /></Reveal>
       </Stagger>
       <p className="mt-3 text-2xs text-fg-faint">vs previous period · {formatPercent(overview.bookingRate)} booking rate · {formatCurrency(overview.costPerBooking)} per booking</p>

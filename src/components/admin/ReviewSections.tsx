@@ -1,6 +1,6 @@
 import { Sparkles } from 'lucide-react'
 import type { CampaignReviewData } from '@/types/admin'
-import type { Campaign as CampaignType } from '@/types'
+import type { OfferCampaign as CampaignType } from '@/types'
 import { formatCurrency, formatNumber } from '@/lib/utils'
 import { RecordingPlayer } from '@/components/recordings/RecordingPlayer'
 import { IntegrationCard } from '@/components/onboarding/IntegrationCard'
@@ -115,7 +115,7 @@ export function ReviewSectionContent({
       return (
         <div className="space-y-4 text-sm">
           <dl className="grid gap-3 sm:grid-cols-2">
-            <div><dt className="text-fg-muted">Campaign budget</dt><dd className="text-lg font-semibold">{formatCurrency(review.budgetProjection.monthlyBudget)} / month</dd></div>
+            <div><dt className="text-fg-muted">OfferCampaign budget</dt><dd className="text-lg font-semibold">{formatCurrency(review.budgetProjection.monthlyBudget)} / month</dd></div>
             <div><dt className="text-fg-muted">Daily budget</dt><dd>{formatCurrency(campaign.budget.daily)}</dd></div>
             <div><dt className="text-fg-muted">Expected leads</dt><dd>{formatNumber(review.budgetProjection.expectedLeads)}</dd></div>
             <div><dt className="text-fg-muted">Projected conversations</dt><dd>{formatNumber(review.budgetProjection.projectedConversations)}</dd></div>

@@ -1,4 +1,4 @@
-import type { Campaign } from '@/types'
+import type { OfferCampaign } from '@/types'
 import type { AnalyticsDateRange } from '@/types/campaignAnalytics'
 import { cn } from '@/lib/utils'
 import { CampaignStatus as CampaignStatusBadge } from '@/components/campaigns/CampaignStatus'
@@ -12,7 +12,7 @@ export function AnalyticsHeader({
   onOpenFilters,
   filterCount,
 }: {
-  campaign: Campaign
+  campaign: OfferCampaign
   dateRange: AnalyticsDateRange
   onDateRangeChange: (r: AnalyticsDateRange) => void
   onOpenFilters: () => void
@@ -21,7 +21,7 @@ export function AnalyticsHeader({
   return (
     <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
       <div>
-        <div className="label-caps">Campaign analytics</div>
+        <div className="label-caps">OfferCampaign analytics</div>
         <h1 className="mt-1 text-2xl font-semibold text-fg">{campaign.name}</h1>
         <p className="mt-1 text-sm text-fg-muted">Understand what is driving conversations and bookings.</p>
         <div className="mt-3 flex flex-wrap items-center gap-2">

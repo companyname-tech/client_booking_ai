@@ -1,16 +1,31 @@
 import { Link, useParams } from 'react-router-dom'
 import { ArrowLeft } from 'lucide-react'
 import { repo } from '@/data/repository'
+import { useAsyncData } from '@/hooks/useAsyncData'
 import { AgentReadiness } from '@/components/ai/AIOperations'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { LoadingState } from '@/components/ui/LoadingState'
+import { ErrorState } from '@/components/ui/ErrorState'
 import { formatNumber } from '@/lib/utils'
 import { Reveal } from '@/components/motion/Reveal'
 
 export default function AIAgentDetail() {
   const { id } = useParams()
-  const profile = id ? repo.getAIAgentProfile(id) : undefined
-  const agent = id ? repo.getAgents().find((a) => a.id === id) : undefined
+  const { data, loading, error, reload } = useAsyncData(
+    async () => {
+      if (!id) return null
+      const [profile, agents] = await Promise.all([repo.getAIAgentProfile(id), repo.getAgents()])
+      return { profile, agent: agents.find((a) => a.id === id) }
+    },
+    [id],
+  )
+
+  if (loading) return <LoadingState rows={6} />
+  if (error) return <ErrorState message={error} onRetry={reload} />
+
+  const profile = data?.profile
+  const agent = data?.agent
 
   if (!profile || !agent) {
     return <EmptyState title="Agent not found" action={<Link to="/client/ai/agents" className="text-accent">Back to agents</Link>} />

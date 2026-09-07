@@ -8,7 +8,7 @@ export type AICommandAvailability = 'pre_launch' | 'live' | 'paused' | 'complete
 export interface AIActivityEvent {
   id: string
   timestamp: string
-  campaignId: string
+  offerCampaignId: string
   campaignName: string
   leadId?: string
   leadName?: string
@@ -21,7 +21,7 @@ export interface AIConversationSummary {
   leadId: string
   leadName: string
   company: string
-  campaignId: string
+  offerCampaignId: string
   campaignName: string
   agentId: string
   callId?: string
@@ -117,7 +117,7 @@ export interface AIFollowUp {
   leadId: string
   leadName: string
   company: string
-  campaignId: string
+  offerCampaignId: string
   note: string
   scheduledFor: string
   recommendation: string
@@ -206,11 +206,11 @@ export interface AIAgentProfile {
 
 export interface AIPerformanceSnapshot {
   metrics: { label: string; value: number; delta: number }[]
-  byCampaign: { campaignId: string; campaignName: string; score: number }[]
+  byCampaign: { offerCampaignId: string; campaignName: string; score: number }[]
 }
 
 export interface AICommandFilters {
-  campaignId?: string
+  offerCampaignId?: string
   outcome?: string
   intent?: ConversationIntent
   search?: string

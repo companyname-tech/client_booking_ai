@@ -1,10 +1,14 @@
 import { useParams } from 'react-router-dom'
 import { repo } from '@/data/repository'
+import { useAsyncData } from '@/hooks/useAsyncData'
+import { LoadingState } from '@/components/ui/LoadingState'
+import { ErrorState } from '@/components/ui/ErrorState'
 import { useCampaignDraft } from '@/hooks/useCampaignDraft'
 import { OnboardingShell } from '@/components/onboarding/OnboardingShell'
+import type { OfferCampaign } from '@/types'
 import type { CampaignDraft } from '@/types/campaignDraft'
 
-function campaignToDraftSeed(campaign: NonNullable<ReturnType<typeof repo.getCampaign>>): Partial<CampaignDraft> {
+function campaignToDraftSeed(campaign: OfferCampaign): Partial<CampaignDraft> {
   const [ageMin = 30, ageMax = 60] = campaign.criteria.ageRange.split(/[–-]/).map((s) => Number(s.trim()))
   return {
     target: {
@@ -33,14 +37,25 @@ function campaignToDraftSeed(campaign: NonNullable<ReturnType<typeof repo.getCam
 
 export default function CampaignOnboarding() {
   const { id } = useParams()
-  const existing = id ? repo.getCampaign(id) : undefined
+  const { data: existing, loading, error, reload } = useAsyncData(
+    () => (id ? repo.getCampaign(id) : Promise.resolve(undefined)),
+    [id],
+  )
+
+  if (loading) return <LoadingState rows={6} />
+  if (error) return <ErrorState message={error} onRetry={reload} />
+
+  return <OnboardingEditor existing={existing ?? undefined} />
+}
+
+function OnboardingEditor({ existing }: { existing?: OfferCampaign }) {
   const draftHook = useCampaignDraft({
     skipRestore: !!existing,
     initial: existing ? campaignToDraftSeed(existing) : undefined,
   })
 
   const handleSubmit = async (draft: CampaignDraft) => {
-    const campaign = repo.createCampaignFromDraft(draft)
+    const campaign = await repo.createCampaignFromDraft(draft)
     return campaign.id
   }
 

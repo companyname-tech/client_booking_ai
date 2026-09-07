@@ -3,11 +3,14 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft } from 'lucide-react'
 import { AnimatePresence, motion } from 'motion/react'
 import { repo } from '@/data/repository'
+import { useAsyncData } from '@/hooks/useAsyncData'
 import { tweenBase } from '@/lib/motion'
 import { PageTransition } from '@/components/motion/PageTransition'
 import { PageContainer } from '@/components/layout/PageHeader'
 import { Button } from '@/components/ui/Button'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { LoadingState } from '@/components/ui/LoadingState'
+import { ErrorState } from '@/components/ui/ErrorState'
 import { CampaignStatus } from '@/components/campaigns/CampaignStatus'
 import { ApprovalPanel } from '@/components/admin/ApprovalPanel'
 import { REVIEW_SECTIONS, ReviewSectionContent, type ReviewSection } from '@/components/admin/ReviewSections'
@@ -18,30 +21,54 @@ import { cn } from '@/lib/utils'
 export default function AdminCampaignReview() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const [, setTick] = useState(0)
-  const refresh = () => setTick((t) => t + 1)
-
-  const campaign = id ? repo.getCampaign(id) : undefined
-  const review = id ? repo.getCampaignReview(id) : undefined
-  const client = campaign ? repo.getClient(campaign.clientId) : undefined
   const [section, setSection] = useState<ReviewSection>('overview')
   const [modal, setModal] = useState<'approve' | 'reject' | 'changes' | null>(null)
   const [toast, setToast] = useState('')
+
+  const { data, loading, error, reload } = useAsyncData(async () => {
+    if (!id) return undefined
+    const [campaign, review] = await Promise.all([repo.getCampaign(id), repo.getCampaignReview(id)])
+    return { campaign, review }
+  }, [id])
+
+  const campaign = data?.campaign
+  const review = data?.review
+
+  const { data: client } = useAsyncData(
+    () => (campaign ? repo.getClient(campaign.clientId) : Promise.resolve(undefined)),
+    [campaign?.clientId],
+  )
+
+  if (loading) {
+    return (
+      <PageTransition>
+        <PageContainer><LoadingState rows={6} /></PageContainer>
+      </PageTransition>
+    )
+  }
+
+  if (error) {
+    return (
+      <PageTransition>
+        <PageContainer><ErrorState message={error} onRetry={reload} /></PageContainer>
+      </PageTransition>
+    )
+  }
 
   if (!campaign || !review) {
     return (
       <PageTransition>
         <PageContainer>
-          <EmptyState title="Campaign not found" action={<Button onClick={() => navigate('/admin/approvals')}>Back to queue</Button>} />
+          <EmptyState title="OfferCampaign not found" action={<Button onClick={() => navigate('/admin/approvals')}>Back to queue</Button>} />
         </PageContainer>
       </PageTransition>
     )
   }
 
-  const handleApprove = () => {
-    repo.approveCampaign(campaign.id)
-    refresh()
-    setToast('Campaign approved and entering launch queue')
+  const handleApprove = async () => {
+    await repo.approveCampaign(campaign.id)
+    reload()
+    setToast('OfferCampaign approved and entering launch queue')
     window.setTimeout(() => navigate(`/admin/campaigns/${campaign.id}`), 2000)
   }
 
@@ -100,7 +127,7 @@ export default function AdminCampaignReview() {
                   <ReviewSectionContent section={section} campaign={campaign} review={review} />
                   {section === 'ai' && (
                     <div className="mt-6 space-y-4">
-                      <AITrainingPanel onComplete={(score) => { repo.completeCampaignTraining(campaign.id, score); refresh() }} />
+                      <AITrainingPanel onComplete={(score) => { repo.completeCampaignTraining(campaign.id, score); reload() }} />
                       <AISimulation />
                     </div>
                   )}
@@ -137,19 +164,19 @@ export default function AdminCampaignReview() {
         <RejectCampaignModal
           open={modal === 'reject'}
           onClose={() => setModal(null)}
-          onSubmit={(reason, detail) => {
-            repo.rejectCampaign(campaign.id, `${reason}: ${detail}`)
-            refresh()
-            setToast('Campaign rejected')
+          onSubmit={async (reason, detail) => {
+            await repo.rejectCampaign(campaign.id, `${reason}: ${detail}`)
+            reload()
+            setToast('OfferCampaign rejected')
           }}
         />
         <RequestChangesModal
           open={modal === 'changes'}
           onClose={() => setModal(null)}
           clientName={client?.name ?? 'Client'}
-          onSubmit={(_, message) => {
-            repo.requestCampaignChanges(campaign.id, message)
-            refresh()
+          onSubmit={async (_, message) => {
+            await repo.requestCampaignChanges(campaign.id, message)
+            reload()
             setToast(`Changes requested from ${client?.name}`)
           }}
         />

@@ -1,6 +1,9 @@
 import { Link, useNavigate } from 'react-router-dom'
 import { Plus } from 'lucide-react'
 import { repo } from '@/data/repository'
+import { useAsyncData } from '@/hooks/useAsyncData'
+import { LoadingState } from '@/components/ui/LoadingState'
+import { ErrorState } from '@/components/ui/ErrorState'
 import { PageTransition } from '@/components/motion/PageTransition'
 import { Reveal, Stagger } from '@/components/motion/Reveal'
 import { PageContainer, PageHeader, WorkspaceEyebrow } from '@/components/layout/PageHeader'
@@ -23,16 +26,48 @@ function greeting(date: Date) {
 
 export default function ClientOverview() {
   const navigate = useNavigate()
-  const client = repo.getCurrentClient()
-  const user = repo.getCurrentUser()
-  const analytics = repo.getAnalytics()
-  const health = repo.getCampaignHealth()
-  const featured = repo.getFeaturedCampaign()
-  const agent = featured.agentId ? repo.getAgents().find((a) => a.id === featured.agentId) : undefined
-  const activity = repo.getActivity(6)
-  const attention = repo.getAttentionItems()
 
-  const campaigns = repo.getCampaigns(client.id).filter((c) => c.status !== 'completed')
+  const { data, loading, error, reload } = useAsyncData(
+    () =>
+      Promise.all([
+        repo.getCurrentClient(),
+        repo.getCurrentUser(),
+        repo.getAnalytics(),
+        repo.getCampaignHealth(),
+        repo.getFeaturedCampaign(),
+        repo.getAgents(),
+        repo.getActivity(6),
+        repo.getAttentionItems(),
+        repo.getCampaigns(),
+      ]),
+    [],
+  )
+
+  if (loading) {
+    return (
+      <PageTransition>
+        <PageContainer>
+          <LoadingState rows={6} />
+        </PageContainer>
+      </PageTransition>
+    )
+  }
+
+  if (error) {
+    return (
+      <PageTransition>
+        <PageContainer>
+          <ErrorState message={error} onRetry={reload} />
+        </PageContainer>
+      </PageTransition>
+    )
+  }
+
+  if (!data) return null
+
+  const [client, user, analytics, health, featured, agents, activity, attention, allCampaigns] = data
+  const agent = featured.agentId ? agents.find((a) => a.id === featured.agentId) : undefined
+  const campaigns = allCampaigns.filter((c) => c.status !== 'completed')
   const firstName = user.name.split(' ')[0]
 
   return (
@@ -63,7 +98,7 @@ export default function ClientOverview() {
         <MetricGrid analytics={analytics} />
 
         <div className="grid gap-6 xl:grid-cols-3 xl:gap-8">
-          <CampaignProgressPanel campaign={featured} agent={agent} className="xl:col-span-2" />
+          {featured && <CampaignProgressPanel campaign={featured} agent={agent} className="xl:col-span-2" />}
           <AIActivityFeed items={activity} />
         </div>
 

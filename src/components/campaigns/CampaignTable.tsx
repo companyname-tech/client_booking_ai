@@ -1,7 +1,7 @@
 import { memo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ChevronRight } from 'lucide-react'
-import type { Campaign } from '@/types'
+import type { OfferCampaign } from '@/types'
 import { cn, formatCurrency, formatNumber, formatPercent, formatRelativeCompact } from '@/lib/utils'
 import { NOW } from '@/data/time'
 import { useIsWide } from '@/hooks/useMediaQuery'
@@ -11,12 +11,12 @@ import { Sparkline } from '@/components/ui/Sparkline'
 import { CampaignStatus } from './CampaignStatus'
 
 export interface CampaignTableProps {
-  campaigns: Campaign[]
+  campaigns: OfferCampaign[]
   zone?: 'client' | 'admin'
   className?: string
 }
 
-const progressTone = (c: Campaign) =>
+const progressTone = (c: OfferCampaign) =>
   c.status === 'paused' ? 'neutral' : c.status === 'completed' ? 'info' : c.stage === 'calling' ? 'success' : 'violet'
 
 const cell = 'px-3 py-3.5 first:pl-4'
@@ -29,7 +29,7 @@ function Th({ children, align = 'left', className }: { children: React.ReactNode
   )
 }
 
-const Row = memo(function Row({ campaign, onOpen }: { campaign: Campaign; onOpen: () => void }) {
+const Row = memo(function Row({ campaign, onOpen }: { campaign: OfferCampaign; onOpen: () => void }) {
   const { metrics, budget } = campaign
 
   return (
@@ -80,7 +80,7 @@ const Row = memo(function Row({ campaign, onOpen }: { campaign: Campaign; onOpen
   )
 })
 
-const CardRow = memo(function CardRow({ campaign, onOpen }: { campaign: Campaign; onOpen: () => void }) {
+const CardRow = memo(function CardRow({ campaign, onOpen }: { campaign: OfferCampaign; onOpen: () => void }) {
   const { metrics, budget } = campaign
   return (
     <Reveal as="li">
@@ -156,7 +156,7 @@ export function CampaignTable({ campaigns, zone = 'client', className }: Campaig
           </colgroup>
           <thead>
             <tr>
-              <Th>Campaign</Th>
+              <Th>OfferCampaign</Th>
               <Th>Status</Th>
               <Th align="right">Leads</Th>
               <Th align="right">Calls</Th>

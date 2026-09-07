@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useLeadProfile } from './LeadProfileLayout'
 import { Reveal } from '@/components/motion/Reveal'
@@ -18,11 +18,22 @@ import { LeadConversationHistory } from '@/components/leads/profile/LeadConversa
 import { LeadActionCenter } from '@/components/leads/profile/LeadActionCenter'
 import { LeadStatePanel, LeadRelationshipGraph, LeadObjectionHistory } from '@/components/leads/profile/LeadStatePanel'
 import { repo } from '@/data/repository'
+import { useAsyncData } from '@/hooks/useAsyncData'
+import { LoadingState } from '@/components/ui/LoadingState'
+import { ErrorState } from '@/components/ui/ErrorState'
 
 export default function LeadProfileOverview() {
   const { profile } = useLeadProfile()
   const [toast, setToast] = useState('')
-  const [tags, setTags] = useState([...new Set([...profile.tags, ...repo.getLeadTags(profile.lead.id)])])
+  const { data: serverTags, loading: tagsLoading, error: tagsError, reload: reloadTags } = useAsyncData(
+    () => repo.getLeadTags(profile.lead.id),
+    [profile.lead.id],
+  )
+  const [tags, setTags] = useState<string[]>([])
+
+  useEffect(() => {
+    setTags([...new Set([...profile.tags, ...(serverTags ?? [])])])
+  }, [profile.tags, serverTags])
 
   const insights = profile.objections.length > 0
     ? {
@@ -41,6 +52,11 @@ export default function LeadProfileOverview() {
   const notify = (msg: string) => {
     setToast(msg)
     window.setTimeout(() => setToast(''), 3000)
+  }
+
+  const handleTagToggle = async (tag: string) => {
+    const stored = await repo.toggleLeadTag(profile.lead.id, tag)
+    setTags((prev) => (stored.length ? stored : prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]))
   }
 
   return (
@@ -106,23 +122,24 @@ export default function LeadProfileOverview() {
           <Reveal>
             <div className="rounded-lg border border-line bg-surface-1 p-4">
               <h3 className="text-sm font-semibold text-fg">Tags</h3>
-              <div className="mt-3 flex flex-wrap gap-1.5">
-                {['High Intent', 'Decision Maker', 'Follow-up', 'Priority', 'Pricing Concern'].map((tag) => (
-                  <button
-                    key={tag}
-                    type="button"
-                    onClick={() => {
-                      repo.toggleLeadTag(profile.lead.id, tag)
-                      const stored = repo.getLeadTags(profile.lead.id)
-                      if (stored.length) setTags(stored)
-                      else setTags((prev) => (prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]))
-                    }}
-                    className={`rounded-full border px-2.5 py-0.5 text-2xs font-medium ${tags.includes(tag) ? 'border-accent bg-accent-soft/10 text-accent' : 'border-line text-fg-muted'}`}
-                  >
-                    {tag}
-                  </button>
-                ))}
-              </div>
+              {tagsLoading && !serverTags ? (
+                <div className="mt-3"><LoadingState rows={1} /></div>
+              ) : tagsError ? (
+                <ErrorState message={tagsError} onRetry={reloadTags} />
+              ) : (
+                <div className="mt-3 flex flex-wrap gap-1.5">
+                  {['High Intent', 'Decision Maker', 'Follow-up', 'Priority', 'Pricing Concern'].map((tag) => (
+                    <button
+                      key={tag}
+                      type="button"
+                      onClick={() => handleTagToggle(tag)}
+                      className={`rounded-full border px-2.5 py-0.5 text-2xs font-medium ${tags.includes(tag) ? 'border-accent bg-accent-soft/10 text-accent' : 'border-line text-fg-muted'}`}
+                    >
+                      {tag}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           </Reveal>
         </div>

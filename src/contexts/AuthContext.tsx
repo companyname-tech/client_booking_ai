@@ -1,12 +1,10 @@
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react'
-import { authService, type AuthSession } from '@/api/auth'
+import { authService, type AuthSession, type LoginResult } from '@/api/auth'
 
 interface AuthContextValue {
   session: AuthSession | null
-  loginClient: () => AuthSession
-  loginAdmin: () => AuthSession
-  login: (email: string, password: string) => { ok: true; session: AuthSession } | { ok: false; error: string }
-  logout: () => void
+  login: (username: string, password: string) => Promise<LoginResult>
+  logout: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null)
@@ -14,33 +12,18 @@ const AuthContext = createContext<AuthContextValue | null>(null)
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<AuthSession | null>(() => authService.readSession())
 
-  const loginClient = useCallback(() => {
-    const next = authService.loginAsClient()
-    setSession(next)
-    return next
-  }, [])
-
-  const loginAdmin = useCallback(() => {
-    const next = authService.loginAsAdmin()
-    setSession(next)
-    return next
-  }, [])
-
-  const login = useCallback((email: string, password: string) => {
-    const result = authService.loginWithCredentials(email, password)
+  const login = useCallback(async (username: string, password: string) => {
+    const result = await authService.loginWithCredentials(username, password)
     if (result.ok) setSession(result.session)
     return result
   }, [])
 
-  const logout = useCallback(() => {
-    authService.clearSession()
+  const logout = useCallback(async () => {
+    await authService.clearSession()
     setSession(null)
   }, [])
 
-  const value = useMemo(
-    () => ({ session, loginClient, loginAdmin, login, logout }),
-    [session, loginClient, loginAdmin, login, logout],
-  )
+  const value = useMemo(() => ({ session, login, logout }), [session, login, logout])
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }

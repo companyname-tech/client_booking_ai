@@ -31,7 +31,7 @@ export function ApprovalPanel({
       )}
     >
       <div>
-        <div className="label-caps">Campaign readiness</div>
+        <div className="label-caps">OfferCampaign readiness</div>
         <div className="mt-1 text-3xl font-semibold tabular text-fg">{overall}%</div>
         <ProgressBar value={overall} tone="violet" segments={20} size="sm" className="mt-3" label="Overall readiness" />
       </div>
@@ -58,7 +58,7 @@ export function ApprovalPanel({
         <Button variant="ghost" onClick={onRequestChanges}>Request Changes</Button>
         <Button variant="secondary" onClick={onReject}>Reject</Button>
         <Button variant="primary" onClick={onApprove}>
-          Approve Campaign
+          Approve OfferCampaign
         </Button>
       </div>
     </aside>

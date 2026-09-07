@@ -2,12 +2,21 @@ import { lazy } from 'react'
 import { createBrowserRouter, Navigate } from 'react-router-dom'
 import { AppShell } from '@/components/shell/AppShell'
 import { RequireAuth } from '@/components/auth/RequireAuth'
+import { useAuth } from '@/contexts/AuthContext'
+import { homeForZone } from '@/lib/auth'
 import { clientRoutes, adminRoutes } from './routes'
 
 const LoginPage = lazy(() => import('@/pages/LoginPage'))
 
+/** `/` → zone home if authenticated, otherwise `/login`. */
+function RootRedirect() {
+  const { session } = useAuth()
+  if (session) return <Navigate to={homeForZone(session.zone)} replace />
+  return <Navigate to="/login" replace />
+}
+
 export const router = createBrowserRouter([
-  { path: '/', element: <LoginPage /> },
+  { path: '/', element: <RootRedirect /> },
   { path: '/login', element: <LoginPage /> },
 
   {

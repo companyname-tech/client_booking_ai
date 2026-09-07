@@ -32,7 +32,7 @@ export function RecommendedLeads({ leads }: { leads: import('@/types/leadIntelli
   return (
     <section className="surface p-5 sm:p-6">
       <h2 className="text-lg font-semibold text-fg">AI recommended leads</h2>
-      <p className="mt-1 text-sm text-fg-muted">Prioritized using simulated campaign fit and engagement signals.</p>
+      <p className="mt-1 text-sm text-fg-muted">Prioritized using campaign fit and engagement signals.</p>
       <ol className="mt-4 space-y-2">
         {leads.map((l, i) => (
           <li key={l.id}>

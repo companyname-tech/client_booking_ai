@@ -1,9 +1,12 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { repo } from '@/data/repository'
+import { useAsyncData } from '@/hooks/useAsyncData'
 import { Input } from '@/components/ui/Input'
 import { Tabs } from '@/components/ui/Tabs'
 import { ActiveConversationCard } from '@/components/ai/AIActivityStream'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { LoadingState } from '@/components/ui/LoadingState'
+import { ErrorState } from '@/components/ui/ErrorState'
 import { MessageSquare } from 'lucide-react'
 
 const FILTER_TABS = [
@@ -19,14 +22,23 @@ const FILTER_TABS = [
 export default function AIConversations() {
   const [search, setSearch] = useState('')
   const [tab, setTab] = useState<string>('all')
-  const conversations = useMemo(
+
+  const { data: overview, loading: overviewLoading, error: overviewError, reload: overviewReload } = useAsyncData(() => repo.getAIOverview(), [])
+
+  const { data: conversationsData, loading, error, reload } = useAsyncData(
     () => repo.getAIConversations({ search, tab: tab === 'all' ? undefined : tab }),
     [search, tab],
   )
 
-  if (repo.getAIOverview().availability === 'pre_launch') {
+  if (overviewLoading || loading) return <LoadingState rows={6} />
+  if (overviewError) return <ErrorState message={overviewError} onRetry={overviewReload} />
+  if (error) return <ErrorState message={error} onRetry={reload} />
+
+  if (overview?.availability === 'pre_launch') {
     return <EmptyState icon={<MessageSquare className="size-8 text-fg-muted" />} title="No conversations yet" description="Conversations will appear once your campaign launches." />
   }
+
+  const conversations = conversationsData ?? []
 
   return (
     <div className="space-y-4">

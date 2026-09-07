@@ -112,33 +112,30 @@ Add `AuthProvider` from `@/contexts/AuthContext` at your app root.
 
 ## Step 6: Environment
 
-Create `.env`:
+Create `.env` (optional — defaults are correct):
 
 ```env
-VITE_USE_MOCK_DATA=true   # false when backend is ready
-VITE_API_URL=http://localhost:3000/api
+# Leave empty for same-origin `/api` (proxied to the backend on :8870).
+VITE_API_URL=
 ```
 
-## Step 7: Wire authentication
+The app reads `env.apiBaseUrl` (default `/api`). See `vite.config.ts` for the
+dev reverse proxy; in production, route `/api/*` to the backend with your own
+reverse proxy.
 
-1. Open `src/api/adapters/http/auth.ts`
-2. Implement `loginWithCredentials` calling your `POST /auth/login`
-3. Store JWT via `apiClient.setAuthToken(token)` from `src/api/adapters/http/client.ts`
-4. Map your user roles to `zone: 'client' | 'admin'`
+## Step 7: Auth
 
-Replace `RequireAuth` session checks if your app uses a different auth context — keep zone enforcement logic.
+Auth is already wired to the leads_to_conversion backend:
 
-## Step 8: Wire API endpoints
+- `POST /auth/login {username,password}` → HttpOnly `access_token` cookie.
+- `GET /auth/me` → `{user:{username}}` (mirrored into the FE session).
+- Default credentials `admin` / `admin`.
 
-1. Set `VITE_USE_MOCK_DATA=false`
-2. Open `src/api/adapters/http/repository.ts`
-3. Replace `todo()` stubs method-by-method with `apiClient.get/post/patch/delete` calls
-4. See [API_CONTRACT.md](API_CONTRACT.md) for suggested endpoints
-5. See [DATA_LAYER.md](DATA_LAYER.md) for implementation patterns
+If your host app uses a different auth backend, replace
+`src/api/adapters/http/auth.ts` and the `RequireAuth` session checks — keep the
+zone-enforcement logic.
 
-Start with: `getCurrentUser`, `getCampaigns`, `getLeads` — then expand by feature.
-
-## Step 9: Verify
+## Step 8: Verify
 
 ```bash
 npm run build
@@ -146,10 +143,14 @@ npm run dev
 ```
 
 Test:
-- `/login` — quick login buttons
+- `/login` — `admin` / `admin`
 - `/client/overview` — client zone
 - `/admin/overview` — admin zone
 - Campaign detail, leads, AI pages
+
+Note: screens that target not-yet-built backend endpoints (admin approval/training,
+AI objections/insights/performance, lead notes/tags, multi-client, OAuth) render
+the empty/error state — see [API_CONTRACT.md](API_CONTRACT.md).
 
 ## Troubleshooting
 
@@ -158,4 +159,5 @@ Test:
 | Missing styles | Ensure `globals.css` imported; check `@theme` tokens |
 | `@/` import errors | Verify vite + tsconfig alias |
 | Blank page after login | Check `RequireAuth` zone matches session |
-| API errors in HTTP mode | Expected until stubs are implemented |
+| `401` on every call | Ensure `/api` is reverse-proxied to the backend (cookie auth needs same-origin) |
+| A screen shows empty/error | The endpoint may be a deferred gap — see API_CONTRACT.md |

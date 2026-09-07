@@ -6,9 +6,9 @@ ai_booking_agent/
 ├── .env.example              # Environment variables template
 ├── docs/
 │   ├── ARCHITECTURE.md       # System design and data flow
+│   ├── API_CONTRACT.md       # FE method → backend endpoint map
+│   ├── DATA_LAYER.md         # HTTP data layer reference
 │   ├── INTEGRATION.md        # Merge into existing Vite app
-│   ├── API_CONTRACT.md       # REST endpoint mapping
-│   ├── DATA_LAYER.md         # Mock → HTTP migration guide
 │   └── FOLDER_STRUCTURE.md   # This file
 ├── .cursor/rules/
 │   └── integration.mdc       # Cursor rules for integration work
@@ -27,28 +27,21 @@ ai_booking_agent/
     │       └── index.ts
     │
     ├── api/                  # Data & auth boundary (integration seam)
-    │   ├── repository.ts     # Facade: repo = mock | http
-    │   ├── auth.ts           # Facade: authService = mock | http
+    │   ├── repository.ts     # Facade — hard-wires the HTTP adapter
+    │   ├── auth.ts           # Facade — hard-wires httpAuthService
     │   ├── index.ts          # Public exports
     │   ├── contracts/
     │   │   ├── repository.ts # Repository type
     │   │   ├── auth.ts       # AuthService interface
     │   │   └── index.ts
     │   └── adapters/
-    │       ├── mock/         # Mock data (dev/demo)
-    │       │   ├── repository.ts
-    │       │   ├── auth.ts
-    │       │   ├── mockClients.ts
-    │       │   ├── campaignStore.ts
-    │       │   └── ...       # seeds, stores, generators
-    │       └── http/         # Backend integration (wire here)
+    │       └── http/         # Backend integration (single adapter)
     │           ├── client.ts # fetch wrapper + ApiError
-    │           ├── repository.ts
-    │           └── auth.ts
+    │           ├── repository.ts # wire→domain translation + all data methods
+    │           └── auth.ts   # JWT cookie login/logout/session
     │
     ├── config/
-    │   ├── environment.ts    # VITE_* vars, storage keys
-    │   └── demo-users.ts     # Demo login credentials
+    │   └── environment.ts    # VITE_* vars, storage keys
     │
     ├── data/                 # Deprecated shims — use @/api/*
     │   ├── repository.ts
@@ -56,12 +49,12 @@ ai_booking_agent/
     │
     ├── types/                # Domain types (backend contract)
     ├── lib/                  # Utils, motion, navigation, status
-    ├── hooks/                # Reusable React hooks
+    ├── hooks/                # Reusable React hooks (useAsyncData)
     ├── contexts/             # AuthContext
     ├── features/             # Logical feature index (README only)
     │
     ├── components/
-    │   ├── ui/               # Design system primitives
+    │   ├── ui/               # Design system primitives (LoadingState, ErrorState, EmptyState)
     │   ├── shell/            # AppShell, Sidebar, TopBar
     │   ├── layout/           # PageHeader, PageContainer
     │   ├── motion/           # Reveal, AnimatedNumber
@@ -99,5 +92,5 @@ ai_booking_agent/
 
 ## Do not import
 
-- `@/api/adapters/mock/*` from UI code
+- `@/api/adapters/http/*` from UI code (go through the `repo` / `authService` facades)
 - `@/data/*` in new code (use `@/api/*` instead)

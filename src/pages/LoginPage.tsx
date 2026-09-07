@@ -1,19 +1,18 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Building2, ShieldCheck, Sparkles } from 'lucide-react'
+import { Sparkles } from 'lucide-react'
 import { motion } from 'motion/react'
 import { BrandLogo } from '@/components/shell/BrandLogo'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
-import { demoUsers } from '@/config/demo-users'
 import { homeForZone } from '@/lib/auth'
 import { useAuth } from '@/contexts/AuthContext'
 import { spring } from '@/lib/motion'
 
 export default function LoginPage() {
   const navigate = useNavigate()
-  const { session, login, loginClient, loginAdmin } = useAuth()
-  const [email, setEmail] = useState('')
+  const { session, login } = useAuth()
+  const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -22,33 +21,17 @@ export default function LoginPage() {
     if (session) navigate(homeForZone(session.zone), { replace: true })
   }, [session, navigate])
 
-  const finish = (zone: 'client' | 'admin') => {
-    navigate(homeForZone(zone), { replace: true })
-  }
-
-  const onSubmit = (e: React.FormEvent) => {
+  const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
     setLoading(true)
-    const result = login(email, password)
+    const result = await login(username, password)
     setLoading(false)
     if (!result.ok) {
       setError(result.error)
       return
     }
-    finish(result.session.zone)
-  }
-
-  const quickClient = () => {
-    setError('')
-    loginClient()
-    finish('client')
-  }
-
-  const quickAdmin = () => {
-    setError('')
-    loginAdmin()
-    finish('admin')
+    navigate(homeForZone(result.session.zone), { replace: true })
   }
 
   return (
@@ -81,14 +64,14 @@ export default function LoginPage() {
         <div className="surface p-6 sm:p-8">
           <form onSubmit={onSubmit} className="space-y-4">
             <div>
-              <label htmlFor="email" className="mb-1.5 block text-xs font-medium text-fg-secondary">Email</label>
+              <label htmlFor="username" className="mb-1.5 block text-xs font-medium text-fg-secondary">Username</label>
               <Input
-                id="email"
-                type="email"
-                autoComplete="email"
-                placeholder="you@company.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                id="username"
+                type="text"
+                autoComplete="username"
+                placeholder="admin"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
               />
             </div>
             <div>
@@ -114,54 +97,17 @@ export default function LoginPage() {
             </Button>
           </form>
 
-          <div className="my-6 flex items-center gap-3">
-            <div className="h-px flex-1 bg-line" />
-            <span className="text-2xs text-fg-muted">or quick access</span>
-            <div className="h-px flex-1 bg-line" />
-          </div>
-
-          <div className="grid gap-2 sm:grid-cols-2">
-            <Button
-              type="button"
-              variant="secondary"
-              className="w-full justify-start"
-              leadingIcon={<Building2 className="size-4 text-accent" />}
-              onClick={quickClient}
-            >
-              Login as Client
-            </Button>
-            <Button
-              type="button"
-              variant="secondary"
-              className="w-full justify-start"
-              leadingIcon={<ShieldCheck className="size-4 text-violet" />}
-              onClick={quickAdmin}
-            >
-              Login as Super Admin
-            </Button>
-          </div>
-
           <div className="mt-6 rounded-lg border border-line bg-surface-1 px-4 py-3">
             <div className="flex items-center gap-2 text-2xs text-fg-muted">
               <Sparkles className="size-3.5 text-violet" />
-              <span>Demo credentials</span>
+              <span>Default credentials</span>
             </div>
-            <dl className="mt-2 space-y-1 text-xs text-fg-secondary">
-              <div className="flex justify-between gap-4">
-                <dt>Client</dt>
-                <dd className="text-right font-mono text-fg-muted">{demoUsers.client.email} / {demoUsers.client.password}</dd>
-              </div>
-              <div className="flex justify-between gap-4">
-                <dt>Super Admin</dt>
-                <dd className="text-right font-mono text-fg-muted">{demoUsers.admin.email} / {demoUsers.admin.password}</dd>
-              </div>
-            </dl>
+            <p className="mt-2 text-xs text-fg-secondary">
+              The default single-admin account is <span className="font-mono text-fg-muted">admin</span> /{' '}
+              <span className="font-mono text-fg-muted">admin</span> (override via ADMIN_USERNAME / ADMIN_PASSWORD).
+            </p>
           </div>
         </div>
-
-        <p className="mt-6 text-center text-2xs text-fg-faint">
-          Frontend demo — no real authentication. Session persists until you sign out.
-        </p>
       </motion.div>
     </div>
   )

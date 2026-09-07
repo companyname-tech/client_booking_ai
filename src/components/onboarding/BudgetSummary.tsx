@@ -10,7 +10,7 @@ export function BudgetSummary({ draft }: { draft: CampaignDraft }) {
     <OnboardingSummaryPanel title="Budget summary">
       <dl className="space-y-3 text-sm">
         <div className="flex justify-between">
-          <dt className="text-fg-muted">Campaign budget</dt>
+          <dt className="text-fg-muted">OfferCampaign budget</dt>
           <dd className="font-semibold tabular text-fg">{formatCurrency(draft.budget.total)}</dd>
         </div>
         <div className="flex justify-between">

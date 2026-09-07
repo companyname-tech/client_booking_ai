@@ -4,7 +4,7 @@ import { AnalyticsSection } from './AnalyticsShared'
 
 export function AIIntelligence({ insights, conversationsAnalyzed }: { insights: AnalyticsInsight[]; conversationsAnalyzed: number }) {
   return (
-    <AnalyticsSection title="AI Campaign Intelligence" description={`Your AI has analyzed ${conversationsAnalyzed.toLocaleString()} conversations.`}>
+    <AnalyticsSection title="AI OfferCampaign Intelligence" description={`Your AI has analyzed ${conversationsAnalyzed.toLocaleString()} conversations.`}>
       <Stagger className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3" stagger={0.04}>
         {insights.map((ins) => (
           <Reveal key={ins.id} className="rounded-lg border border-line bg-surface-1 p-4">
@@ -21,7 +21,7 @@ export function AIIntelligence({ insights, conversationsAnalyzed }: { insights: 
 
 export function AIRecommendations({ items }: { items: AnalyticsRecommendation[] }) {
   return (
-    <AnalyticsSection title="Recommended actions" description="Mock AI suggestions based on campaign patterns">
+    <AnalyticsSection title="Recommended actions" description="AI suggestions based on campaign patterns">
       <ol className="space-y-4">
         {items.map((r, i) => (
           <li key={r.id} className="flex gap-4 rounded-lg border border-line bg-surface-1 p-4">

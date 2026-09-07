@@ -86,7 +86,7 @@ export interface ComplianceItem {
 }
 
 export interface CampaignReviewData {
-  campaignId: string
+  offerCampaignId: string
   displayId: string
   submittedAt: string
   aiReadiness: number
@@ -109,7 +109,7 @@ export interface CampaignReviewData {
 }
 
 export interface AdminCampaignMeta {
-  campaignId: string
+  offerCampaignId: string
   workflowStatus: AdminWorkflowStatus
   aiReadiness: number
   complianceScore: number

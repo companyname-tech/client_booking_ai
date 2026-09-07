@@ -21,7 +21,7 @@ export function AIActivityStream({ events: initial }: { events: AIActivityEvent[
     const ev: AIActivityEvent = {
       id: `sim_${Date.now()}`,
       timestamp: new Date().toLocaleTimeString('en-US', { hour12: false }),
-      campaignId: 'cmp_q4_arch',
+      offerCampaignId: 'cmp_q4_arch',
       campaignName: 'Q4 Architecture Outreach',
       leadName: 'David Carter',
       event: 'Qualification in progress',

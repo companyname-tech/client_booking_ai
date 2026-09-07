@@ -11,6 +11,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { Avatar } from '@/components/ui/Avatar'
 import { Dropdown } from '@/components/ui/Dropdown'
 import { Tooltip } from '@/components/ui/Tooltip'
+import { useAsyncData } from '@/hooks/useAsyncData'
 import { BrandLogo } from './BrandLogo'
 import { useShell } from './ShellContext'
 
@@ -81,8 +82,12 @@ function SidebarNavItem({ item, collapsed }: { item: NavItem; collapsed: boolean
 
 function WorkspaceSwitcher({ collapsed, zone }: { collapsed: boolean; zone: Zone }) {
   const navigate = useNavigate()
-  const client = repo.getCurrentClient()
-  const clients = repo.getClients()
+  const { data } = useAsyncData(async () => {
+    const [client, clients] = await Promise.all([repo.getCurrentClient(), repo.getClients()])
+    return { client, clients }
+  }, [])
+  const client = data?.client
+  const clients = data?.clients ?? []
   const isAdmin = zone === 'admin'
 
   return (
@@ -98,7 +103,7 @@ function WorkspaceSwitcher({ collapsed, zone }: { collapsed: boolean; zone: Zone
             id: c.id,
             label: c.name,
             description: c.industry,
-            selected: !isAdmin && c.id === client.id,
+            selected: !isAdmin && c.id === client?.id,
             icon: <Avatar name={c.name} size="xs" />,
             onSelect: () => navigate('/client/overview'),
           })),
@@ -117,7 +122,7 @@ function WorkspaceSwitcher({ collapsed, zone }: { collapsed: boolean; zone: Zone
         },
       ]}
       trigger={({ toggle, ...a11y }) => (
-        <Tooltip content={isAdmin ? 'Super Admin' : client.name} side="right" disabled={!collapsed} delay={80}>
+        <Tooltip content={isAdmin ? 'Super Admin' : client?.name ?? ''} side="right" disabled={!collapsed} delay={80}>
           <button
             type="button"
             onClick={toggle}
@@ -132,14 +137,14 @@ function WorkspaceSwitcher({ collapsed, zone }: { collapsed: boolean; zone: Zone
                 <ShieldCheck className="size-3.5" />
               </span>
             ) : (
-              <Avatar name={client.name} size="sm" className="rounded-md" />
+              <Avatar name={client?.name ?? ''} size="sm" className="rounded-md" />
             )}
             {!collapsed && (
               <>
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-sm font-medium text-fg">{isAdmin ? 'Super Admin' : client.name}</span>
+                  <span className="block truncate text-sm font-medium text-fg">{isAdmin ? 'Super Admin' : client?.name ?? ''}</span>
                   <span className="block truncate text-2xs text-fg-muted">
-                    {isAdmin ? 'Internal console' : `${client.plan[0].toUpperCase()}${client.plan.slice(1)} plan`}
+                    {isAdmin ? 'Internal console' : client ? `${client.plan[0].toUpperCase()}${client.plan.slice(1)} plan` : ''}
                   </span>
                 </span>
                 <ChevronsUpDown className="size-3.5 shrink-0 text-fg-muted" />
@@ -155,7 +160,8 @@ function WorkspaceSwitcher({ collapsed, zone }: { collapsed: boolean; zone: Zone
 function UserMenu({ collapsed, zone }: { collapsed: boolean; zone: Zone }) {
   const navigate = useNavigate()
   const { logout } = useAuth()
-  const user = zone === 'admin' ? repo.getSuperAdminUser() : repo.getCurrentUser()
+  const { data } = useAsyncData(async () => (zone === 'admin' ? repo.getSuperAdminUser() : repo.getCurrentUser()), [zone])
+  const user = data
   return (
     <Dropdown
       side="top"
@@ -183,7 +189,7 @@ function UserMenu({ collapsed, zone }: { collapsed: boolean; zone: Zone }) {
         },
       ]}
       trigger={({ toggle, ...a11y }) => (
-        <Tooltip content={user.name} side="right" disabled={!collapsed} delay={80}>
+        <Tooltip content={user?.name ?? ''} side="right" disabled={!collapsed} delay={80}>
           <button
             type="button"
             onClick={toggle}
@@ -193,11 +199,11 @@ function UserMenu({ collapsed, zone }: { collapsed: boolean; zone: Zone }) {
               collapsed ? 'justify-center' : 'gap-2.5 px-2',
             )}
           >
-            <Avatar name={user.name} size="sm" />
+            <Avatar name={user?.name ?? ''} size="sm" />
             {!collapsed && (
               <span className="min-w-0 flex-1">
-                <span className="block truncate text-sm font-medium text-fg">{user.name}</span>
-                <span className="block truncate text-2xs text-fg-muted">{user.email}</span>
+                <span className="block truncate text-sm font-medium text-fg">{user?.name ?? ''}</span>
+                <span className="block truncate text-2xs text-fg-muted">{user?.email ?? ''}</span>
               </span>
             )}
           </button>

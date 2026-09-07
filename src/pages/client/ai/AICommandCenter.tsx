@@ -1,19 +1,51 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { repo } from '@/data/repository'
+import { useAsyncData } from '@/hooks/useAsyncData'
 import { Reveal } from '@/components/motion/Reveal'
 import { AIStatusHero } from '@/components/ai/AIStatusHero'
 import { AIActivityStream, ActiveConversationCard } from '@/components/ai/AIActivityStream'
 import { ObjectionIntelligence } from '@/components/ai/ObjectionIntelligence'
 import { FollowUpQueue, HumanEscalations, BookingIntelligence, AIHealthPanel, AIInsightDrawer } from '@/components/ai/AIOperations'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { LoadingState } from '@/components/ui/LoadingState'
+import { ErrorState } from '@/components/ui/ErrorState'
 import { Bot } from 'lucide-react'
 import type { AIInsight } from '@/types/aiCommand'
 
 export default function AICommandCenter() {
-  const overview = repo.getAIOverview()
+  const { data, loading, error, reload } = useAsyncData(async () => {
+    const [
+      overview,
+      conversations,
+      activity,
+      health,
+      objections,
+      followUps,
+      bookings,
+      escalations,
+      insights,
+    ] = await Promise.all([
+      repo.getAIOverview(),
+      repo.getAIConversations(),
+      repo.getAIActivity(),
+      repo.getAIHealth(),
+      repo.getAIObjections(),
+      repo.getAIFollowUps(),
+      repo.getAIBookings(),
+      repo.getAIEscalations(),
+      repo.getAIInsights(),
+    ])
+    return { overview, conversations, activity, health, objections, followUps, bookings, escalations, insights }
+  }, [])
+
   const [insight, setInsight] = useState<AIInsight | null>(null)
-  const conversations = repo.getAIConversations({ tab: overview.availability === 'live' ? undefined : undefined })
+
+  if (loading) return <LoadingState rows={6} />
+  if (error) return <ErrorState message={error} onRetry={reload} />
+  if (!data) return null
+
+  const { overview, conversations, activity, health, objections, followUps, bookings, escalations, insights } = data
   const active = conversations.filter((c) => c.isActive)
 
   if (overview.availability === 'pre_launch') {
@@ -37,8 +69,8 @@ export default function AICommandCenter() {
       )}
 
       <div className="grid gap-6 xl:grid-cols-[1.4fr_1fr]">
-        <Reveal><AIActivityStream events={repo.getAIActivity()} /></Reveal>
-        <Reveal><AIHealthPanel health={repo.getAIHealth()} /></Reveal>
+        <Reveal><AIActivityStream events={activity} /></Reveal>
+        <Reveal><AIHealthPanel health={health} /></Reveal>
       </div>
 
       <section>
@@ -57,19 +89,19 @@ export default function AICommandCenter() {
       </section>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <Reveal><ObjectionIntelligence objections={repo.getAIObjections()} /></Reveal>
-        <Reveal><FollowUpQueue items={repo.getAIFollowUps()} /></Reveal>
+        <Reveal><ObjectionIntelligence objections={objections} /></Reveal>
+        <Reveal><FollowUpQueue items={followUps} /></Reveal>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <Reveal><BookingIntelligence bookings={repo.getAIBookings()} /></Reveal>
-        <Reveal><HumanEscalations items={repo.getAIEscalations()} /></Reveal>
+        <Reveal><BookingIntelligence bookings={bookings} /></Reveal>
+        <Reveal><HumanEscalations items={escalations} /></Reveal>
       </div>
 
       <section className="surface p-5 sm:p-6">
         <h2 className="text-lg font-semibold text-fg">AI Insights</h2>
         <div className="mt-4 grid gap-3 sm:grid-cols-3">
-          {repo.getAIInsights().map((i) => (
+          {insights.map((i) => (
             <button key={i.id} type="button" onClick={() => setInsight(i)} className="interactive rounded-lg border border-line bg-surface-1 p-4 text-left hover:border-line-strong">
               <div className="label-caps text-accent">{i.category}</div>
               <p className="mt-1 text-sm font-medium text-fg">{i.title}</p>

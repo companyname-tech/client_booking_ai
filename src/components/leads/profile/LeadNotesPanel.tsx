@@ -1,32 +1,40 @@
 import { useState } from 'react'
 import { repo } from '@/data/repository'
+import { useAsyncData } from '@/hooks/useAsyncData'
+import { LoadingState } from '@/components/ui/LoadingState'
+import { ErrorState } from '@/components/ui/ErrorState'
 import type { LeadNote } from '@/types/leadIntelligence'
 import { Button } from '@/components/ui/Button'
 import { Textarea } from '@/components/ui/Textarea'
 
 export function LeadNotesPanel({ leadId }: { leadId: string }) {
-  const [notes, setNotes] = useState<LeadNote[]>(() => repo.getLeadNotes(leadId))
+  const { data: notes, loading, error, reload } = useAsyncData(() => repo.getLeadNotes(leadId), [leadId])
   const [text, setText] = useState('')
   const [editing, setEditing] = useState<string | null>(null)
   const [editText, setEditText] = useState('')
 
-  const add = () => {
+  const add = async () => {
     if (!text.trim()) return
-    repo.addLeadNote(leadId, text.trim())
-    setNotes(repo.getLeadNotes(leadId))
+    await repo.addLeadNote(leadId, text.trim())
     setText('')
+    reload()
   }
 
-  const save = (noteId: string) => {
-    repo.updateLeadNote(leadId, noteId, editText)
-    setNotes(repo.getLeadNotes(leadId))
+  const save = async (noteId: string) => {
+    await repo.updateLeadNote(leadId, noteId, editText)
     setEditing(null)
+    reload()
   }
 
-  const remove = (noteId: string) => {
-    repo.deleteLeadNote(leadId, noteId)
-    setNotes(repo.getLeadNotes(leadId))
+  const remove = async (noteId: string) => {
+    await repo.deleteLeadNote(leadId, noteId)
+    reload()
   }
+
+  if (loading) return <LoadingState rows={3} />
+  if (error) return <ErrorState message={error} onRetry={reload} />
+
+  const list: LeadNote[] = notes ?? []
 
   return (
     <div className="space-y-4">
@@ -34,11 +42,11 @@ export function LeadNotesPanel({ leadId }: { leadId: string }) {
         <Textarea rows={3} value={text} onChange={(e) => setText(e.target.value)} placeholder="Add a note about this prospect…" />
         <Button variant="primary" size="sm" className="mt-2" onClick={add} disabled={!text.trim()}>Add note</Button>
       </div>
-      {notes.length === 0 ? (
+      {list.length === 0 ? (
         <p className="text-sm text-fg-muted">No notes yet.</p>
       ) : (
         <ul className="space-y-2">
-          {notes.map((n) => (
+          {list.map((n) => (
             <li key={n.id} className="rounded-lg border border-line bg-surface-2 p-4">
               {editing === n.id ? (
                 <>

@@ -1,117 +1,75 @@
 # Data Layer
 
-How to swap mock data for your backend.
+How the frontend loads and persists real data against the backend.
 
-## Adapter selection
+## Adapter
+
+The app has a single data source: the HTTP adapter. `src/api/repository.ts`
+hard-wires it:
 
 ```ts
 // src/api/repository.ts
-export const repo = env.useMockData ? mockRepository : httpRepository
+import { httpRepository } from './adapters/http/repository'
+export const repo: Repository = httpRepository
 ```
 
-Set `VITE_USE_MOCK_DATA=false` in `.env` to activate the HTTP adapter.
+There is no `VITE_USE_MOCK_DATA` switch and no mock adapter — the mock
+`src/api/adapters/mock/` directory was removed. `authService` (`src/api/auth.ts`)
+similarly hard-wires `httpAuthService`.
 
-## Where to implement
+## Files
 
 | Concern | File |
 |---------|------|
-| HTTP client (fetch, auth headers) | `src/api/adapters/http/client.ts` |
-| All data methods | `src/api/adapters/http/repository.ts` |
-| Login/logout | `src/api/adapters/http/auth.ts` |
+| HTTP client (fetch, auth header, errors) | `src/api/adapters/http/client.ts` |
+| All data methods + wire→domain translation | `src/api/adapters/http/repository.ts` |
+| Login/logout/session | `src/api/adapters/http/auth.ts` |
 
-## Implementation pattern
+## Base URL
 
-### 1. Simple GET
+`ApiClient` calls `env.apiBaseUrl` (`src/config/environment.ts`), which defaults
+to `/api` (same-origin). `vite.config.ts` reverse-proxies `/api/*` to the backend
+on `127.0.0.1:8870`, rewriting `/api` off — required so the HttpOnly
+`access_token` cookie is sent same-origin. Set `VITE_API_URL` only for a
+different deployment topology.
 
-```ts
-// In http/repository.ts — replace todo() stub:
-async getCampaigns(clientId?: string): Promise<Campaign[]> {
-  const qs = clientId ? `?clientId=${clientId}` : ''
-  return apiClient.get<Campaign[]>(`/campaigns${qs}`)
-}
-```
+## Auth token
 
-**Note:** Current `Repository` methods are synchronous (mock). For async APIs you have two options:
-
-**Option A (recommended):** Add React Query / TanStack Query in pages, call `apiClient` directly in hooks, gradually migrate off `repo`.
-
-**Option B:** Make repository methods async and update all callers to `await repo.getCampaigns()`.
-
-For minimal disruption, start with Option A for new endpoints while keeping sync mock for development.
-
-### 2. POST / mutation
-
-```ts
-approveCampaign(id: string) {
-  return apiClient.post(`/admin/campaigns/${id}/approve`)
-}
-```
-
-### 3. Auth token
-
-After login:
-
-```ts
-import { apiClient } from './client'
-apiClient.setAuthToken(response.token)
-```
-
-`apiClient` attaches `Authorization: Bearer <token>` to all requests.
+Login is cookie-based: `POST /auth/login` sets an HttpOnly `access_token` cookie
+and every authenticated route reads it. `ApiClient` also attaches
+`Authorization: Bearer <token>` when `setAuthToken` is called, which the backend
+accepts as a fallback. The FE mirrors `GET /auth/me` into the session.
 
 ## Error handling
 
-`apiClient` throws `ApiError` with `status` and `body`. Catch in UI or a global error boundary:
+`ApiClient` throws `ApiError` with `status` and `body` on any non-2xx. Screens
+catch it (often via `useAsyncData`) and render `ErrorState` with a retry. On
+`401`, clear the session.
 
 ```ts
 import { ApiError } from '@/api/adapters/http/client'
 
 try {
-  await apiClient.get('/campaigns')
+  await apiClient.get('/leads')
 } catch (e) {
-  if (e instanceof ApiError && e.status === 401) {
-    authService.clearSession()
-  }
+  if (e instanceof ApiError && e.status === 401) authService.clearSession()
 }
 ```
 
-## Types as contract
+## Translation (wire → domain)
 
-Response JSON must match types in `src/types/`. If your API differs:
+`repository.ts` is the single translation point:
 
-1. Prefer transforming in the HTTP adapter (map API → domain type)
-2. Or extend types with optional fields
+- snake_case → camelCase (`offer_id` → `offerCampaignId`)
+- BE enums → FE enums (`LeadStatus`, `PostCallOutcome` → `Call.outcome`)
+- wrapped lists → bare arrays (`{leads:[...]}` → `[...]`)
 
-## Incremental migration
+If an API response differs from a `src/types/` shape, transform it in the
+adapter — never scatter mapping in UI code.
 
-1. Keep `VITE_USE_MOCK_DATA=true` during UI work
-2. Implement HTTP methods one domain at a time (campaigns → leads → AI → admin)
-3. Use feature flags per method if needed:
+## Async state
 
-```ts
-getCampaigns() {
-  if (env.useMockData) return mockRepository.getCampaigns()
-  return apiClient.get('/campaigns')
-}
-```
-
-## Optional: React Query
-
-For production apps, wrap HTTP calls in query hooks:
-
-```ts
-// src/hooks/useCampaigns.ts
-export function useCampaigns() {
-  return useQuery({
-    queryKey: ['campaigns'],
-    queryFn: () => apiClient.get<Campaign[]>('/campaigns'),
-  })
-}
-```
-
-Migrate pages from `repo.getCampaigns()` to hooks over time.
-
-## Mock adapter (reference)
-
-Full working implementation: `src/api/adapters/mock/repository.ts`
-
-Use it as the specification for what each method must return.
+Data methods are async. Screens use `useAsyncData` (`src/hooks/useAsyncData.ts`)
+for loading/error/reload, and render `LoadingState` / `ErrorState` (retry) /
+`EmptyState` from `src/components/ui/`. Optimistic mutations read
+`override ?? data` to avoid a reload flash (see the settings tabs).

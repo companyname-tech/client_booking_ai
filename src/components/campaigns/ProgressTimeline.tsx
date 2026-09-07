@@ -17,7 +17,7 @@ export interface ProgressTimelineProps {
 }
 
 /**
- * Campaign lifecycle: ONBOARDING → AI TRAINING → LEGAL REVIEW → APPROVED →
+ * OfferCampaign lifecycle: ONBOARDING → AI TRAINING → LEGAL REVIEW → APPROVED →
  * CALLING → OPTIMIZATION. Shared between the Client Zone and Super Admin.
  */
 export const ProgressTimeline = memo(function ProgressTimeline({
@@ -35,7 +35,7 @@ export const ProgressTimeline = memo(function ProgressTimeline({
 
   if (orientation === 'vertical') {
     return (
-      <ol className={cn('relative', className)} aria-label="Campaign lifecycle">
+      <ol className={cn('relative', className)} aria-label="OfferCampaign lifecycle">
         {CAMPAIGN_STAGES.map((stage, i) => {
           const state = i < currentIndex ? 'done' : i === currentIndex ? 'current' : 'todo'
           const meta = campaignStageMeta[stage]
@@ -60,7 +60,7 @@ export const ProgressTimeline = memo(function ProgressTimeline({
   }
 
   return (
-    <div className={cn('relative min-w-0 max-w-full', className)} role="group" aria-label="Campaign lifecycle">
+    <div className={cn('relative min-w-0 max-w-full', className)} role="group" aria-label="OfferCampaign lifecycle">
       {/* Track */}
       <div
         aria-hidden

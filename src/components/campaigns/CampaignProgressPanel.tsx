@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { ArrowUpRight, Bot } from 'lucide-react'
-import type { Agent, Campaign } from '@/types'
+import type { Agent, OfferCampaign } from '@/types'
 import { CAMPAIGN_STAGES } from '@/types'
 import { campaignStageMeta } from '@/lib/status'
 import { cn, formatRelativeTime } from '@/lib/utils'
@@ -11,7 +11,7 @@ import { CampaignStatus } from './CampaignStatus'
 import { ProgressTimeline } from './ProgressTimeline'
 
 export interface CampaignProgressPanelProps {
-  campaign: Campaign
+  campaign: OfferCampaign
   agent?: Agent
   zone?: 'client' | 'admin'
   className?: string
@@ -39,7 +39,7 @@ export function CampaignProgressPanel({ campaign, agent, zone = 'client', classN
 
       <Reveal className="relative flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
-          <div className="label-caps">Campaign progress</div>
+          <div className="label-caps">OfferCampaign progress</div>
           <div className="mt-1.5 flex flex-wrap items-center gap-2.5">
             <h2 id="progress-title" className="text-lg font-semibold tracking-tight text-fg">
               {campaign.name}

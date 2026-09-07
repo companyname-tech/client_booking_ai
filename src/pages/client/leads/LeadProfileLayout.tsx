@@ -2,6 +2,10 @@ import { NavLink, Outlet, useOutletContext, useParams } from 'react-router-dom'
 import { Link } from 'react-router-dom'
 import { ArrowLeft } from 'lucide-react'
 import { repo } from '@/data/repository'
+import type { LeadIntelligenceProfile } from '@/types/leadIntelligence'
+import { useAsyncData } from '@/hooks/useAsyncData'
+import { LoadingState } from '@/components/ui/LoadingState'
+import { ErrorState } from '@/components/ui/ErrorState'
 import { motion } from 'motion/react'
 import { spring } from '@/lib/motion'
 import { cn } from '@/lib/utils'
@@ -20,12 +24,35 @@ const TABS = [
 ]
 
 export function useLeadProfile() {
-  return useOutletContext<{ profile: NonNullable<ReturnType<typeof repo.getLeadIntelligence>> }>()
+  return useOutletContext<{ profile: LeadIntelligenceProfile }>()
 }
 
 export default function LeadProfileLayout() {
   const { id } = useParams()
-  const profile = id ? repo.getLeadIntelligence(id) : undefined
+  const { data: profile, loading, error, reload } = useAsyncData(
+    () => (id ? repo.getLeadIntelligence(id) : Promise.resolve<LeadIntelligenceProfile | undefined>(undefined)),
+    [id],
+  )
+
+  if (loading) {
+    return (
+      <PageTransition>
+        <PageContainer>
+          <LoadingState rows={6} />
+        </PageContainer>
+      </PageTransition>
+    )
+  }
+
+  if (error) {
+    return (
+      <PageTransition>
+        <PageContainer>
+          <ErrorState message={error} onRetry={reload} />
+        </PageContainer>
+      </PageTransition>
+    )
+  }
 
   if (!profile) {
     return (

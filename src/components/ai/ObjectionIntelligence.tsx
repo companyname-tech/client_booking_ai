@@ -7,7 +7,7 @@ export function ObjectionIntelligence({ objections }: { objections: AIObjection[
   return (
     <section className="surface p-5 sm:p-6">
       <h2 className="text-lg font-semibold text-fg">Top Objections</h2>
-      <p className="mt-1 text-sm text-fg-muted">Mock AI analysis · simulated metrics</p>
+      <p className="mt-1 text-sm text-fg-muted">AI analysis</p>
       <div className="mt-4 space-y-3">
         {objections.map((o) => (
           <div key={o.id} className="rounded-lg border border-line bg-surface-1 p-4">

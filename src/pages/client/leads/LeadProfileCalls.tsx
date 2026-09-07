@@ -5,6 +5,10 @@ import { CallDrawer } from '@/components/calls/CallDrawer'
 import { RecordingPlayer } from '@/components/recordings/RecordingPlayer'
 import { DetailDrawer } from '@/components/ui/DetailDrawer'
 import { repo } from '@/data/repository'
+import type { CallDetail } from '@/types'
+import { useAsyncData } from '@/hooks/useAsyncData'
+import { LoadingState } from '@/components/ui/LoadingState'
+import { ErrorState } from '@/components/ui/ErrorState'
 import { Reveal } from '@/components/motion/Reveal'
 
 export default function LeadProfileCalls() {
@@ -12,7 +16,14 @@ export default function LeadProfileCalls() {
   const [selectedCallId, setSelectedCallId] = useState<string | null>(null)
   const [selectedRecordingId, setSelectedRecordingId] = useState<string | null>(null)
 
-  const detail = selectedCallId ? repo.getCall(profile.lead.campaignId, selectedCallId) : null
+  const { data: detail, loading: detailLoading, error: detailError, reload: reloadDetail } = useAsyncData(
+    () =>
+      selectedCallId
+        ? repo.getCall(profile.lead.offerCampaignId, selectedCallId)
+        : Promise.resolve<CallDetail | null>(null),
+    [profile.lead.offerCampaignId, selectedCallId],
+  )
+
   const recording = profile.recordings.find((r) => r.id === selectedRecordingId)
 
   return (
@@ -31,12 +42,22 @@ export default function LeadProfileCalls() {
         </div>
       </Reveal>
 
-      <CallDrawer
-        call={detail ?? null}
-        lead={profile.lead}
-        open={!!selectedCallId}
-        onClose={() => setSelectedCallId(null)}
-      />
+      {selectedCallId && detailLoading ? (
+        <DetailDrawer open onClose={() => setSelectedCallId(null)} title="Call detail" subtitle={profile.lead.name}>
+          <LoadingState rows={5} />
+        </DetailDrawer>
+      ) : selectedCallId && detailError ? (
+        <DetailDrawer open onClose={() => setSelectedCallId(null)} title="Call detail" subtitle={profile.lead.name}>
+          <ErrorState message={detailError} onRetry={reloadDetail} />
+        </DetailDrawer>
+      ) : (
+        <CallDrawer
+          call={detail ?? null}
+          lead={profile.lead}
+          open={!!selectedCallId}
+          onClose={() => setSelectedCallId(null)}
+        />
+      )}
 
       <DetailDrawer
         open={!!recording}

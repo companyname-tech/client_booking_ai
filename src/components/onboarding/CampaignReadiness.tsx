@@ -14,7 +14,7 @@ export function CampaignReadiness({ draft }: { draft: CampaignDraft }) {
     <div className="surface-raised p-5 sm:p-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <div className="label-caps">Campaign readiness</div>
+          <div className="label-caps">OfferCampaign readiness</div>
           <div className="mt-1 flex items-baseline gap-2">
             <AnimatedNumber value={score} format={(n) => `${Math.round(n)}%`} className="text-3xl font-semibold tracking-tight text-fg" />
             <span className={cn('text-sm font-medium', ready ? 'text-success' : 'text-warning')}>
@@ -22,7 +22,7 @@ export function CampaignReadiness({ draft }: { draft: CampaignDraft }) {
             </span>
           </div>
         </div>
-        <ProgressBar value={score} tone={ready ? 'success' : 'violet'} segments={20} size="sm" className="w-full max-w-xs sm:mt-0" label="Campaign readiness" />
+        <ProgressBar value={score} tone={ready ? 'success' : 'violet'} segments={20} size="sm" className="w-full max-w-xs sm:mt-0" label="OfferCampaign readiness" />
       </div>
       <ul className="mt-5 grid gap-2 sm:grid-cols-2">
         {items.map((item, i) => (

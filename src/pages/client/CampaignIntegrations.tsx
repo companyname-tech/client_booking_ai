@@ -1,18 +1,33 @@
 import { repo } from '@/data/repository'
 import { useCampaignContext } from './campaignContext'
+import { useAsyncData } from '@/hooks/useAsyncData'
+import { LoadingState } from '@/components/ui/LoadingState'
+import { ErrorState } from '@/components/ui/ErrorState'
 import { Reveal } from '@/components/motion/Reveal'
 import { IntegrationCard } from '@/components/onboarding/IntegrationCard'
 import type { IntegrationState } from '@/types'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 export default function CampaignIntegrations() {
   const { campaign } = useCampaignContext()
-  const workspaceIntegrations = repo.getIntegrations()
+  const { data: workspaceIntegrations, loading, error, reload } = useAsyncData(() => repo.getIntegrations(), [])
   const [states, setStates] = useState<Record<string, IntegrationState>>({
-    gmail: workspaceIntegrations.find((i) => i.provider === 'gmail')?.state ?? 'disconnected',
-    calendly: workspaceIntegrations.find((i) => i.provider === 'calendly')?.state ?? 'disconnected',
-    zoom: workspaceIntegrations.find((i) => i.provider === 'zoom')?.state ?? 'connected',
+    gmail: 'disconnected',
+    calendly: 'disconnected',
+    zoom: 'connected',
   })
+
+  useEffect(() => {
+    if (!workspaceIntegrations) return
+    setStates({
+      gmail: workspaceIntegrations.find((i) => i.provider === 'gmail')?.state ?? 'disconnected',
+      calendly: workspaceIntegrations.find((i) => i.provider === 'calendly')?.state ?? 'disconnected',
+      zoom: workspaceIntegrations.find((i) => i.provider === 'zoom')?.state ?? 'connected',
+    })
+  }, [workspaceIntegrations])
+
+  if (loading) return <LoadingState rows={4} />
+  if (error) return <ErrorState message={error} onRetry={reload} />
 
   return (
     <Reveal className="space-y-6">

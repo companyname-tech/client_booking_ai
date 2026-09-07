@@ -1,6 +1,5 @@
 /**
- * Domain types shared across the app. The mock data layer in `src/data`
- * implements these; a future API client should return the same shapes.
+ * Domain types shared across the app. The API adapter returns these shapes.
  */
 
 export type ID = string
@@ -30,7 +29,7 @@ export interface Client {
 }
 
 // ---------------------------------------------------------------------------
-// Campaign
+// OfferCampaign
 // ---------------------------------------------------------------------------
 
 /** Lifecycle stage of a campaign — drives the ProgressTimeline. */
@@ -85,7 +84,7 @@ export interface CampaignMetrics {
   detailsRequested: number
 }
 
-export interface Campaign {
+export interface OfferCampaign {
   id: ID
   clientId: ID
   name: string
@@ -98,7 +97,7 @@ export interface Campaign {
   budget: Budget
   metrics: CampaignMetrics
   progress: number // 0..100
-  agentId?: ID
+  agentId: ID // 1:1 — exactly one agent per offer campaign
   createdAt: string
   lastActivityAt: string
   history: number[] // recent daily bookings, for sparklines
@@ -122,7 +121,7 @@ export type LeadStatus =
 
 export interface Lead {
   id: ID
-  campaignId: ID
+  offerCampaignId: ID
   name: string
   title: string
   company: string
@@ -153,7 +152,7 @@ export type CallSentiment = 'positive' | 'neutral' | 'negative' | 'high_intent' 
 
 export interface Call {
   id: ID
-  campaignId: ID
+  offerCampaignId: ID
   leadId: ID
   agentId: ID
   startedAt: string
@@ -166,7 +165,7 @@ export interface Call {
 
 export interface Booking {
   id: ID
-  campaignId: ID
+  offerCampaignId: ID
   leadId: ID
   scheduledFor: string
   durationMin: number
@@ -178,7 +177,7 @@ export interface Booking {
 }
 
 // ---------------------------------------------------------------------------
-// Campaign command center (Phase 3)
+// OfferCampaign command center (Phase 3)
 // ---------------------------------------------------------------------------
 
 export interface LeadTimelineEvent {
@@ -274,10 +273,18 @@ export interface Agent {
   voice: string
   language: string
   status: AgentStatus
-  campaignIds: ID[]
+  offerCampaignIds: ID[] // offer campaigns this agent serves (campaign→agent is 1:1 via OfferCampaign.agentId)
   callsToday: number
   successRate: number
   trainingProgress: number // 0..100
+  // Operational voice/identity/model editing fields (legacy Settings → Agent tab):
+  role: import('./settings').AgentRole // AGENT_ROLES key
+  role_label: string // computed label
+  identity: string // custom identity; "" = use role template
+  effective_identity: string // resolved identity (identity || role template)
+  audio_model: string // TTS model ("" = default)
+  transcription_model: string // caller STT model ("" = default)
+  agent_model: string // chat-completions "brain" model
 }
 
 export type IntegrationProvider = 'gmail' | 'calendly' | 'zoom'
@@ -310,7 +317,7 @@ export interface Activity {
   kind: ActivityKind
   title: string
   description?: string
-  campaignId?: ID
+  offerCampaignId?: ID
   timestamp: string
   tone: Tone
 }
@@ -350,7 +357,7 @@ export interface AttentionItem {
   kind: AttentionKind
   title: string
   description: string
-  campaignId?: ID
+  offerCampaignId?: ID
   href: string
   priority: 'high' | 'medium' | 'low'
 }

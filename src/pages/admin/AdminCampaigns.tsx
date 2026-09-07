@@ -1,20 +1,26 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { repo } from '@/data/repository'
+import { useAsyncData } from '@/hooks/useAsyncData'
 import { PageTransition } from '@/components/motion/PageTransition'
 import { PageContainer, PageHeader, WorkspaceEyebrow } from '@/components/layout/PageHeader'
 import { Input } from '@/components/ui/Input'
 import { CampaignTable } from '@/components/campaigns/CampaignTable'
 import { Reveal } from '@/components/motion/Reveal'
 import { cn } from '@/lib/utils'
+import { LoadingState } from '@/components/ui/LoadingState'
+import { ErrorState } from '@/components/ui/ErrorState'
 
 const FILTERS = ['All', 'Awaiting Review', 'Training', 'Live', 'Paused', 'Completed', 'Rejected'] as const
 
 export default function AdminCampaigns() {
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState<string>('All')
-  const campaigns = repo.getCampaigns()
-  const metas = repo.getAllAdminMeta()
+  const { data, loading, error, reload } = useAsyncData(() =>
+    Promise.all([repo.getCampaigns(), repo.getAllAdminMeta()]),
+  )
+  const campaigns = data?.[0] ?? []
+  const metas = data?.[1] ?? []
 
   const filtered = useMemo(() => {
     let list = campaigns
@@ -24,7 +30,7 @@ export default function AdminCampaigns() {
     }
     if (filter !== 'All') {
       list = list.filter((c) => {
-        const m = metas.find((x) => x.campaignId === c.id)
+        const m = metas.find((x) => x.offerCampaignId === c.id)
         if (filter === 'Awaiting Review') return ['awaiting_approval', 'preparing'].includes(c.status) || m?.workflowStatus === 'awaiting_approval'
         if (filter === 'Training') return c.status === 'ai_training'
         if (filter === 'Live') return c.status === 'active'
@@ -51,9 +57,15 @@ export default function AdminCampaigns() {
             ))}
           </div>
         </div>
-        <Reveal>
-          <CampaignTable campaigns={filtered} zone="admin" />
-        </Reveal>
+        {loading ? (
+          <LoadingState rows={5} />
+        ) : error ? (
+          <ErrorState message={error} onRetry={reload} />
+        ) : (
+          <Reveal>
+            <CampaignTable campaigns={filtered} zone="admin" />
+          </Reveal>
+        )}
         <p className="text-xs text-fg-muted">
           <Link to="/admin/approvals" className="text-accent">Open approval queue →</Link>
         </p>

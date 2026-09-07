@@ -11,20 +11,20 @@ alwaysApply: false
 ## Data access
 
 - UI components and pages MUST import `repo` from `@/api/repository` (or `@/data/repository` shim).
-- NEVER import from `@/api/adapters/mock/*` in pages or components.
+- NEVER import from `@/api/adapters/http/*` in pages or components.
 - Backend work goes in `src/api/adapters/http/repository.ts` and `src/api/adapters/http/auth.ts`.
 - Use `apiClient` from `src/api/adapters/http/client.ts` for HTTP calls.
 
 ## Types
 
 - Domain types live in `src/types/`. API responses must match these shapes.
-- Transform API payloads in the HTTP adapter if backend shape differs.
+- Transform API payloads (snake_case → camelCase, enums, wrapped lists) in the HTTP adapter — never in UI code.
 
 ## Auth
 
 - Use `authService` from `@/api/auth`.
-- Session zones: `client` | `admin`. Enforced by `RequireAuth`.
-- Demo credentials in `src/config/demo-users.ts`.
+- Single-admin JWT cookie auth (`POST /auth/login`, `GET /auth/me`).
+- Session zones: `client` | `admin` (both resolve to the single admin). Enforced by `RequireAuth`.
 
 ## Routing
 
@@ -38,8 +38,7 @@ alwaysApply: false
 
 ## Environment
 
-- `VITE_USE_MOCK_DATA=true` → mock adapters (default)
-- `VITE_USE_MOCK_DATA=false` → HTTP adapters (requires implementation)
+- `VITE_API_URL` (optional) — backend base URL; leave empty for same-origin `/api` (proxied to :8870).
 
 ## Documentation
 

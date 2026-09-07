@@ -12,9 +12,9 @@ export type LoginResult =
 
 export interface AuthService {
   readSession(): AuthSession | null
-  clearSession(): void
-  loginAsClient(): AuthSession
-  loginAsAdmin(): AuthSession
-  loginWithCredentials(email: string, password: string): LoginResult
+  clearSession(): Promise<void>
+  loginAsClient(): Promise<AuthSession>
+  loginAsAdmin(): Promise<AuthSession>
+  loginWithCredentials(username: string, password: string): Promise<LoginResult>
   homeForZone(zone: Zone): string
 }

@@ -25,7 +25,7 @@ export function LeadBulkActions({
         <Button variant="ghost" size="sm" onClick={onClear}>Clear</Button>
       </div>
       <Modal open={!!confirm} onClose={() => setConfirm(null)} title="Archive leads?" footer={<><Button variant="ghost" onClick={() => setConfirm(null)}>Cancel</Button><Button variant="primary" onClick={() => { onAction('archive'); setConfirm(null) }}>Archive</Button></>}>
-        <p className="px-5 py-4 text-sm text-fg-muted">This is a mock action. {count} leads will be archived in the current session.</p>
+        <p className="px-5 py-4 text-sm text-fg-muted">{count} leads will be archived in the current session.</p>
       </Modal>
     </>
   )

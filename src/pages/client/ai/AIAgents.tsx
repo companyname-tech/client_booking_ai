@@ -1,11 +1,21 @@
 import { Link } from 'react-router-dom'
 import { repo } from '@/data/repository'
+import { useAsyncData } from '@/hooks/useAsyncData'
 import { agentStatusMeta } from '@/lib/status'
 import { StatusBadge } from '@/components/ui/StatusBadge'
+import { EmptyState } from '@/components/ui/EmptyState'
+import { LoadingState } from '@/components/ui/LoadingState'
+import { ErrorState } from '@/components/ui/ErrorState'
 import { Bot } from 'lucide-react'
 
 export default function AIAgents() {
-  const agents = repo.getAgents()
+  const { data: agents, loading, error, reload } = useAsyncData(() => repo.getAgents(), [])
+
+  if (loading) return <LoadingState rows={4} />
+  if (error) return <ErrorState message={error} onRetry={reload} />
+  if (!agents || agents.length === 0) {
+    return <EmptyState icon={<Bot className="size-8 text-fg-muted" />} title="No agents" description="Your AI booking agents will appear here." />
+  }
 
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

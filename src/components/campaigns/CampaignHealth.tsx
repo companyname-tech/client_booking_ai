@@ -30,17 +30,17 @@ const barTone: Record<Tone, string> = {
 }
 
 /**
- * Campaign health strip: a proportional distribution bar plus counts.
+ * OfferCampaign health strip: a proportional distribution bar plus counts.
  * Reads as a single instrument rather than five cards.
  */
 export function CampaignHealth({ health, className }: { health: Health; className?: string }) {
   const total = cells.reduce((n, c) => n + health[c.key], 0)
 
   return (
-    <Stagger as="section" aria-label="Campaign health" className={cn('surface p-5', className)}>
+    <Stagger as="section" aria-label="OfferCampaign health" className={cn('surface p-5', className)}>
       <Reveal className="flex items-center justify-between gap-4">
         <div>
-          <h2 className="text-md font-semibold text-fg">Campaign health</h2>
+          <h2 className="text-md font-semibold text-fg">OfferCampaign health</h2>
           <p className="mt-0.5 text-sm text-fg-muted">
             <span className="tabular text-fg-secondary">{total}</span> campaigns across your workspace
           </p>

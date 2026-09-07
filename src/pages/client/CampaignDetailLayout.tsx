@@ -4,6 +4,9 @@ import { motion } from 'motion/react'
 import { ArrowLeft } from 'lucide-react'
 import type { CampaignStatus } from '@/types'
 import { repo } from '@/data/repository'
+import { useAsyncData } from '@/hooks/useAsyncData'
+import { LoadingState } from '@/components/ui/LoadingState'
+import { ErrorState } from '@/components/ui/ErrorState'
 import { spring } from '@/lib/motion'
 import { cn } from '@/lib/utils'
 import { PageTransition } from '@/components/motion/PageTransition'
@@ -32,9 +35,34 @@ const clientTabs: Tab[] = [
 
 export default function CampaignDetailLayout({ zone = 'client' }: { zone?: 'client' | 'admin' }) {
   const { id } = useParams()
-  const campaign = id ? repo.getCampaign(id) : undefined
-  const client = repo.getCurrentClient()
   const [statusOverride, setStatusOverride] = useState<CampaignStatus | null>(null)
+
+  const { data, loading, error, reload } = useAsyncData(
+    () => Promise.all([id ? repo.getCampaign(id) : Promise.resolve(undefined), repo.getCurrentClient()]),
+    [id],
+  )
+  const campaign = data?.[0]
+  const client = data?.[1]
+
+  if (loading) {
+    return (
+      <PageTransition>
+        <PageContainer>
+          <LoadingState rows={6} />
+        </PageContainer>
+      </PageTransition>
+    )
+  }
+
+  if (error) {
+    return (
+      <PageTransition>
+        <PageContainer>
+          <ErrorState message={error} onRetry={reload} />
+        </PageContainer>
+      </PageTransition>
+    )
+  }
 
   if (!campaign) {
     return (
@@ -42,7 +70,7 @@ export default function CampaignDetailLayout({ zone = 'client' }: { zone?: 'clie
         <PageContainer>
           <div className="surface">
             <EmptyState
-              title="Campaign not found"
+              title="OfferCampaign not found"
               description="It may have been removed, or the link is out of date."
               action={
                 <Button variant="secondary" leadingIcon={<ArrowLeft />} onClick={() => history.back()}>
@@ -55,6 +83,8 @@ export default function CampaignDetailLayout({ zone = 'client' }: { zone?: 'clie
       </PageTransition>
     )
   }
+
+  if (!client) return null
 
   const effectiveStatus = statusOverride ?? campaign.status
   const pauseCampaign = () => setStatusOverride('paused')
@@ -85,7 +115,7 @@ export default function CampaignDetailLayout({ zone = 'client' }: { zone?: 'clie
                   <ArrowLeft className="size-3.5" /> Campaigns
                 </NavLink>
                 <span className="text-fg-faint">/</span>
-                <WorkspaceEyebrow name={zone === 'admin' ? 'Super Admin' : client.name} context={zone === 'admin' ? 'Review' : 'Campaign'} />
+                <WorkspaceEyebrow name={zone === 'admin' ? 'Super Admin' : client.name} context={zone === 'admin' ? 'Review' : 'OfferCampaign'} />
               </div>
               <h1 className="text-2xl font-semibold tracking-tight text-fg sm:text-3xl">{campaign.name}</h1>
               <div className="mt-3">
@@ -103,7 +133,7 @@ export default function CampaignDetailLayout({ zone = 'client' }: { zone?: 'clie
             </div>
           </div>
 
-          <nav aria-label="Campaign sections" className="hairline-b -mx-4 overflow-x-auto px-4 scrollbar-none sm:mx-0 sm:px-0">
+          <nav aria-label="OfferCampaign sections" className="hairline-b -mx-4 overflow-x-auto px-4 scrollbar-none sm:mx-0 sm:px-0">
             <div className="flex min-w-max items-center gap-0.5">
               {visibleTabs.map((t) => (
                 <NavLink

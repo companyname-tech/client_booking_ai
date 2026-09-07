@@ -22,7 +22,7 @@ export function ReviewStep({
       title: 'Target',
       index: 0,
       rows: [
-        ['Campaign', t.campaignName],
+        ['OfferCampaign', t.campaignName],
         ['Industries', t.industries.join(', ')],
         ['Company size', t.companySize],
         ['Geographies', t.geographies.join(', ')],

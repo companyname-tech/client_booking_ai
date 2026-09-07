@@ -188,7 +188,7 @@ export interface AIExecutiveSummary {
 }
 
 export interface CampaignAnalyticsData {
-  campaignId: string
+  offerCampaignId: string
   availability: AnalyticsAvailability
   statusLabel: string
   conversationsAnalyzed: number

@@ -10,7 +10,7 @@ export interface BudgetEstimates {
 }
 
 /**
- * Mock illustrative estimates derived from budget. Replace with backend/AI later.
+ * Estimated projections derived from budget. Replace with backend/AI later.
  */
 export function estimateFromBudget(budget: DraftBudget): BudgetEstimates {
   const days = budget.durationDays || Math.max(1, Math.round(budget.total / Math.max(budget.daily, 1)))

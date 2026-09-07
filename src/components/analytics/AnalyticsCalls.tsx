@@ -50,7 +50,7 @@ export function CallOutcomeDistribution({ outcomes }: { outcomes: CallOutcomeRow
 
 export function ConversationQualityPanel({ quality }: { quality: ConversationQuality }) {
   return (
-    <AnalyticsSection title="Conversation quality" description="Mock AI assessment of call quality">
+    <AnalyticsSection title="Conversation quality" description="AI assessment of call quality">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <div className="text-xs text-fg-muted">Average quality score</div>

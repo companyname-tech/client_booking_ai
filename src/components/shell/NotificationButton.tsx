@@ -7,9 +7,13 @@ import { useShell } from './ShellContext'
 import { repo } from '@/data/repository'
 import { NOW } from '@/data/time'
 import { useDismiss } from '@/hooks/useDismiss'
+import { useAsyncData } from '@/hooks/useAsyncData'
 import { Button } from '@/components/ui/Button'
 import { StatusDot } from '@/components/ui/StatusDot'
 import { Tooltip } from '@/components/ui/Tooltip'
+import { LoadingState } from '@/components/ui/LoadingState'
+import { EmptyState } from '@/components/ui/EmptyState'
+import { ErrorState } from '@/components/ui/ErrorState'
 
 export function NotificationButton() {
   const { zone } = useShell()
@@ -19,12 +23,32 @@ export function NotificationButton() {
   const close = useCallback(() => setOpen(false), [])
   useDismiss(open, close, [ref])
 
-  const adminItems = repo.getAdminNotifications()
-  const clientItems = repo.getActivity(5)
-  const items = zone === 'admin'
-    ? adminItems.map((n) => ({ id: n.id, title: n.title, description: n.description, timestamp: n.timestamp, tone: n.tone }))
-    : clientItems
-  const unread = read ? 0 : (zone === 'admin' ? repo.getAdminUnreadCount() : 3)
+  const { data, loading, error, reload } = useAsyncData(
+    async () => {
+      if (zone === 'admin') {
+        const [notifications, unread] = await Promise.all([
+          repo.getAdminNotifications(),
+          repo.getAdminUnreadCount(),
+        ])
+        return {
+          items: notifications.map((n) => ({
+            id: n.id,
+            title: n.title,
+            description: n.description,
+            timestamp: n.timestamp,
+            tone: n.tone,
+          })),
+          unread,
+        }
+      }
+      const activity = await repo.getActivity(5)
+      return { items: activity, unread: 3 }
+    },
+    [zone],
+  )
+
+  const items = data?.items ?? []
+  const unread = read ? 0 : (data?.unread ?? 0)
 
   return (
     <div ref={ref} className="relative">
@@ -67,32 +91,42 @@ export function NotificationButton() {
                   <span className="rounded-full bg-accent-soft px-1.5 py-0.5 text-2xs font-medium text-accent tabular">{unread} new</span>
                 )}
               </div>
-              <Button variant="ghost" size="sm" leadingIcon={<Check />} onClick={() => { setRead(true); if (zone === 'admin') repo.markAdminNotificationsRead() }} disabled={read}>
+              <Button variant="ghost" size="sm" leadingIcon={<Check />} onClick={() => { setRead(true); if (zone === 'admin') void repo.markAdminNotificationsRead() }} disabled={read}>
                 Mark all read
               </Button>
             </div>
-            <ul className="max-h-[360px] overflow-y-auto py-1">
-              {items.map((item, i) => (
-                <li key={item.id}>
-                  <button
-                    type="button"
-                    onClick={close}
-                    className="interactive flex w-full items-start gap-3 px-4 py-2.5 text-left hover:bg-white/[0.03]"
-                  >
-                    <span className="mt-1.5">
-                      <StatusDot tone={item.tone} live={i === 0 && !read} size={7} />
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className={cn('block truncate text-sm', i < unread ? 'font-medium text-fg' : 'text-fg-secondary')}>
-                        {item.title}
-                      </span>
-                      {item.description && <span className="block truncate text-xs text-fg-muted">{item.description}</span>}
-                    </span>
-                    <span className="shrink-0 pt-0.5 text-2xs text-fg-muted tabular">{formatRelativeTime(item.timestamp, NOW)}</span>
-                  </button>
-                </li>
-              ))}
-            </ul>
+            <div className="max-h-[360px] overflow-y-auto py-1">
+              {loading ? (
+                <LoadingState rows={3} className="p-3" />
+              ) : error ? (
+                <ErrorState message={error} onRetry={reload} className="py-8" />
+              ) : items.length === 0 ? (
+                <EmptyState title={zone === 'admin' ? 'No notifications' : 'No recent activity'} className="py-8" />
+              ) : (
+                <ul>
+                  {items.map((item, i) => (
+                    <li key={item.id}>
+                      <button
+                        type="button"
+                        onClick={close}
+                        className="interactive flex w-full items-start gap-3 px-4 py-2.5 text-left hover:bg-white/[0.03]"
+                      >
+                        <span className="mt-1.5">
+                          <StatusDot tone={item.tone} live={i === 0 && !read} size={7} />
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className={cn('block truncate text-sm', i < unread ? 'font-medium text-fg' : 'text-fg-secondary')}>
+                            {item.title}
+                          </span>
+                          {item.description && <span className="block truncate text-xs text-fg-muted">{item.description}</span>}
+                        </span>
+                        <span className="shrink-0 pt-0.5 text-2xs text-fg-muted tabular">{formatRelativeTime(item.timestamp, NOW)}</span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
           </motion.div>
         )}
       </AnimatePresence>

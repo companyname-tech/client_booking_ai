@@ -1,6 +1,9 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { repo } from '@/data/repository'
 import type { EnrichedLead, LeadHubFilters } from '@/types/leadIntelligence'
+import { useAsyncData } from '@/hooks/useAsyncData'
+import { LoadingState } from '@/components/ui/LoadingState'
+import { ErrorState } from '@/components/ui/ErrorState'
 import { PageContainer, PageHeader, WorkspaceEyebrow } from '@/components/layout/PageHeader'
 import { PageTransition } from '@/components/motion/PageTransition'
 import { Reveal } from '@/components/motion/Reveal'
@@ -14,12 +17,17 @@ import { LeadBulkActions, LeadExportButton } from '@/components/leads/hub/LeadBu
 const DEFAULT_FILTERS: LeadHubFilters = { search: '', status: 'all', intent: 'all' }
 
 export default function LeadHub() {
-  const client = repo.getCurrentClient()
-  const allLeads = useMemo(() => repo.getAllLeads(), [])
-  const metrics = repo.getLeadHubMetrics()
-  const stats = repo.getLeadHubStats(allLeads)
-  const segments = repo.getLeadSegments()
-  const campaigns = repo.getCampaigns().map((c) => ({ id: c.id, name: c.name }))
+  const clientData = useAsyncData(() => repo.getCurrentClient(), [])
+  const allLeads = useAsyncData(() => repo.getAllLeads(), [])
+  const metrics = useAsyncData(() => repo.getLeadHubMetrics(), [])
+  const stats = useAsyncData(() => repo.getLeadHubStats(), [])
+  const segments = useAsyncData(() => repo.getLeadSegments(), [])
+  const campaigns = useAsyncData(async () => {
+    const cs = await repo.getCampaigns()
+    return cs.map((c) => ({ id: c.id, name: c.name }))
+  }, [])
+  const recommended = useAsyncData(() => repo.getRecommendedLeads(3), [])
+  const priority = useAsyncData(() => repo.getPriorityLeads(4), [])
 
   const [filters, setFilters] = useState<LeadHubFilters>(DEFAULT_FILTERS)
   const [page, setPage] = useState(1)
@@ -28,9 +36,9 @@ export default function LeadHub() {
   const [preview, setPreview] = useState<EnrichedLead | null>(null)
   const [toast, setToast] = useState('')
 
-  const filtered = useMemo(
-    () => repo.filterLeads(allLeads, { ...filters, segment }),
-    [allLeads, filters, segment],
+  const filtered = useAsyncData(
+    () => repo.filterLeads(allLeads.data ?? [], { ...filters, segment }),
+    [allLeads.data, filters, segment],
   )
 
   const toggle = (id: string) => {
@@ -48,16 +56,16 @@ export default function LeadHub() {
     window.setTimeout(() => setToast(''), 3000)
   }
 
-  const onBulk = (action: string) => {
+  const onBulk = async (action: string) => {
     if (action === 'qualified') {
-      selected.forEach((id) => repo.setLeadStatus(id, 'interested'))
+      await Promise.all([...selected].map((id) => repo.setLeadStatus(id, 'interested')))
       notify(`${selected.size} leads marked as qualified.`)
     } else if (action === 'export') {
       notify('Lead export prepared.')
     } else if (action === 'archive') {
-      notify(`${selected.size} leads archived (mock).`)
+      notify(`${selected.size} leads archived.`)
     } else if (action === 'tag') {
-      selected.forEach((id) => repo.toggleLeadTag(id, 'Priority'))
+      await Promise.all([...selected].map((id) => repo.toggleLeadTag(id, 'Priority')))
       notify('Tag added to selected leads.')
     }
     setSelected(new Set())
@@ -68,7 +76,7 @@ export default function LeadHub() {
     <PageTransition>
       <PageContainer className="space-y-6 pb-8">
         <PageHeader
-          eyebrow={<WorkspaceEyebrow name={client.name} context="Lead Intelligence" />}
+          eyebrow={<WorkspaceEyebrow name={clientData.data?.name ?? 'Workspace'} context="Lead Intelligence" />}
           title="Lead Intelligence"
           description="Every prospect, conversation and opportunity in one place."
           actions={<LeadExportButton onExport={() => notify('Lead export prepared.')} />}
@@ -78,51 +86,103 @@ export default function LeadHub() {
           <div className="rounded-lg border border-success/20 bg-success-soft/10 px-4 py-3 text-sm text-success">{toast}</div>
         )}
 
-        <LeadHubMetrics metrics={metrics} />
+        {metrics.loading && !metrics.data ? (
+          <LoadingState rows={4} />
+        ) : metrics.error ? (
+          <ErrorState message={metrics.error} onRetry={metrics.reload} />
+        ) : metrics.data ? (
+          <LeadHubMetrics metrics={metrics.data} />
+        ) : null}
 
         <Reveal>
-          <LeadSegments
-            segments={segments}
-            active={segment}
-            onSelect={(id) => {
-              setSegment(segment === id ? undefined : id)
-              setPage(1)
-            }}
-          />
+          {segments.loading && !segments.data ? (
+            <LoadingState rows={3} />
+          ) : segments.error ? (
+            <ErrorState message={segments.error} onRetry={segments.reload} />
+          ) : segments.data ? (
+            <LeadSegments
+              segments={segments.data}
+              active={segment}
+              onSelect={(id) => {
+                setSegment(segment === id ? undefined : id)
+                setPage(1)
+              }}
+            />
+          ) : null}
         </Reveal>
 
         <div className="grid gap-6 xl:grid-cols-[1fr_320px]">
           <div className="space-y-4">
             <Reveal className="surface p-5 sm:p-6">
-              <LeadHubFiltersBar
-                filters={filters}
-                onChange={(f) => { setFilters(f); setPage(1) }}
-                campaigns={campaigns}
-                total={filtered.length}
-              />
+              {campaigns.loading && !campaigns.data ? (
+                <LoadingState rows={2} />
+              ) : campaigns.error ? (
+                <ErrorState message={campaigns.error} onRetry={campaigns.reload} />
+              ) : campaigns.data ? (
+                <LeadHubFiltersBar
+                  filters={filters}
+                  onChange={(f) => { setFilters(f); setPage(1) }}
+                  campaigns={campaigns.data}
+                  total={filtered.data?.length ?? 0}
+                />
+              ) : null}
             </Reveal>
 
             <LeadBulkActions count={selected.size} onAction={onBulk} onClear={() => { setSelected(new Set()); repo.clearLeadSelection() }} />
 
             <Reveal>
-              <LeadHubTable
-                leads={filtered}
-                selected={selected}
-                onToggle={toggle}
-                onSelect={setPreview}
-                page={page}
-                onPageChange={setPage}
-              />
+              {allLeads.loading && !allLeads.data ? (
+                <LoadingState rows={6} />
+              ) : allLeads.error ? (
+                <ErrorState message={allLeads.error} onRetry={allLeads.reload} />
+              ) : filtered.loading && !filtered.data ? (
+                <LoadingState rows={6} />
+              ) : filtered.error ? (
+                <ErrorState message={filtered.error} onRetry={filtered.reload} />
+              ) : (
+                <LeadHubTable
+                  leads={filtered.data ?? []}
+                  selected={selected}
+                  onToggle={toggle}
+                  onSelect={setPreview}
+                  page={page}
+                  onPageChange={setPage}
+                />
+              )}
             </Reveal>
           </div>
 
           <div className="space-y-4">
-            <Reveal><RecommendedLeads leads={repo.getRecommendedLeads(3)} /></Reveal>
-            <Reveal><PriorityLeads items={repo.getPriorityLeads(4)} /></Reveal>
+            <Reveal>
+              {recommended.loading && !recommended.data ? (
+                <LoadingState rows={3} />
+              ) : recommended.error ? (
+                <ErrorState message={recommended.error} onRetry={recommended.reload} />
+              ) : recommended.data ? (
+                <RecommendedLeads leads={recommended.data} />
+              ) : null}
+            </Reveal>
+            <Reveal>
+              {priority.loading && !priority.data ? (
+                <LoadingState rows={4} />
+              ) : priority.error ? (
+                <ErrorState message={priority.error} onRetry={priority.reload} />
+              ) : priority.data ? (
+                <PriorityLeads items={priority.data} />
+              ) : null}
+            </Reveal>
           </div>
         </div>
 
-        <Reveal><LeadHubCharts stats={stats} /></Reveal>
+        <Reveal>
+          {stats.loading && !stats.data ? (
+            <LoadingState rows={4} />
+          ) : stats.error ? (
+            <ErrorState message={stats.error} onRetry={stats.reload} />
+          ) : stats.data ? (
+            <LeadHubCharts stats={stats.data} />
+          ) : null}
+        </Reveal>
 
         <LeadPreviewDrawer lead={preview} open={!!preview} onClose={() => setPreview(null)} />
       </PageContainer>

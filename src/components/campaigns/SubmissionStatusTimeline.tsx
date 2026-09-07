@@ -8,7 +8,7 @@ const STEPS = [
   { id: 'ai_training', label: 'AI Training', short: 'AI' },
   { id: 'legal_review', label: 'Legal Review', short: 'Legal' },
   { id: 'approval', label: 'Approval', short: 'Approve' },
-  { id: 'launch', label: 'Campaign Launch', short: 'Launch' },
+  { id: 'launch', label: 'OfferCampaign Launch', short: 'Launch' },
 ] as const
 
 export interface SubmissionStatusTimelineProps {
