@@ -78,7 +78,7 @@ export function CampaignPerformanceChart({
           </button>
         ))}
       </div>
-      <svg viewBox={`0 0 ${width} ${height}`} className="w-full max-w-full" role="img" aria-label="OfferCampaign performance chart">
+      <svg viewBox={`0 0 ${width} ${height}`} className="w-full max-w-full" role="img" aria-label="Offer Campaign performance chart">
         {[0, 0.25, 0.5, 0.75, 1].map((pct) => (
           <line
             key={pct}

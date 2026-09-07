@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/Button'
 import { Select } from '@/components/ui/Select'
 import { Input } from '@/components/ui/Input'
 import { Textarea } from '@/components/ui/Textarea'
+import { PhoneField } from '@/components/ui/fields/PhoneField'
 
 type AddLeadForm = {
   leadName: string
@@ -132,7 +133,12 @@ export function AddLeadModal({
         </div>
         <div>
           <span className="text-xs text-fg-muted">Phone</span>
-          <Input className="mt-1" value={form.phone} onChange={set('phone')} placeholder="e.g. +972501234567" />
+          <PhoneField
+            className="mt-1"
+            value={form.phone}
+            onChange={(v) => setForm((f) => ({ ...f, phone: v }))}
+            placeholder="e.g. +972545551234"
+          />
         </div>
         <div>
           <span className="text-xs text-fg-muted">Email</span>

@@ -1,11 +1,115 @@
 import { useState } from 'react'
-import { Check, Loader2, MessageSquarePlus, X } from 'lucide-react'
+import { Check, Clock, Loader2, MessageSquarePlus, X } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
 import { repo } from '@/api/repository'
 import type { TrainingSuggestion } from '@/types/training'
 import { cn } from '@/lib/utils'
+
+function formatClock(sec: number): string {
+  const total = Math.max(0, Math.round(sec || 0))
+  const m = Math.floor(total / 60)
+  const s = total % 60
+  return `${m}:${String(s).padStart(2, '0')}`
+}
+
+function parseClock(v: string): number | null {
+  const m = /^(?:(\d+):)?(\d{1,2}(?:\.\d+)?)$/.exec((v || '').trim())
+  if (!m) return null
+  const mins = m[1] ? parseInt(m[1], 10) : 0
+  return mins * 60 + parseFloat(m[2])
+}
+
+/** Highlight every (case-insensitive) occurrence of `word` in `text`. */
+function highlight(text: string, word: string) {
+  if (!word) return text
+  const lower = text.toLowerCase()
+  const needle = word.toLowerCase()
+  const parts: React.ReactNode[] = []
+  let i = 0
+  let idx = lower.indexOf(needle)
+  while (idx !== -1) {
+    if (idx > i) parts.push(text.slice(i, idx))
+    parts.push(
+      <mark key={idx} className="rounded bg-warning/25 px-0.5 text-warning">
+        {text.slice(idx, idx + word.length)}
+      </mark>,
+    )
+    i = idx + word.length
+    idx = lower.indexOf(needle, i)
+  }
+  if (i < text.length) parts.push(text.slice(i))
+  return parts
+}
+
+/** The talk context a suggestion came from + an editable timestamp. */
+function SuggestionContext({ s, onChanged }: { s: TrainingSuggestion; onChanged: () => void }) {
+  const [draft, setDraft] = useState(s.timestampS ? formatClock(s.timestampS) : '')
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+
+  const save = async () => {
+    const parsed = parseClock(draft)
+    if (parsed === null) {
+      setError('Use mm:ss, e.g. 1:05')
+      return
+    }
+    setBusy(true)
+    setError('')
+    try {
+      await repo.setTrainingSuggestionTimestamp(s.suggestionId, parsed)
+      onChanged()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const turns = s.context ?? []
+  const hasTimestamp = (s.timestampS ?? 0) > 0
+  if (turns.length === 0 && !hasTimestamp) return null
+
+  return (
+    <div className="mt-2.5 space-y-2 rounded-md border border-line bg-bg/40 p-2.5">
+      {turns.length > 0 ? (
+        <div>
+          <div className="mb-1 flex items-center gap-1.5 text-2xs font-semibold uppercase tracking-wide text-fg-muted">
+            <MessageSquarePlus className="size-3" />
+            From the session — where it was said
+          </div>
+          <ul className="space-y-1">
+            {turns.map((t, i) => (
+              <li key={i} className="text-xs leading-relaxed">
+                <span className={cn('mr-1.5 font-semibold', t.role === 'user' ? 'text-accent' : 'text-fg-muted')}>
+                  {t.role === 'user' ? 'You:' : 'Agent:'}
+                </span>
+                <span className="text-fg-secondary">{highlight(t.text, s.word)}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+      <div className="flex items-center gap-2">
+        <Clock className="size-3.5 text-fg-muted" />
+        <span className="text-xs text-fg-secondary">Timestamp</span>
+        <Input
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          placeholder={hasTimestamp ? formatClock(s.timestampS ?? 0) : '0:00'}
+          disabled={busy}
+          aria-label="Timestamp mm:ss"
+          className="h-7 w-20 text-xs tabular"
+        />
+        <Button size="sm" variant="secondary" disabled={busy} onClick={() => void save()}>
+          {busy ? 'Saving…' : 'Set'}
+        </Button>
+        {error ? <span className="text-2xs text-danger">{error}</span> : null}
+      </div>
+    </div>
+  )
+}
 
 /**
  * Pronunciation suggestions harvested from real training talks.
@@ -120,6 +224,8 @@ export function TrainingSuggestionsPanel({
                 </Button>
               </div>
             </div>
+
+            <SuggestionContext s={s} onChanged={onChanged} />
 
             {openId === s.suggestionId ? (
               <div className="mt-3 grid gap-2 rounded-md border border-line bg-bg/40 p-3 sm:grid-cols-[auto_1fr_auto_auto_auto]">

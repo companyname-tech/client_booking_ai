@@ -19,6 +19,13 @@ export interface TrainingTalkTurn {
   text: string
 }
 
+/** Structured contact/booking data the backend deterministically extracted from the talk. */
+export interface TrainingExtractedData {
+  emails?: { email: string; confirmed?: boolean }[]
+  phones?: string[]
+  meeting?: { day?: string; time?: string } | null
+}
+
 /** Wire shape of a finished training session stored on the campaign. */
 export interface TrainingSessionResult {
   sessionId: string
@@ -36,6 +43,8 @@ export interface TrainingSessionResult {
   gaps: string[]
   suggestionsAdded: number
   deterministic: boolean
+  /** Email/phone/meeting captured from the talk (empty when nothing found). */
+  extracted?: TrainingExtractedData
 }
 
 /** POST …/training/complete (transcript mode) response. */
@@ -65,6 +74,12 @@ export interface TrainingCampaignRow {
   pendingSuggestions: number
 }
 
+/** One context turn around where the word was said (from the stored talk). */
+export interface TrainingSuggestionContextTurn {
+  role: 'user' | 'agent' | string
+  text: string
+}
+
 /** Pronunciation suggestion harvested from a training talk (pending review). */
 export interface TrainingSuggestion {
   suggestionId: string
@@ -79,6 +94,12 @@ export interface TrainingSuggestion {
   agentName: string
   status: 'pending' | 'accepted' | 'dismissed'
   createdAt: string
+  /** Source training-talk conversation (when found). */
+  conversationId?: string
+  /** Transcript excerpt around where the word was said. */
+  context?: TrainingSuggestionContextTurn[]
+  /** Operator-set timestamp (seconds into the talk); 0 when unset. */
+  timestampS?: number
 }
 
 /** POST /admin/training/suggestions/{id}/accept body + reply. */

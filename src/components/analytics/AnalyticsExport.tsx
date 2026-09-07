@@ -4,7 +4,7 @@ import { Modal } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 
 const OPTIONS = [
-  'OfferCampaign summary',
+  'Offer Campaign summary',
   'Full analytics',
   'Lead data',
   'Call data',
@@ -13,7 +13,7 @@ const OPTIONS = [
 
 export function AnalyticsExport() {
   const [open, setOpen] = useState(false)
-  const [selected, setSelected] = useState<string[]>(['OfferCampaign summary'])
+  const [selected, setSelected] = useState<string[]>(['Offer Campaign summary'])
   const [message, setMessage] = useState('')
 
   const toggle = (o: string) => setSelected((prev) => prev.includes(o) ? prev.filter((x) => x !== o) : [...prev, o])

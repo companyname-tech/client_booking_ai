@@ -21,7 +21,7 @@ export function AnalyticsHeader({
   return (
     <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
       <div>
-        <div className="label-caps">OfferCampaign analytics</div>
+        <div className="label-caps">Offer Campaign analytics</div>
         <h1 className="mt-1 text-2xl font-semibold text-fg">{campaign.name}</h1>
         <p className="mt-1 text-sm text-fg-muted">Understand what is driving conversations and bookings.</p>
         <div className="mt-3 flex flex-wrap items-center gap-2">

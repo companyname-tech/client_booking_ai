@@ -1,10 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   AudioLines,
+  CalendarClock,
   CircleCheck,
+  ContactRound,
   Loader2,
+  Mail,
   Mic,
   MicOff,
+  Phone,
   Radio,
   Square,
   TriangleAlert,
@@ -14,6 +18,7 @@ import { Select } from '@/components/ui/Select'
 import { repo } from '@/api/repository'
 import type {
   TrainingCampaignRow,
+  TrainingExtractedData,
   TrainingTalkTurn,
   TrainingSessionResult,
 } from '@/types/training'
@@ -58,6 +63,41 @@ function trainingLabel(status: string): string {
     needs_improvement: 'Needs improvement',
   }
   return map[status] ?? status
+}
+
+/** The extracted contact/booking values the backend pulled from the talk. */
+function renderExtracted(x?: TrainingExtractedData): React.ReactNode {
+  if (!x) return null
+  const emails = x.emails ?? []
+  const phones = x.phones ?? []
+  const meeting = x.meeting
+  const hasMeeting = !!(meeting && (meeting.day || meeting.time))
+  if (emails.length === 0 && phones.length === 0 && !hasMeeting) return null
+  return (
+    <>
+      {emails.length > 0 ? (
+        <div className="flex items-center gap-1.5 text-sm text-fg-secondary">
+          <Mail className="size-3.5 shrink-0 text-accent" />
+          <span className="font-medium text-fg">{emails[0].email}</span>
+          {!emails[0].confirmed ? <span className="text-2xs text-warning">unverified</span> : null}
+          {emails.length > 1 ? <span className="text-xs text-fg-muted">+{emails.length - 1} more</span> : null}
+        </div>
+      ) : null}
+      {phones.length > 0 ? (
+        <div className="flex items-center gap-1.5 text-sm text-fg-secondary">
+          <Phone className="size-3.5 shrink-0 text-accent" />
+          <span className="font-medium text-fg">{phones[0]}</span>
+          {phones.length > 1 ? <span className="text-xs text-fg-muted">+{phones.length - 1} more</span> : null}
+        </div>
+      ) : null}
+      {hasMeeting ? (
+        <div className="flex items-center gap-1.5 text-sm text-fg-secondary">
+          <CalendarClock className="size-3.5 shrink-0 text-accent" />
+          <span className="font-medium text-fg">{[meeting.day, meeting.time].filter(Boolean).join(' · ')}</span>
+        </div>
+      ) : null}
+    </>
+  )
 }
 
 interface LiveSession {
@@ -369,7 +409,10 @@ export function TrainingTalkConsole({
     }
   }, [agentId, campaign, onTrainingUpdated, stopEngine])
 
-  const ready = phase === 'idle' && !!campaign && !!agentId
+  const ready =
+    (phase === 'idle' || phase === 'done' || phase === 'error') &&
+    !!campaign &&
+    !!agentId
   const inTalk = phase === 'connecting' || phase === 'live'
 
   return (
@@ -524,6 +567,15 @@ export function TrainingTalkConsole({
                   {g}
                 </span>
               ))}
+            </div>
+          ) : null}
+          {renderExtracted(result.extracted) ? (
+            <div className="mt-4 rounded-md border border-line bg-bg/40 p-3">
+              <div className="flex items-center gap-1.5 text-2xs font-semibold uppercase tracking-wide text-fg-muted">
+                <ContactRound className="size-3.5" />
+                Extracted from this talk
+              </div>
+              <div className="mt-2 flex flex-wrap gap-x-5 gap-y-2">{renderExtracted(result.extracted)}</div>
             </div>
           ) : null}
         </div>

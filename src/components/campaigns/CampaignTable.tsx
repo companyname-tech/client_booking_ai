@@ -63,11 +63,13 @@ const Row = memo(function Row({
       aria-label={`Open ${campaign.name}`}
       className="group interactive ring-focus cursor-pointer border-t border-line outline-none hover:bg-white/[0.025] focus-visible:bg-white/[0.03]"
     >
+      {onToggle ? (
+        <td className="px-2 py-3.5 pl-4 align-middle">
+          <SelectCheckbox checked={!!selected} onChange={() => onToggle(campaign.id)} label={`Select ${campaign.name}`} />
+        </td>
+      ) : null}
       <td className={cell}>
         <div className="flex items-center gap-2.5">
-          {onToggle ? (
-            <SelectCheckbox checked={!!selected} onChange={() => onToggle(campaign.id)} label={`Select ${campaign.name}`} />
-          ) : null}
           <div className="min-w-0">
             <div className="truncate text-sm font-medium text-fg">{campaign.name}</div>
             <div className="truncate text-xs text-fg-muted">{campaign.targetAudience}</div>
@@ -194,6 +196,7 @@ export function CampaignTable({ campaigns, zone = 'client', className, selection
       <div className="overflow-x-auto">
         <table className="w-full min-w-[880px] table-fixed border-collapse">
           <colgroup>
+            {selection ? <col className="w-10" /> : null}
             <col />
             <col className="w-40" />
             <col className="w-[76px]" />
@@ -207,19 +210,17 @@ export function CampaignTable({ campaigns, zone = 'client', className, selection
           </colgroup>
           <thead>
             <tr>
-              <Th>
-                <span className="inline-flex items-center gap-2.5">
-                  {selection ? (
-                    <SelectCheckbox
-                      checked={selection.allChecked}
-                      indeterminate={selection.someChecked}
-                      onChange={selection.toggleAll}
-                      label="Select all campaigns"
-                    />
-                  ) : null}
-                  OfferCampaign
-                </span>
-              </Th>
+              {selection ? (
+                <th scope="col" className="px-2 py-2.5 pl-4">
+                  <SelectCheckbox
+                    checked={selection.allChecked}
+                    indeterminate={selection.someChecked}
+                    onChange={selection.toggleAll}
+                    label="Select all campaigns"
+                  />
+                </th>
+              ) : null}
+              <Th>Offer Campaign</Th>
               <Th>Status</Th>
               <Th align="right">Leads</Th>
               <Th align="right">Calls</Th>

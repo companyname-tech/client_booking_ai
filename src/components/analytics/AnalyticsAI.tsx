@@ -4,7 +4,7 @@ import { AnalyticsSection } from './AnalyticsShared'
 
 export function AIIntelligence({ insights, conversationsAnalyzed }: { insights: AnalyticsInsight[]; conversationsAnalyzed: number }) {
   return (
-    <AnalyticsSection title="AI OfferCampaign Intelligence" description={`Your AI has analyzed ${conversationsAnalyzed.toLocaleString()} conversations.`}>
+    <AnalyticsSection title="AI Offer Campaign Intelligence" description={`Your AI has analyzed ${conversationsAnalyzed.toLocaleString()} conversations.`}>
       <Stagger className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3" stagger={0.04}>
         {insights.map((ins) => (
           <Reveal key={ins.id} className="rounded-lg border border-line bg-surface-1 p-4">

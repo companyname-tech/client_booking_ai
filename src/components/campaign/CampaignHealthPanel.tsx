@@ -30,7 +30,7 @@ export function CampaignHealthPanel({ health, compact }: { health: CampaignHealt
       <div className="flex items-center gap-3">
         <StatusDot tone={tone} live={health.overall === 'excellent'} />
         <div>
-          <div className="text-xs text-fg-muted">OfferCampaign health</div>
+          <div className="text-xs text-fg-muted">Offer Campaign health</div>
           <div className="text-sm font-semibold text-fg">{OVERALL_LABEL[health.overall]}</div>
           <p className="text-xs text-fg-muted">{health.message}</p>
         </div>
@@ -42,7 +42,7 @@ export function CampaignHealthPanel({ health, compact }: { health: CampaignHealt
     <div className="surface p-5 sm:p-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <div className="label-caps">OfferCampaign health</div>
+          <div className="label-caps">Offer Campaign health</div>
           <div className="mt-1 flex items-center gap-2">
             <StatusDot tone={tone} live={health.overall === 'excellent'} size={8} />
             <span className="text-2xl font-semibold text-fg">{OVERALL_LABEL[health.overall]}</span>

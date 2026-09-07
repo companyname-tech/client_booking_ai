@@ -68,7 +68,7 @@ export default function CampaignDetailLayout({ zone = 'client' }: { zone?: 'clie
         <PageContainer>
           <div className="surface">
             <EmptyState
-              title="OfferCampaign not found"
+              title="Offer Campaign not found"
               description="It may have been removed, or the link is out of date."
               action={
                 <Button variant="secondary" leadingIcon={<ArrowLeft />} onClick={() => history.back()}>
@@ -106,7 +106,7 @@ export default function CampaignDetailLayout({ zone = 'client' }: { zone?: 'clie
                   <ArrowLeft className="size-3.5" /> Campaigns
                 </NavLink>
                 <span className="text-fg-faint">/</span>
-                <WorkspaceEyebrow name={zone === 'admin' ? 'Super Admin' : client.name} context={zone === 'admin' ? 'Review' : 'OfferCampaign'} />
+                <WorkspaceEyebrow name={zone === 'admin' ? 'Super Admin' : client.name} context={zone === 'admin' ? 'Review' : 'Offer Campaign'} />
               </div>
               <h1 className="text-2xl font-semibold tracking-tight text-fg sm:text-3xl">{campaign.name}</h1>
               <div className="mt-3">
@@ -124,7 +124,7 @@ export default function CampaignDetailLayout({ zone = 'client' }: { zone?: 'clie
             </div>
           </div>
 
-          <nav aria-label="OfferCampaign sections" className="hairline-b -mx-4 overflow-x-auto px-4 scrollbar-none sm:mx-0 sm:px-0">
+          <nav aria-label="Offer Campaign sections" className="hairline-b -mx-4 overflow-x-auto px-4 scrollbar-none sm:mx-0 sm:px-0">
             <div className="flex min-w-max items-center gap-0.5">
               {visibleTabs.map((t) => (
                 <NavLink

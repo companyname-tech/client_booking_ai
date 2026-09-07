@@ -4,6 +4,7 @@ import { repo } from '@/api/repository'
 import { DetailDrawer } from '@/components/ui/DetailDrawer'
 import { Select } from '@/components/ui/Select'
 import { Input } from '@/components/ui/Input'
+import { PhoneField } from '@/components/ui/fields/PhoneField'
 import { LeadScore } from './LeadScore'
 import { LeadStatusBadge } from './LeadStatusBadge'
 import { AILeadAnalysis } from './AILeadAnalysis'
@@ -163,7 +164,11 @@ export function LeadDrawer({
             </div>
             <div>
               <span className="text-fg-muted">Phone</span>
-              <Input className="mt-1" value={form.phone} onChange={set('phone')} />
+              <PhoneField
+                className="mt-1"
+                value={form.phone}
+                onChange={(v) => setForm((f) => ({ ...f, phone: v }))}
+              />
             </div>
             <div>
               <span className="text-fg-muted">Email</span>

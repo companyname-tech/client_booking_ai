@@ -33,6 +33,9 @@ export function CampaignLifecycle({
           <StatusDot tone={meta.tone} live={meta.live} size={8} />
           <span className="text-xs font-semibold uppercase tracking-wider text-fg-muted">{meta.label}</span>
         </div>
+        {campaign.valueProposition && (
+          <p className="mt-3 max-w-2xl text-sm font-medium leading-relaxed text-fg">{campaign.valueProposition}</p>
+        )}
         <p className="mt-2 text-sm text-fg-secondary">{statusMessage[status] ?? campaignStageMeta[campaign.stage].description}</p>
         {status === 'ai_training' && (
           <div className="mt-4 max-w-xs">

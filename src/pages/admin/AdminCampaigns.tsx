@@ -15,7 +15,9 @@ import { cn } from '@/lib/utils'
 import { LoadingState } from '@/components/ui/LoadingState'
 import { ErrorState } from '@/components/ui/ErrorState'
 import { NewCampaignModal } from '@/components/admin/NewCampaignModal'
+import { EditCampaignModal } from '@/components/admin/EditCampaignModal'
 import { Button } from '@/components/ui/Button'
+import type { OfferCampaign } from '@/types'
 
 const FILTERS = ['All', 'Awaiting Review', 'Training', 'Live', 'Paused', 'Completed', 'Rejected'] as const
 
@@ -23,6 +25,7 @@ export default function AdminCampaigns() {
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState<string>('All')
   const [creating, setCreating] = useState(false)
+  const [editingCampaign, setEditingCampaign] = useState<OfferCampaign | null>(null)
   const { data, loading, error, reload } = useAsyncData(() =>
     Promise.all([repo.getCampaigns(), repo.getAllAdminMeta()]),
   )
@@ -56,6 +59,11 @@ export default function AdminCampaigns() {
   const [confirmBulk, setConfirmBulk] = useState(false)
   const [bulkBusy, setBulkBusy] = useState(false)
   const [bulkNotice, setBulkNotice] = useState('')
+
+  const openEdit = () => {
+    const target = filtered.find((c) => selection.selected.has(c.id))
+    if (target) setEditingCampaign(target)
+  }
 
   const runBulkDelete = async () => {
     const ids = filtered.filter((c) => selection.selected.has(c.id)).map((c) => c.id)
@@ -103,6 +111,9 @@ export default function AdminCampaigns() {
           count={selection.count}
           noun="campaigns"
           onClear={selection.clear}
+          onEdit={openEdit}
+          editDisabled={selection.count !== 1}
+          editHint="Select one campaign to edit"
           onDelete={() => setConfirmBulk(true)}
           busy={bulkBusy}
         />
@@ -126,6 +137,16 @@ export default function AdminCampaigns() {
           onClose={() => setCreating(false)}
           onCreated={() => {
             setCreating(false)
+            void reload()
+          }}
+        />
+        <EditCampaignModal
+          open={!!editingCampaign}
+          campaign={editingCampaign}
+          onClose={() => setEditingCampaign(null)}
+          onSaved={() => {
+            setEditingCampaign(null)
+            selection.clear()
             void reload()
           }}
         />

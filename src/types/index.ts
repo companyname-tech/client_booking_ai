@@ -110,6 +110,7 @@ export interface OfferCampaign {
   clientId: ID
   name: string
   offerName: string
+  valueProposition?: string // the offer pitch/description (BE value_proposition/description)
   status: CampaignStatus
   stage: CampaignStage
   targetAudience: string

@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom'
 import { Pencil, Plus } from 'lucide-react'
 import { repo } from '@/api/repository'
 import { useAsyncData } from '@/hooks/useAsyncData'
+import { useBulkSelection } from '@/hooks/useBulkSelection'
 import { PageTransition } from '@/components/motion/PageTransition'
 import { PageContainer, PageHeader, WorkspaceEyebrow } from '@/components/layout/PageHeader'
 import { Avatar } from '@/components/ui/Avatar'
@@ -12,8 +13,12 @@ import { EmptyState } from '@/components/ui/EmptyState'
 import { Reveal } from '@/components/motion/Reveal'
 import { LoadingState } from '@/components/ui/LoadingState'
 import { ErrorState } from '@/components/ui/ErrorState'
+import { BulkActionBar } from '@/components/ui/BulkActionBar'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { ClientFormModal } from '@/components/admin/ClientFormModal'
 import { NewCampaignModal } from '@/components/admin/NewCampaignModal'
+import { EditCampaignModal } from '@/components/admin/EditCampaignModal'
+import type { OfferCampaign } from '@/types'
 
 export default function AdminClientDetail() {
   const { id } = useParams()
@@ -23,6 +28,39 @@ export default function AdminClientDetail() {
     async () => (id ? repo.getClient(id) : undefined),
     [id],
   )
+
+  const campaigns = data?.campaigns ?? []
+  const selection = useBulkSelection(campaigns.map((c) => c.id))
+  const [confirmBulk, setConfirmBulk] = useState(false)
+  const [bulkBusy, setBulkBusy] = useState(false)
+  const [bulkNotice, setBulkNotice] = useState('')
+  const [editingCampaign, setEditingCampaign] = useState<OfferCampaign | null>(null)
+
+  const runBulkDelete = async () => {
+    const ids = campaigns.filter((c) => selection.selected.has(c.id)).map((c) => c.id)
+    if (ids.length === 0) return
+    setBulkBusy(true)
+    setBulkNotice('')
+    try {
+      const res = await repo.bulkDeleteCampaigns(ids)
+      setBulkNotice(
+        res.failed ? `Deleted ${res.affected}, ${res.failed} failed` : `Deleted ${res.affected} campaign${res.affected === 1 ? '' : 's'}`,
+      )
+      selection.clear()
+      setConfirmBulk(false)
+      void reload()
+    } catch (e) {
+      setBulkNotice(`Bulk delete failed: ${e instanceof Error ? e.message : String(e)}`)
+      setConfirmBulk(false)
+    } finally {
+      setBulkBusy(false)
+    }
+  }
+
+  const openEdit = () => {
+    const target = campaigns.find((c) => selection.selected.has(c.id))
+    if (target) setEditingCampaign(target)
+  }
 
   if (loading) {
     return (
@@ -41,7 +79,6 @@ export default function AdminClientDetail() {
   }
 
   const client = data?.client
-  const campaigns = data?.campaigns ?? []
 
   if (!client) {
     return (
@@ -94,7 +131,20 @@ export default function AdminClientDetail() {
         <Reveal>
           <h2 className="mb-3 text-sm font-semibold text-fg">Campaigns</h2>
           {campaigns.length ? (
-            <CampaignTable campaigns={campaigns} zone="admin" />
+            <div className="space-y-3">
+              <BulkActionBar
+                count={selection.count}
+                noun="campaigns"
+                onClear={selection.clear}
+                onEdit={openEdit}
+                editDisabled={selection.count !== 1}
+                editHint="Select one campaign to edit"
+                onDelete={() => setConfirmBulk(true)}
+                busy={bulkBusy}
+              />
+              {bulkNotice && <p aria-live="polite" className="text-xs text-fg-secondary">{bulkNotice}</p>}
+              <CampaignTable campaigns={campaigns} zone="admin" selection={selection} />
+            </div>
           ) : (
             <EmptyState
               title="No campaigns yet"
@@ -123,6 +173,24 @@ export default function AdminClientDetail() {
           setCreating(false)
           void reload()
         }}
+      />
+      <EditCampaignModal
+        open={!!editingCampaign}
+        campaign={editingCampaign}
+        onClose={() => setEditingCampaign(null)}
+        onSaved={() => {
+          setEditingCampaign(null)
+          selection.clear()
+          void reload()
+        }}
+      />
+      <ConfirmDialog
+        open={confirmBulk}
+        onClose={() => setConfirmBulk(false)}
+        title={`Delete ${selection.count} selected campaign${selection.count === 1 ? '' : 's'}?`}
+        body={`This permanently deletes ${selection.count} campaign${selection.count === 1 ? '' : 's'} and their associated agents, leads and recordings. This cannot be undone.`}
+        busy={bulkBusy}
+        onConfirm={runBulkDelete}
       />
     </PageTransition>
   )

@@ -1,10 +1,13 @@
-import { Trash2, X } from 'lucide-react'
+import { Pencil, Trash2, X } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 
 interface BulkActionBarProps {
   count: number
   noun: string // e.g. "leads" — used for the "N leads selected" label
   onClear: () => void
+  onEdit?: () => void
+  editDisabled?: boolean
+  editHint?: string // shown when edit is disabled (e.g. only one row can be edited)
   onDelete?: () => void
   deleteDisabled?: boolean
   deleteHint?: string // shown when delete is disabled (e.g. pending backend endpoint)
@@ -12,7 +15,7 @@ interface BulkActionBarProps {
 }
 
 /** Floating bulk action bar shown while rows are selected. */
-export function BulkActionBar({ count, noun, onClear, onDelete, deleteDisabled, deleteHint, busy }: BulkActionBarProps) {
+export function BulkActionBar({ count, noun, onClear, onEdit, editDisabled, editHint, onDelete, deleteDisabled, deleteHint, busy }: BulkActionBarProps) {
   if (count === 0) return null
 
   return (
@@ -24,6 +27,18 @@ export function BulkActionBar({ count, noun, onClear, onDelete, deleteDisabled, 
         Clear
       </Button>
       <div className="ml-auto flex items-center gap-2">
+        {onEdit ? (
+          <Button
+            variant="secondary"
+            size="sm"
+            leadingIcon={<Pencil className="size-3.5" />}
+            onClick={onEdit}
+            disabled={editDisabled || busy}
+            title={editDisabled ? editHint : undefined}
+          >
+            Edit
+          </Button>
+        ) : null}
         {onDelete ? (
           <Button
             variant="danger"

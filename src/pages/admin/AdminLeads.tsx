@@ -7,6 +7,7 @@ import { useAsyncData } from '@/hooks/useAsyncData'
 import { PageTransition } from '@/components/motion/PageTransition'
 import { PageContainer, PageHeader, WorkspaceEyebrow } from '@/components/layout/PageHeader'
 import { Input } from '@/components/ui/Input'
+import { PhoneField } from '@/components/ui/fields/PhoneField'
 import { Button } from '@/components/ui/Button'
 import { LoadingState } from '@/components/ui/LoadingState'
 import { ErrorState } from '@/components/ui/ErrorState'
@@ -264,7 +265,11 @@ function LeadExtraDrawer({
           </div>
           <div>
             <span className="text-xs text-fg-muted">Phone</span>
-            <Input className="mt-1" value={form.phone} onChange={set('phone')} />
+            <PhoneField
+              className="mt-1"
+              value={form.phone}
+              onChange={(v) => setForm((f) => ({ ...f, phone: v }))}
+            />
           </div>
           <div>
             <span className="text-xs text-fg-muted">Website</span>
