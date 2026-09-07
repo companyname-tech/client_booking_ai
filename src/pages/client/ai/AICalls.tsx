@@ -59,11 +59,11 @@ export default function AICalls() {
     <div className="space-y-6">
       <div className="grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-line bg-line sm:grid-cols-5">
         {[
-          { label: 'Calls today', value: 2842 },
-          { label: 'Connected', value: 1284 },
-          { label: 'Conversations', value: 1428 },
-          { label: 'Bookings', value: 184 },
-          { label: 'Avg duration', value: '3m 42s', raw: true },
+          { label: 'Calls today', value: overview.callsToday },
+          { label: 'Connected', value: summary.connected },
+          { label: 'Conversations', value: overview.conversations },
+          { label: 'Bookings', value: overview.bookings },
+          { label: 'Avg duration', value: summary.avgDuration, raw: true },
         ].map((m) => (
           <div key={m.label} className="bg-surface-2 p-4">
             <div className="text-2xs text-fg-muted">{m.label}</div>

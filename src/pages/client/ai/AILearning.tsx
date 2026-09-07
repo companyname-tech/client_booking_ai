@@ -28,16 +28,14 @@ export default function AILearning() {
   }
 
   const stats = [
-    { label: 'Conversations analyzed', value: 7842 },
-    { label: 'Patterns identified', value: 214 },
-    { label: 'Objection patterns', value: 18 },
-    { label: 'Successful responses', value: 42 },
-    { label: 'Recent improvements', value: 12 },
+    { label: 'Conversations analyzed', value: overview.conversations },
+    { label: 'Patterns identified', value: patterns.length },
+    { label: 'Recent improvements', value: improvements.length },
   ]
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-line bg-line md:grid-cols-5">
+      <div className="grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-line bg-line md:grid-cols-3">
         {stats.map((s) => (
           <Reveal key={s.label} className="bg-surface-2 p-4">
             <div className="text-2xs text-fg-muted">{s.label}</div>
@@ -48,11 +46,19 @@ export default function AILearning() {
       <section className="surface p-5 sm:p-6">
         <h2 className="text-lg font-semibold text-fg">Learned patterns</h2>
         <p className="mt-1 text-sm text-fg-muted">What your booking agent has learned from campaign conversations</p>
-        <div className="mt-4"><LearnedPatterns patterns={patterns} /></div>
+        {patterns.length > 0 ? (
+          <div className="mt-4"><LearnedPatterns patterns={patterns} /></div>
+        ) : (
+          <p className="mt-4 text-sm text-fg-muted">No patterns learned yet — insights appear once conversations are analyzed.</p>
+        )}
       </section>
       <section className="surface p-5 sm:p-6">
         <h2 className="text-lg font-semibold text-fg">AI Improvement History</h2>
-        <div className="mt-4"><AIImprovementTimeline items={improvements} /></div>
+        {improvements.length > 0 ? (
+          <div className="mt-4"><AIImprovementTimeline items={improvements} /></div>
+        ) : (
+          <p className="mt-4 text-sm text-fg-muted">No improvements applied yet.</p>
+        )}
       </section>
     </div>
   )

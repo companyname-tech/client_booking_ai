@@ -79,7 +79,7 @@ function useCommands(): Command[] {
   const { data } = useAsyncData(
     async () => {
       const campaigns = await repo.getCampaigns()
-      const clients = zone === 'admin' ? await repo.getClients() : []
+      const clients = zone === 'admin' ? (await repo.getClients({ pageSize: 100 })).items : []
       const conversations = zone === 'client' ? await repo.getAIConversations() : []
       const leads = zone === 'client' ? await repo.getAllLeads() : []
       return { campaigns, clients, conversations, leads }

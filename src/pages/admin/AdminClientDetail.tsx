@@ -1,23 +1,26 @@
+import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { repo } from '@/data/repository'
+import { Pencil } from 'lucide-react'
+import { repo } from '@/api/repository'
 import { useAsyncData } from '@/hooks/useAsyncData'
 import { PageTransition } from '@/components/motion/PageTransition'
 import { PageContainer, PageHeader, WorkspaceEyebrow } from '@/components/layout/PageHeader'
 import { Avatar } from '@/components/ui/Avatar'
+import { Button } from '@/components/ui/Button'
 import { CampaignTable } from '@/components/campaigns/CampaignTable'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { Reveal } from '@/components/motion/Reveal'
 import { LoadingState } from '@/components/ui/LoadingState'
 import { ErrorState } from '@/components/ui/ErrorState'
+import { ClientFormModal } from '@/components/admin/ClientFormModal'
 
 export default function AdminClientDetail() {
   const { id } = useParams()
-  const { data, loading, error, reload } = useAsyncData(async () => {
-    if (!id) return undefined
-    const client = await repo.getClient(id)
-    const campaigns = await repo.getCampaigns(client?.id)
-    return { client, campaigns }
-  }, [id])
+  const [editing, setEditing] = useState(false)
+  const { data, loading, error, reload } = useAsyncData(
+    async () => (id ? repo.getClient(id) : undefined),
+    [id],
+  )
 
   if (loading) {
     return (
@@ -57,8 +60,19 @@ export default function AdminClientDetail() {
               {client.name}
             </span>
           }
-          description={`${client.industry} · ${client.plan} plan`}
+          description={`${client.industry || 'No industry'} · ${client.plan} plan`}
+          actions={<Button variant="secondary" leadingIcon={<Pencil />} onClick={() => setEditing(true)}>Edit</Button>}
         />
+        {client.primaryContact && (client.primaryContact.name || client.primaryContact.email) && (
+          <Reveal>
+            <div className="surface p-4 text-sm text-fg-secondary">
+              <span className="text-fg-muted">Primary contact:</span>{' '}
+              {client.primaryContact.name || '—'}
+              {client.primaryContact.email ? ` · ${client.primaryContact.email}` : ''}
+              {client.primaryContact.role ? ` · ${client.primaryContact.role}` : ''}
+            </div>
+          </Reveal>
+        )}
         <Reveal>
           <div className="grid gap-4 sm:grid-cols-3">
             <div className="surface p-4"><div className="text-2xs text-fg-muted">Campaigns</div><div className="text-2xl font-semibold tabular">{campaigns.length}</div></div>
@@ -68,10 +82,20 @@ export default function AdminClientDetail() {
         </Reveal>
         <Reveal>
           <h2 className="mb-3 text-sm font-semibold text-fg">Campaigns</h2>
-          <CampaignTable campaigns={campaigns} zone="admin" />
+          {campaigns.length ? (
+            <CampaignTable campaigns={campaigns} zone="admin" />
+          ) : (
+            <EmptyState title="No campaigns yet" description="Campaigns linked to this client will appear here." />
+          )}
         </Reveal>
         <Link to="/admin/clients" className="text-xs text-accent">← All clients</Link>
       </PageContainer>
+      <ClientFormModal
+        open={editing}
+        client={client}
+        onClose={() => setEditing(false)}
+        onSaved={reload}
+      />
     </PageTransition>
   )
 }

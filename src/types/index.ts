@@ -25,7 +25,28 @@ export interface Client {
   industry: string
   plan: 'starter' | 'growth' | 'enterprise'
   createdAt: string
-  primaryContact: User
+  primaryContact: PrimaryContact
+}
+
+export interface PrimaryContact {
+  name: string
+  email: string
+  role: string
+}
+
+export interface ClientInput {
+  name: string
+  slug?: string
+  industry?: string
+  plan?: Client['plan']
+  primaryContact?: Partial<PrimaryContact>
+}
+
+export interface ClientPage {
+  items: Client[]
+  total: number
+  page: number
+  pageSize: number
 }
 
 // ---------------------------------------------------------------------------

@@ -3,7 +3,6 @@ import { repo } from '@/data/repository'
 import { useAsyncData } from '@/hooks/useAsyncData'
 import { PageTransition } from '@/components/motion/PageTransition'
 import { PageContainer, PageHeader, WorkspaceEyebrow } from '@/components/layout/PageHeader'
-import { AITrainingPanel, AISimulation } from '@/components/admin/AITrainingPanel'
 import { PronunciationLexicon } from '@/components/admin/PronunciationLexicon'
 import { Reveal } from '@/components/motion/Reveal'
 import { CampaignStatus } from '@/components/campaigns/CampaignStatus'
@@ -21,7 +20,7 @@ export default function AdminAITraining() {
   return (
     <PageTransition>
       <PageContainer className="space-y-6">
-        <PageHeader eyebrow={<WorkspaceEyebrow name="Super Admin" context="AI Training" />} title="AI training workspace" description="Train and simulate AI agents for submitted campaigns." />
+        <PageHeader eyebrow={<WorkspaceEyebrow name="Super Admin" context="AI Training" />} title="AI training workspace" description="Review AI training status for submitted campaigns." />
         <Reveal>
           <PronunciationLexicon />
         </Reveal>
@@ -46,18 +45,12 @@ export default function AdminAITraining() {
                       </div>
                       <CampaignStatus status={c.status} size="sm" />
                     </div>
-                    <div className="mt-4">
-                      <AITrainingPanel onComplete={(score) => repo.completeCampaignTraining(offerCampaignId, score)} />
-                    </div>
                   </div>
                 </Reveal>
               )
             })}
           </div>
         )}
-        <Reveal>
-          <AISimulation />
-        </Reveal>
       </PageContainer>
     </PageTransition>
   )

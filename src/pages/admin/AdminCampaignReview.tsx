@@ -15,7 +15,6 @@ import { CampaignStatus } from '@/components/campaigns/CampaignStatus'
 import { ApprovalPanel } from '@/components/admin/ApprovalPanel'
 import { REVIEW_SECTIONS, ReviewSectionContent, type ReviewSection } from '@/components/admin/ReviewSections'
 import { ApproveCampaignModal, RejectCampaignModal, RequestChangesModal } from '@/components/admin/CampaignReviewModals'
-import { AITrainingPanel, AISimulation } from '@/components/admin/AITrainingPanel'
 import { cn } from '@/lib/utils'
 
 export default function AdminCampaignReview() {
@@ -34,10 +33,11 @@ export default function AdminCampaignReview() {
   const campaign = data?.campaign
   const review = data?.review
 
-  const { data: client } = useAsyncData(
-    () => (campaign ? repo.getClient(campaign.clientId) : Promise.resolve(undefined)),
+  const { data: clientData } = useAsyncData(
+    () => (campaign && campaign.clientId ? repo.getClient(campaign.clientId) : Promise.resolve(undefined)),
     [campaign?.clientId],
   )
+  const client = clientData?.client
 
   if (loading) {
     return (
@@ -125,12 +125,6 @@ export default function AdminCampaignReview() {
                 <div className="surface min-h-[320px] p-5 sm:p-6">
                   <h2 className="mb-4 text-lg font-semibold text-fg">{REVIEW_SECTIONS.find((s) => s.id === section)?.label}</h2>
                   <ReviewSectionContent section={section} campaign={campaign} review={review} />
-                  {section === 'ai' && (
-                    <div className="mt-6 space-y-4">
-                      <AITrainingPanel onComplete={(score) => { repo.completeCampaignTraining(campaign.id, score); reload() }} />
-                      <AISimulation />
-                    </div>
-                  )}
                 </div>
               </motion.div>
             </AnimatePresence>

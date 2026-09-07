@@ -83,8 +83,8 @@ function SidebarNavItem({ item, collapsed }: { item: NavItem; collapsed: boolean
 function WorkspaceSwitcher({ collapsed, zone }: { collapsed: boolean; zone: Zone }) {
   const navigate = useNavigate()
   const { data } = useAsyncData(async () => {
-    const [client, clients] = await Promise.all([repo.getCurrentClient(), repo.getClients()])
-    return { client, clients }
+    const [client, clientsPage] = await Promise.all([repo.getCurrentClient(), repo.getClients({ pageSize: 100 })])
+    return { client, clients: clientsPage.items }
   }, [])
   const client = data?.client
   const clients = data?.clients ?? []

@@ -19,7 +19,7 @@ export default function AdminOverview() {
     Promise.all([
       repo.getSuperAdminUser(),
       repo.getCampaigns(),
-      repo.getClients(),
+      repo.getClients({ pageSize: 100 }),
       repo.getAllAdminMeta(),
       repo.getAdminOverview(),
     ]),
@@ -43,14 +43,15 @@ export default function AdminOverview() {
 
   if (!data) return null
 
-  const [user, campaigns, clients, metas, overview] = data
+  const [user, campaigns, clientPage, metas, overview] = data
+  const clients = clientPage.items
   const pending = metas.filter((m) => ['awaiting_approval', 'submitted', 'compliance_review'].includes(m.workflowStatus)).length
 
   const metrics = [
     { label: 'Pending Review', value: pending },
     { label: 'Active Campaigns', value: campaigns.filter((c) => c.status === 'active').length },
     { label: 'Campaigns Launching', value: metas.filter((m) => m.workflowStatus === 'launching').length },
-    { label: 'Clients', value: clients.length },
+    { label: 'Clients', value: clientPage.total },
     { label: 'Leads Processing', value: overview.leads ?? 0 },
     { label: 'Bookings Today', value: overview.meetings_booked ?? 0 },
   ]

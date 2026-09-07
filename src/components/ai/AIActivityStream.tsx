@@ -1,9 +1,6 @@
-import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import type { AIActivityEvent } from '@/types/aiCommand'
-import { repo } from '@/data/repository'
 import { Reveal, Stagger } from '@/components/motion/Reveal'
-import { Button } from '@/components/ui/Button'
 import { StatusDot } from '@/components/ui/StatusDot'
 import { cn } from '@/lib/utils'
 
@@ -14,31 +11,14 @@ const TONE: Record<AIActivityEvent['status'], 'success' | 'info' | 'warning' | '
   neutral: 'neutral',
 }
 
-export function AIActivityStream({ events: initial }: { events: AIActivityEvent[] }) {
-  const [events, setEvents] = useState(initial)
-
-  const simulate = () => {
-    const ev: AIActivityEvent = {
-      id: `sim_${Date.now()}`,
-      timestamp: new Date().toLocaleTimeString('en-US', { hour12: false }),
-      offerCampaignId: 'cmp_q4_arch',
-      campaignName: 'Q4 Architecture Outreach',
-      leadName: 'David Carter',
-      event: 'Qualification in progress',
-      status: 'info',
-    }
-    repo.addSimulatedActivity(ev)
-    setEvents((prev) => [ev, ...prev])
-  }
-
+export function AIActivityStream({ events }: { events: AIActivityEvent[] }) {
   return (
     <section className="surface p-5 sm:p-6">
       <div className="mb-4 flex items-center justify-between gap-3">
         <div>
           <h2 className="text-lg font-semibold text-fg">AI Activity</h2>
-          <p className="text-sm text-fg-muted">Recent agent events · demo data</p>
+          <p className="text-sm text-fg-muted">Recent agent events</p>
         </div>
-        <Button variant="ghost" size="sm" onClick={simulate}>Simulate activity</Button>
       </div>
       <Stagger as="ul" className="space-y-0" stagger={0.03}>
         {events.map((e) => (
