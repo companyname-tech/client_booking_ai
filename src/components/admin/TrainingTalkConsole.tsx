@@ -239,7 +239,7 @@ export function TrainingTalkConsole({
 
     const proto = window.location.protocol === 'https:' ? 'wss' : 'ws'
     const wsUrl =
-      `${proto}//${window.location.host}/api/agent/rtc` +
+      `${proto}://${window.location.host}/api/agent/rtc` +
       `?mode=training&offer_id=${encodeURIComponent(campaign.offerCampaignId)}` +
       `&agent_id=${encodeURIComponent(agentId)}&auto_hangup=0`
     const ws = new WebSocket(wsUrl)
