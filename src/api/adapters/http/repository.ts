@@ -15,7 +15,7 @@ import { env } from '@/config/environment'
 import { ensureEntryIds, stripEntryIds } from '@/lib/pronunciation'
 import type { Agent, OfferCampaign, User, Client, ClientInput, ClientPage, Lead, Call, Booking, CallDetail, LeadDetail, Recording, CallHistoryEntry, CampaignFunnelStage, CampaignInsight, CampaignAttentionAlert, CampaignPerformancePoint, CampaignHealthSnapshot, CampaignHealth, Analytics, Activity, AttentionItem, Integration, LeadStatus, Meeting, WorkspaceAnalytics } from '@/types'
 import type { AppSettings, ConnectionsState, ConnectionKey, TwilioNumber, FishVoice, SettingsSchemaField, AgentModels, AgentVoiceOption, AgentRole } from '@/types/settings'
-import type { AdminCampaignMeta, AdminLead, CampaignReviewData, AuditEvent, AdminNotification, TrainingStatus, ActivityLogEntry, ActivitySource } from '@/types/admin'
+import type { AdminCampaignMeta, AdminLead, CampaignReviewData, AuditEvent, AdminNotification, TrainingStatus, ActivityLogEntry, ActivitySource, ReviewCampaignContent } from '@/types/admin'
 import type { CampaignAnalyticsData, AnalyticsFilters } from '@/types/campaignAnalytics'
 import type { EnrichedLead, LeadHubMetrics, LeadHubStats, LeadSegment, LeadHubFilters, LeadIntelligenceProfile, LeadNote } from '@/types/leadIntelligence'
 import type { AICommandOverview, AIActivityEvent, AIConversationSummary, AIConversationDetail, AIObjection, AILearningPattern, AIImprovement, AIFollowUp, AIEscalation, AIBookingConversation, AIInsight, AIHealthSnapshot, AIAgentProfile, AIPerformanceSnapshot, AICommandFilters } from '@/types/aiCommand'
@@ -53,6 +53,7 @@ interface OfferWire {
   meetings_booked?: number
   conversion_rate?: number
   agent_name?: string
+  campaign_content?: ReviewCampaignContent
 }
 
 interface LeadWire {
@@ -301,6 +302,19 @@ function toAdminLead(wire: LeadWire): AdminLead {
 function toCampaign(wire: OfferWire): OfferCampaign {
   const leadCount = wire.lead_count ?? 0
   const status = leadCount > 0 ? 'active' : 'draft'
+  // Admin review content (stored on the offer as campaign_content) carries the
+  // targeting/budget the review screen edits; map it onto the FE campaign shape.
+  const content = wire.campaign_content
+  const targeting = content?.targeting
+  const budget = content?.budget
+  const criteria: OfferCampaign['criteria'] = {
+    industry: targeting?.industry ?? '',
+    companySize: targeting?.companySize ?? '',
+    decisionMakers: targeting?.decisionMakers ?? [],
+    ageRange: targeting?.ageRange ?? '',
+    location: targeting?.location ?? '',
+    ...(targeting?.other ? { other: targeting.other } : {}),
+  }
   return {
     id: wire.id,
     clientId: wire.client_id ?? '',
@@ -308,10 +322,16 @@ function toCampaign(wire: OfferWire): OfferCampaign {
     offerName: wire.title,
     status,
     stage: status === 'active' ? 'calling' : 'onboarding',
-    targetAudience: '',
-    geography: '',
-    criteria: { industry: '', companySize: '', decisionMakers: [], ageRange: '', location: '' },
-    budget: { total: 0, used: 0, daily: 0, currency: 'USD', expectedDurationDays: 0 },
+    targetAudience: targeting ? [targeting.industry, targeting.companySize].filter(Boolean).join(' · ') : '',
+    geography: targeting?.location ?? '',
+    criteria,
+    budget: {
+      total: budget?.total ?? 0,
+      used: 0,
+      daily: budget?.daily ?? 0,
+      currency: 'USD',
+      expectedDurationDays: budget?.expectedDurationDays ?? 0,
+    },
     metrics: {
       leadsFound: leadCount,
       leadsContacted: wire.contacted_leads ?? 0,
@@ -727,6 +747,34 @@ export const httpRepository = {
       title: patch.offerName ?? patch.name,
       description: patch.criteria?.other,
     })
+    return toCampaign(wire)
+  },
+  /**
+   * Save admin review edits on a campaign with one PUT /offers/{id} — the
+   * offer-details columns (title/description/pitch/cta), the assigned agent
+   * (agent_id) and/or the campaign_content subdoc (targeting/budget/booking).
+   * Content is stored WHOLE: the review screen merges section edits against the
+   * last stored snapshot (review.campaignContent) before calling this.
+   */
+  async updateCampaignOffer(
+    id: string,
+    input: {
+      title?: string
+      description?: string
+      pitch?: string
+      cta?: string
+      agentId?: string
+      content?: ReviewCampaignContent
+    },
+  ): Promise<OfferCampaign> {
+    const body: Record<string, unknown> = {}
+    if (input.title !== undefined) body.title = input.title
+    if (input.description !== undefined) body.description = input.description
+    if (input.pitch !== undefined) body.value_proposition = input.pitch
+    if (input.cta !== undefined) body.cta = input.cta
+    if (input.agentId !== undefined) body.agent_id = input.agentId
+    if (input.content !== undefined) body.campaign_content = input.content
+    const wire = await apiClient.put<OfferWire>(`/offers/${id}`, body)
     return toCampaign(wire)
   },
   async getClient(id: string): Promise<{ client: Client; campaigns: OfferCampaign[] } | undefined> {
