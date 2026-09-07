@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { Pencil } from 'lucide-react'
+import { Pencil, Plus } from 'lucide-react'
 import { repo } from '@/api/repository'
 import { useAsyncData } from '@/hooks/useAsyncData'
 import { PageTransition } from '@/components/motion/PageTransition'
@@ -13,10 +13,12 @@ import { Reveal } from '@/components/motion/Reveal'
 import { LoadingState } from '@/components/ui/LoadingState'
 import { ErrorState } from '@/components/ui/ErrorState'
 import { ClientFormModal } from '@/components/admin/ClientFormModal'
+import { NewCampaignModal } from '@/components/admin/NewCampaignModal'
 
 export default function AdminClientDetail() {
   const { id } = useParams()
   const [editing, setEditing] = useState(false)
+  const [creating, setCreating] = useState(false)
   const { data, loading, error, reload } = useAsyncData(
     async () => (id ? repo.getClient(id) : undefined),
     [id],
@@ -61,7 +63,16 @@ export default function AdminClientDetail() {
             </span>
           }
           description={`${client.industry || 'No industry'} · ${client.plan} plan`}
-          actions={<Button variant="secondary" leadingIcon={<Pencil />} onClick={() => setEditing(true)}>Edit</Button>}
+          actions={
+            <>
+              <Button variant="primary" leadingIcon={<Plus />} onClick={() => setCreating(true)}>
+                New campaign
+              </Button>
+              <Button variant="secondary" leadingIcon={<Pencil />} onClick={() => setEditing(true)}>
+                Edit
+              </Button>
+            </>
+          }
         />
         {client.primaryContact && (client.primaryContact.name || client.primaryContact.email) && (
           <Reveal>
@@ -85,7 +96,15 @@ export default function AdminClientDetail() {
           {campaigns.length ? (
             <CampaignTable campaigns={campaigns} zone="admin" />
           ) : (
-            <EmptyState title="No campaigns yet" description="Campaigns linked to this client will appear here." />
+            <EmptyState
+              title="No campaigns yet"
+              description="Campaigns linked to this client will appear here."
+              action={
+                <Button variant="primary" leadingIcon={<Plus />} onClick={() => setCreating(true)}>
+                  New campaign
+                </Button>
+              }
+            />
           )}
         </Reveal>
         <Link to="/admin/clients" className="text-xs text-accent">← All clients</Link>
@@ -95,6 +114,15 @@ export default function AdminClientDetail() {
         client={client}
         onClose={() => setEditing(false)}
         onSaved={reload}
+      />
+      <NewCampaignModal
+        open={creating}
+        fixedClient={{ id: client.id, name: client.name }}
+        onClose={() => setCreating(false)}
+        onCreated={() => {
+          setCreating(false)
+          void reload()
+        }}
       />
     </PageTransition>
   )

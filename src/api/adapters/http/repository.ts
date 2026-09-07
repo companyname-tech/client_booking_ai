@@ -410,6 +410,7 @@ export const httpRepository = {
       description: draft.offer.description,
       value_proposition: draft.offer.pitch,
       category: draft.target.industries[0] ?? '',
+      phone: '', // OfferIn requires phone; a campaign/offer has no phone of its own
     })
     return toCampaign(created)
   },
@@ -422,6 +423,7 @@ export const httpRepository = {
       company: input.company ?? '',
       client_id: input.clientId ?? '',
       agent_id: '',
+      phone: '', // OfferIn requires phone; a campaign/offer has no phone of its own
     })
     return toCampaign(created)
   },

@@ -14,20 +14,15 @@ import { Reveal } from '@/components/motion/Reveal'
 import { cn } from '@/lib/utils'
 import { LoadingState } from '@/components/ui/LoadingState'
 import { ErrorState } from '@/components/ui/ErrorState'
-import { Modal } from '@/components/ui/Modal'
+import { NewCampaignModal } from '@/components/admin/NewCampaignModal'
 import { Button } from '@/components/ui/Button'
 
 const FILTERS = ['All', 'Awaiting Review', 'Training', 'Live', 'Paused', 'Completed', 'Rejected'] as const
-
-const inputClass =
-  'mt-1 w-full rounded-md border border-border bg-card px-3 py-2 text-sm text-fg placeholder:text-fg-muted focus:outline-none focus:ring-1 focus:ring-accent'
 
 export default function AdminCampaigns() {
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState<string>('All')
   const [creating, setCreating] = useState(false)
-  const [saving, setSaving] = useState(false)
-  const [form, setForm] = useState({ name: '', offerName: '', category: '', clientId: '' })
   const { data, loading, error, reload } = useAsyncData(() =>
     Promise.all([repo.getCampaigns(), repo.getAllAdminMeta()]),
   )
@@ -85,26 +80,6 @@ export default function AdminCampaigns() {
     }
   }
 
-  const submit = async () => {
-    if (!form.name.trim()) return
-    setSaving(true)
-    try {
-      const selectedClient = clients.find((c) => c.id === form.clientId)
-      await repo.createCampaign({
-        name: form.name,
-        offerName: form.offerName,
-        category: form.category,
-        clientId: form.clientId,
-        company: selectedClient?.name ?? '',
-      })
-      setCreating(false)
-      setForm({ name: '', offerName: '', category: '', clientId: '' })
-      void reload()
-    } finally {
-      setSaving(false)
-    }
-  }
-
   return (
     <PageTransition>
       <PageContainer className="space-y-6">
@@ -145,54 +120,15 @@ export default function AdminCampaigns() {
           <Link to="/admin/approvals" className="text-accent">Open approval queue →</Link>
         </p>
 
-        <Modal
+        <NewCampaignModal
           open={creating}
-          onClose={() => !saving && setCreating(false)}
-          title="New campaign"
-          description="Create an offer campaign — attach it to a client and define the offer."
-          size="sm"
-        >
-          <form
-            className="space-y-4 p-5"
-            onSubmit={(e) => {
-              e.preventDefault()
-              void submit()
-            }}
-          >
-            <div>
-              <span className="text-xs text-fg-muted">Client *</span>
-              <select className={inputClass} autoFocus value={form.clientId} onChange={(e) => setForm((f) => ({ ...f, clientId: e.target.value }))}>
-                <option value="">Select a client…</option>
-                {clients.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
-              <p className="mt-1 text-2xs text-fg-muted">The campaign is attached to this client.</p>
-            </div>
-            <div>
-              <span className="text-xs text-fg-muted">Campaign name *</span>
-              <input className={inputClass} value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} placeholder="e.g. Arch Sites" />
-            </div>
-            <div>
-              <span className="text-xs text-fg-muted">Offer</span>
-              <input className={inputClass} value={form.offerName} onChange={(e) => setForm((f) => ({ ...f, offerName: e.target.value }))} placeholder="The offer the campaign sells, e.g. Website redesign" />
-            </div>
-            <div>
-              <span className="text-xs text-fg-muted">Category</span>
-              <input className={inputClass} value={form.category} onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))} placeholder="e.g. Architecture" />
-            </div>
-            <div className="flex justify-end gap-2 pt-2">
-              <Button variant="ghost" size="sm" disabled={saving} onClick={() => setCreating(false)}>
-                Cancel
-              </Button>
-              <Button type="submit" variant="primary" size="sm" disabled={saving || !form.name.trim() || !form.clientId}>
-                {saving ? 'Creating…' : 'Create campaign'}
-              </Button>
-            </div>
-          </form>
-        </Modal>
+          clients={clients}
+          onClose={() => setCreating(false)}
+          onCreated={() => {
+            setCreating(false)
+            void reload()
+          }}
+        />
         <ConfirmDialog
           open={confirmBulk}
           onClose={() => setConfirmBulk(false)}
