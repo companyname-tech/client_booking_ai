@@ -364,10 +364,10 @@ export const httpRepository = {
     return apiClient.get<CampaignHealthSnapshot>(`/offers/${_offerCampaignId}/health`)
   },
   async getCampaignInsights(_offerCampaignId: string): Promise<CampaignInsight[]> {
-    return apiClient.get<CampaignInsight[]>(`/campaigns/${_offerCampaignId}/insights`)
+    return apiClient.get<CampaignInsight[]>(`/offers/${_offerCampaignId}/insights`)
   },
   async getCampaignAlerts(_offerCampaignId: string): Promise<CampaignAttentionAlert[]> {
-    return apiClient.get<CampaignAttentionAlert[]>(`/campaigns/${_offerCampaignId}/alerts`)
+    return apiClient.get<CampaignAttentionAlert[]>(`/offers/${_offerCampaignId}/alerts`)
   },
   async getCampaignPerformance(_offerCampaignId: string, _days: 7 | 14 | 30 = 14): Promise<CampaignPerformancePoint[]> {
     return apiClient.get<CampaignPerformancePoint[]>(`/offers/${_offerCampaignId}/performance?days=${_days}`)
