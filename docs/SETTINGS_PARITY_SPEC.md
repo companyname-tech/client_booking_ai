@@ -288,7 +288,7 @@ updateAgent(id: string, patch: Partial<Agent>): Promise<Agent>
 createAgent(patch: Partial<Agent>): Promise<Agent>
 deleteAgent(id: string): Promise<void>
 listAgentVoices(): Promise<{value: string; label: string}[]>      // GET /agents/voices
-listAgentModels(): Promise<{audio: ModelOption[]; transcription: ModelOption[]}>  // GET /agents/models
+listAgentModels(): Promise<{audio: ModelOption[]; transcription: ModelOption[]; chat: ModelOption[]}>  // GET /agents/models
 ```
 
 ---

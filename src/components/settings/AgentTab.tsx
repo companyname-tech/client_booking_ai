@@ -36,7 +36,7 @@ export default function AgentTab() {
   const { data: settings } = useAsyncData(() => repo.getSettings())
   const [agents, setAgents] = useState<Agent[]>([])
   const [voices, setVoices] = useState<AgentVoiceOption[]>([])
-  const [models, setModels] = useState<AgentModels>({ audio: [], transcription: [] })
+  const [models, setModels] = useState<AgentModels>({ audio: [], transcription: [], chat: [] })
 
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [drafts, setDrafts] = useState<Record<string, Agent>>({})
@@ -279,11 +279,25 @@ export default function AgentTab() {
                       </div>
                       <div>
                         <label className="mb-1.5 block text-sm font-medium text-fg">Agent model</label>
-                        <Input
+                        <Select
                           value={draft.agent_model ?? ''}
-                          onChange={(e) => patchDraft(agent.id, { agent_model: e.target.value })}
-                          placeholder="e.g. gpt-4o-mini — conversation brain"
+                          onChange={(v) => patchDraft(agent.id, { agent_model: v })}
+                          ariaLabel="Agent model"
+                          placeholder="— Default —"
+                          options={[
+                            ...models.chat.map((m) => ({ value: m.value, label: m.label })),
+                            // Keep a previously-stored value selectable even when it is no
+                            // longer on the system roster (legacy free-text agents).
+                            ...(draft.agent_model &&
+                            !models.chat.some((m) => m.value === draft.agent_model)
+                              ? [{ value: draft.agent_model, label: `${draft.agent_model} (custom)` }]
+                              : []),
+                          ]}
+                          className="w-full"
                         />
+                        <p className="mt-1.5 text-xs text-fg-muted">
+                          Chat brain for operation + transcript analysis. DeepSeek models appear once the DeepSeek key is connected.
+                        </p>
                       </div>
                       <div>
                         <label className="mb-1.5 block text-sm font-medium text-fg">Role</label>

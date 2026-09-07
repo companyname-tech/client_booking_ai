@@ -1200,6 +1200,7 @@ function agentPatch(patch: Partial<Agent>): Record<string, unknown> {
   if (patch.identity !== undefined) out.identity = patch.identity
   if (patch.audio_model !== undefined) out.audio_model = patch.audio_model
   if (patch.transcription_model !== undefined) out.transcription_model = patch.transcription_model
+  if (patch.agent_model !== undefined) out.agent_model = patch.agent_model
   return out
 }
 

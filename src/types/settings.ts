@@ -150,4 +150,8 @@ export interface ModelOption {
 export interface AgentModels {
   audio: ModelOption[]
   transcription: ModelOption[]
+  /** Non-voice chat "brain" models (operation + transcript analysis). BE
+   * gates provider availability: OpenAI always listed, DeepSeek only when its
+   * key is configured — the FE renders whatever the endpoint returns. */
+  chat: ModelOption[]
 }
