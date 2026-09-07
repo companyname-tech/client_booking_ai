@@ -1,6 +1,6 @@
 import { Sparkles } from 'lucide-react'
 import type { CampaignReviewData } from '@/types/admin'
-import type { OfferCampaign as CampaignType } from '@/types'
+import type { OfferCampaign as CampaignType, Agent } from '@/types'
 import { formatCurrency, formatNumber } from '@/lib/utils'
 import { RecordingPlayer } from '@/components/recordings/RecordingPlayer'
 import { IntegrationCard } from '@/components/onboarding/IntegrationCard'
@@ -59,10 +59,14 @@ export function ReviewSectionContent({
   section,
   campaign,
   review,
+  agent,
 }: {
   section: ReviewSection
   campaign: CampaignType
   review: CampaignReviewData
+  /** The campaign's assigned agent (when one is set) — overlays the AI-config
+   *  review snapshot with the agent's real persona fields. */
+  agent?: Agent
 }) {
   const c = campaign.criteria
 
@@ -111,12 +115,22 @@ export function ReviewSectionContent({
           </div>
         </div>
       )
-    case 'budget':
+    case 'budget': {
+      const hasCampaignBudget = campaign.budget.total > 0 || campaign.budget.daily > 0
       return (
         <div className="space-y-4 text-sm">
           <dl className="grid gap-3 sm:grid-cols-2">
-            <div><dt className="text-fg-muted">OfferCampaign budget</dt><dd className="text-lg font-semibold">{formatCurrency(review.budgetProjection.monthlyBudget)} / month</dd></div>
+            <div>
+              <dt className="text-fg-muted">Campaign budget</dt>
+              <dd className="text-lg font-semibold">
+                {formatCurrency(hasCampaignBudget ? campaign.budget.total : review.budgetProjection.monthlyBudget)}
+                {hasCampaignBudget ? '' : ' / month'}
+              </dd>
+            </div>
             <div><dt className="text-fg-muted">Daily budget</dt><dd>{formatCurrency(campaign.budget.daily)}</dd></div>
+            {hasCampaignBudget && (
+              <div><dt className="text-fg-muted">Duration</dt><dd>{campaign.budget.expectedDurationDays} days</dd></div>
+            )}
             <div><dt className="text-fg-muted">Expected leads</dt><dd>{formatNumber(review.budgetProjection.expectedLeads)}</dd></div>
             <div><dt className="text-fg-muted">Projected conversations</dt><dd>{formatNumber(review.budgetProjection.projectedConversations)}</dd></div>
             <div className="sm:col-span-2"><dt className="text-fg-muted">Projected bookings</dt><dd>{review.budgetProjection.projectedBookingsMin}–{review.budgetProjection.projectedBookingsMax}</dd></div>
@@ -124,6 +138,7 @@ export function ReviewSectionContent({
           <p className="rounded-md border border-line bg-surface-1 px-3 py-2 text-xs text-fg-muted">{review.budgetProjection.aiNote}</p>
         </div>
       )
+    }
     case 'booking':
       return (
         <dl className="grid gap-3 text-sm sm:grid-cols-2">
@@ -141,14 +156,26 @@ export function ReviewSectionContent({
           <IntegrationCard provider="zoom" state="disconnected" onConnect={() => {}} optional />
         </div>
       )
-    case 'ai':
+    case 'ai': {
+      const config = {
+        ...review.agentConfig,
+        ...(agent
+          ? {
+              agentName: agent.name || review.agentConfig.agentName,
+              voice: agent.voice || review.agentConfig.voice,
+              language: agent.language || review.agentConfig.language,
+              model: agent.audio_model || agent.agent_model || review.agentConfig.model,
+              role: agent.role_label || agent.role || review.agentConfig.role,
+            }
+          : {}),
+      }
       return (
         <div className="space-y-4">
           <dl className="grid gap-3 text-sm sm:grid-cols-2">
-            {Object.entries(review.agentConfig).map(([k, v]) => (
+            {Object.entries(config).map(([k, v]) => (
               <div key={k} className={Array.isArray(v) ? 'sm:col-span-2' : ''}>
                 <dt className="capitalize text-fg-muted">{k.replace(/([A-Z])/g, ' $1')}</dt>
-                <dd className="font-medium text-fg">{Array.isArray(v) ? v.join(' · ') : v}</dd>
+                <dd className="font-medium text-fg">{Array.isArray(v) ? (v as string[]).join(' · ') : (v as string)}</dd>
               </div>
             ))}
           </dl>
@@ -166,6 +193,7 @@ export function ReviewSectionContent({
           </ul>
         </div>
       )
+    }
     case 'compliance':
       return (
         <div className="space-y-4">

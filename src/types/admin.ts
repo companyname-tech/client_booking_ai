@@ -1,4 +1,4 @@
-import type { CampaignStatus, Lead, Tone } from '@/types'
+import type { Budget, CampaignStatus, Lead, LeadCriteria, Tone } from '@/types'
 
 /**
  * A lead as shown on the Super Admin → Leads screen: the client-shared `Lead`
@@ -120,6 +120,24 @@ export interface ComplianceItem {
   note?: string
 }
 
+/**
+ * Admin-editable campaign content — the sections of the campaign review screen.
+ * Persisted as `campaign_content` on the backend offer row via PUT /offers/{id}
+ * and round-tripped through the review payload (`campaignContent`).
+ */
+export interface ReviewCampaignContent {
+  /** Target-audience configuration (mirrors the FE LeadCriteria shape). */
+  targeting?: Partial<LeadCriteria>
+  /** Campaign budget (mirrors the FE Budget shape, minus runtime usage). */
+  budget?: Partial<Omit<Budget, 'used'>>
+  /** Booking-destination configuration shown on the Booking review section. */
+  booking?: { titleTemplate?: string; email?: string }
+  /** Review-time agent-config snapshot (display only by default). */
+  agentConfig?: Partial<AIAgentConfig>
+  /** Booking-integration states (gmail/calendly/zoom). */
+  integrations?: { gmail?: string; calendly?: string; zoom?: string }
+}
+
 export interface CampaignReviewData {
   offerCampaignId: string
   displayId: string
@@ -141,6 +159,8 @@ export interface CampaignReviewData {
   bookingTitle: string
   bookingEmail: string
   integrations: { gmail: string; calendly: string; zoom: string }
+  /** Stored admin-editable content — null when the campaign has none yet. */
+  campaignContent?: ReviewCampaignContent | null
 }
 
 export interface AdminCampaignMeta {

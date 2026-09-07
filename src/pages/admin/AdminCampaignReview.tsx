@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft } from 'lucide-react'
-import { AnimatePresence, motion } from 'motion/react'
+import { ArrowLeft, Pencil } from 'lucide-react'
+import { motion } from 'motion/react'
 import { repo } from '@/data/repository'
 import { useAsyncData } from '@/hooks/useAsyncData'
 import { tweenBase } from '@/lib/motion'
@@ -14,24 +14,47 @@ import { ErrorState } from '@/components/ui/ErrorState'
 import { CampaignStatus } from '@/components/campaigns/CampaignStatus'
 import { ApprovalPanel } from '@/components/admin/ApprovalPanel'
 import { REVIEW_SECTIONS, ReviewSectionContent, type ReviewSection } from '@/components/admin/ReviewSections'
+import {
+  AgentSelectEditor,
+  BookingEditor,
+  BudgetEditor,
+  OfferDetailsEditor,
+  TargetingEditor,
+  type BookingDraft,
+  type BudgetDraft,
+  type OfferDetailsDraft,
+} from '@/components/admin/CampaignSectionEditors'
 import { ApproveCampaignModal, RejectCampaignModal, RequestChangesModal } from '@/components/admin/CampaignReviewModals'
+import type { OfferCampaign } from '@/types'
+import type { ReviewCampaignContent } from '@/types/admin'
+import type { LeadCriteria } from '@/types'
 import { cn } from '@/lib/utils'
+
+/** Review sections whose content the admin can change inline before approving. */
+const EDITABLE_SECTIONS: ReadonlySet<ReviewSection> = new Set(['offer', 'target', 'budget', 'booking', 'ai'])
+
+function errorMessage(e: unknown): string {
+  return e instanceof Error ? e.message : String(e)
+}
 
 export default function AdminCampaignReview() {
   const { id } = useParams()
   const navigate = useNavigate()
   const [section, setSection] = useState<ReviewSection>('overview')
   const [modal, setModal] = useState<'approve' | 'reject' | 'changes' | null>(null)
+  const [editing, setEditing] = useState<ReviewSection | null>(null)
+  const [saving, setSaving] = useState(false)
   const [toast, setToast] = useState('')
 
   const { data, loading, error, reload } = useAsyncData(async () => {
     if (!id) return undefined
-    const [campaign, review] = await Promise.all([repo.getCampaign(id), repo.getCampaignReview(id)])
-    return { campaign, review }
+    const [campaign, review, agents] = await Promise.all([repo.getCampaign(id), repo.getCampaignReview(id), repo.getAgents()])
+    return { campaign, review, agents }
   }, [id])
 
   const campaign = data?.campaign
   const review = data?.review
+  const agents = data?.agents ?? []
 
   const { data: clientData } = useAsyncData(
     () => (campaign && campaign.clientId ? repo.getClient(campaign.clientId) : Promise.resolve(undefined)),
@@ -65,12 +88,126 @@ export default function AdminCampaignReview() {
     )
   }
 
+  const agent = campaign.agentId ? agents.find((a) => a.id === campaign.agentId) : undefined
+  // Last persisted admin-editable content — every section save merges into it so
+  // partial edits never wipe content saved on other sections.
+  const stored: ReviewCampaignContent = review.campaignContent ?? {}
+
+  const toastError = (e: unknown) => setToast(`Save failed — ${errorMessage(e)}`)
+
+  /** Run a save handler, then reload so the review + header reflect the edit. */
+  const persist = async (action: () => Promise<OfferCampaign>) => {
+    setSaving(true)
+    try {
+      await action()
+      setEditing(null)
+      setToast('Changes saved')
+      void reload()
+    } catch (e) {
+      toastError(e)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const openEditor = (s: ReviewSection) => {
+    setEditing(s)
+    setSection(s)
+  }
+
+  const renderEditor = (s: ReviewSection) => {
+    if (s === 'offer') {
+      const seed: OfferDetailsDraft = {
+        title: campaign.offerName,
+        description: review.offerAnalysis.clarity,
+        pitch: review.offerAnalysis.valueProposition,
+        cta: review.offerAnalysis.cta,
+      }
+      return (
+        <OfferDetailsEditor
+          seed={seed}
+          saving={saving}
+          onCancel={() => setEditing(null)}
+          onSave={(draft) =>
+            persist(() =>
+              repo.updateCampaignOffer(campaign.id, {
+                title: draft.title,
+                description: draft.description,
+                pitch: draft.pitch,
+                cta: draft.cta,
+              }),
+            )
+          }
+        />
+      )
+    }
+    if (s === 'target') {
+      const seed: Partial<LeadCriteria> = stored.targeting ?? campaign.criteria
+      return (
+        <TargetingEditor
+          seed={seed}
+          saving={saving}
+          onCancel={() => setEditing(null)}
+          onSave={(draft) => persist(() => repo.updateCampaignOffer(campaign.id, { content: { ...stored, targeting: draft } }))}
+        />
+      )
+    }
+    if (s === 'budget') {
+      const seed: BudgetDraft = {
+        total: campaign.budget.total,
+        daily: campaign.budget.daily,
+        expectedDurationDays: campaign.budget.expectedDurationDays,
+      }
+      return (
+        <BudgetEditor
+          seed={seed}
+          saving={saving}
+          onCancel={() => setEditing(null)}
+          onSave={(draft) =>
+            persist(() =>
+              repo.updateCampaignOffer(campaign.id, { content: { ...stored, budget: { ...draft, currency: 'USD' } } }),
+            )
+          }
+        />
+      )
+    }
+    if (s === 'booking') {
+      const seed: BookingDraft = {
+        titleTemplate: stored.booking?.titleTemplate ?? review.bookingTitle ?? '',
+        email: stored.booking?.email ?? review.bookingEmail ?? '',
+      }
+      return (
+        <BookingEditor
+          seed={seed}
+          saving={saving}
+          onCancel={() => setEditing(null)}
+          onSave={(draft) => persist(() => repo.updateCampaignOffer(campaign.id, { content: { ...stored, booking: draft } }))}
+        />
+      )
+    }
+    if (s === 'ai') {
+      return (
+        <AgentSelectEditor
+          agents={agents}
+          seedAgentId={campaign.agentId}
+          saving={saving}
+          onCancel={() => setEditing(null)}
+          onSave={(agentId) => persist(() => repo.updateCampaignOffer(campaign.id, { agentId }))}
+        />
+      )
+    }
+    return null
+  }
+
   const handleApprove = async () => {
     await repo.approveCampaign(campaign.id)
     reload()
     setToast('OfferCampaign approved and entering launch queue')
     window.setTimeout(() => navigate(`/admin/campaigns/${campaign.id}`), 2000)
   }
+
+  const sectionMeta = (s: ReviewSection) => REVIEW_SECTIONS.find((x) => x.id === s)
+  const editingLabel = editing ? sectionMeta(editing)?.label : undefined
 
   return (
     <PageTransition>
@@ -96,11 +233,17 @@ export default function AdminCampaignReview() {
             </div>
           </div>
           <div className="hidden gap-2 sm:flex">
-            <Button variant="ghost" onClick={() => setModal('changes')}>Request Changes</Button>
-            <Button variant="secondary" onClick={() => setModal('reject')}>Reject</Button>
-            <Button variant="primary" onClick={() => setModal('approve')}>Approve</Button>
+            <Button variant="ghost" disabled={editing !== null} onClick={() => setModal('changes')}>Request Changes</Button>
+            <Button variant="secondary" disabled={editing !== null} onClick={() => setModal('reject')}>Reject</Button>
+            <Button variant="primary" disabled={editing !== null} onClick={() => setModal('approve')}>Approve</Button>
           </div>
         </div>
+
+        {editing && (
+          <div className="rounded-md border border-warning/25 bg-warning-soft/10 px-3 py-2 text-xs text-fg-secondary">
+            Editing {editingLabel} — save or discard your changes before approving the campaign.
+          </div>
+        )}
 
         <div className="grid gap-6 lg:grid-cols-[200px_minmax(0,1fr)_280px]">
           <nav className="space-y-0.5">
@@ -108,7 +251,10 @@ export default function AdminCampaignReview() {
               <button
                 key={s.id}
                 type="button"
-                onClick={() => setSection(s.id)}
+                onClick={() => {
+                  setEditing(null)
+                  setSection(s.id)
+                }}
                 className={cn(
                   'interactive w-full rounded-md px-3 py-2 text-left text-sm',
                   section === s.id ? 'bg-white/[0.06] font-medium text-fg' : 'text-fg-muted hover:text-fg-secondary',
@@ -120,31 +266,52 @@ export default function AdminCampaignReview() {
           </nav>
 
           <div className="min-w-0">
-            <AnimatePresence mode="wait">
-              <motion.div key={section} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0, transition: tweenBase }} exit={{ opacity: 0, transition: { duration: 0.12 } }}>
-                <div className="surface min-h-[320px] p-5 sm:p-6">
-                  <h2 className="mb-4 text-lg font-semibold text-fg">{REVIEW_SECTIONS.find((s) => s.id === section)?.label}</h2>
-                  <ReviewSectionContent section={section} campaign={campaign} review={review} />
+            {/* Keyed on the section so switching re-runs the fade-in; edit toggles
+                stay inside the same keyed node (no exit-animation dependency). */}
+            <motion.div key={section} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0, transition: tweenBase }}>
+              <div className="surface min-h-[320px] p-5 sm:p-6">
+                <div className="mb-4 flex items-center justify-between gap-3">
+                  <h2 className="text-lg font-semibold text-fg">{sectionMeta(section)?.label}</h2>
+                  {editing === null && EDITABLE_SECTIONS.has(section) && (
+                    <Button variant="ghost" size="sm" leadingIcon={<Pencil className="size-3.5" />} onClick={() => openEditor(section)}>
+                      Edit
+                    </Button>
+                  )}
                 </div>
-              </motion.div>
-            </AnimatePresence>
+                {editing === section ? (
+                  renderEditor(section)
+                ) : (
+                  <ReviewSectionContent section={section} campaign={campaign} review={review} agent={agent} />
+                )}
+              </div>
+            </motion.div>
           </div>
 
           <div className="hidden lg:block">
-            <ApprovalPanel
-              review={review}
-              sticky
-              onApprove={() => setModal('approve')}
-              onReject={() => setModal('reject')}
-              onRequestChanges={() => setModal('changes')}
-            />
+            {editing === null ? (
+              <ApprovalPanel
+                review={review}
+                sticky
+                onApprove={() => setModal('approve')}
+                onReject={() => setModal('reject')}
+                onRequestChanges={() => setModal('changes')}
+              />
+            ) : (
+              <aside className="surface flex flex-col gap-3 p-5 lg:sticky lg:top-24 lg:self-start">
+                <div className="label-caps">Editing {editingLabel}</div>
+                <p className="text-xs text-fg-muted">Save or discard your changes before approving the campaign.</p>
+                <div className="flex flex-col gap-2 border-t border-line pt-4">
+                  <Button variant="secondary" onClick={() => setEditing(null)}>Discard edits</Button>
+                </div>
+              </aside>
+            )}
           </div>
         </div>
 
         <div className="fixed inset-x-0 bottom-0 z-40 flex gap-2 border-t border-line bg-bg/95 p-3 backdrop-blur-sm lg:hidden">
-          <Button variant="ghost" className="flex-1" onClick={() => setModal('changes')}>Changes</Button>
-          <Button variant="secondary" className="flex-1" onClick={() => setModal('reject')}>Reject</Button>
-          <Button variant="primary" className="flex-1" onClick={() => setModal('approve')}>Approve</Button>
+          <Button variant="ghost" className="flex-1" disabled={editing !== null} onClick={() => setModal('changes')}>Changes</Button>
+          <Button variant="secondary" className="flex-1" disabled={editing !== null} onClick={() => setModal('reject')}>Reject</Button>
+          <Button variant="primary" className="flex-1" disabled={editing !== null} onClick={() => setModal('approve')}>Approve</Button>
         </div>
 
         <ApproveCampaignModal
