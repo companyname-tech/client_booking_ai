@@ -841,6 +841,9 @@ export const httpRepository = {
   async updateLeadNote(leadId: string, noteId: string, text: string): Promise<void> {
     await apiClient.patch(`/leads/${leadId}/notes/${noteId}`, { text })
   },
+  async updateLead(id: string, patch: Partial<Lead>): Promise<Lead> {
+    return apiClient.put<Lead>(`/leads/${id}`, patch)
+  },
   async deleteLeadNote(leadId: string, noteId: string): Promise<void> {
     await apiClient.delete(`/leads/${leadId}/notes/${noteId}`)
   },
@@ -858,6 +861,23 @@ export const httpRepository = {
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: body.toString(),
     })
+  },
+  async verifyLead(leadId: string): Promise<void> {
+    await apiClient.post(`/leads/${leadId}/verify`)
+  },
+  async manualVerifyLead(leadId: string, action: 'approve' | 'reject'): Promise<void> {
+    await apiClient.post(`/leads/${leadId}/verify/manual`, { action })
+  },
+  async deleteLead(leadId: string): Promise<void> {
+    await apiClient.delete(`/leads/${leadId}`)
+  },
+  async dialLead(leadId: string, offerId = ''): Promise<{ callSid: string; to: string }> {
+    const res = await apiClient.post<{ call_sid?: string; to?: string }>('/twilio/dial', {
+      lead_id: leadId,
+      offer_id: offerId,
+      agent_id: '',
+    })
+    return { callSid: res?.call_sid ?? '', to: res?.to ?? '' }
   },
 
   // --- Lead selection (client-side UI state) -----------------------------------

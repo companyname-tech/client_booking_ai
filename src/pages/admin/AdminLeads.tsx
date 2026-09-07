@@ -1,7 +1,8 @@
-import { useMemo, useState } from 'react'
-import { ArrowDown, ArrowUp, ArrowUpDown, Search } from 'lucide-react'
+import { useMemo, useState, type ChangeEvent } from 'react'
+import { ArrowDown, ArrowUp, ArrowUpDown, Check, Phone, RefreshCw, Search, Trash2, X } from 'lucide-react'
 import { repo } from '@/api/repository'
 import type { AdminLead } from '@/types/admin'
+import type { LeadStatus } from '@/types'
 import { useAsyncData } from '@/hooks/useAsyncData'
 import { PageTransition } from '@/components/motion/PageTransition'
 import { PageContainer, PageHeader, WorkspaceEyebrow } from '@/components/layout/PageHeader'
@@ -22,6 +23,19 @@ type SortDir = 'asc' | 'desc'
 
 const PAGE_SIZE = 15
 
+const LEAD_STATUSES: LeadStatus[] = [
+  'new',
+  'queued',
+  'contacted',
+  'interested',
+  'details_requested',
+  'booked',
+  'not_interested',
+  'no_response',
+  'do_not_contact',
+  'unreachable',
+]
+
 function outcomeLabel(raw: string): string {
   if (!raw) return ''
   return raw
@@ -29,6 +43,94 @@ function outcomeLabel(raw: string): string {
     .filter(Boolean)
     .map((w) => w[0] + w.slice(1).toLowerCase())
     .join(' ')
+}
+
+type LeadAction = 'analyze' | 'dial' | 'approve' | 'reject' | 'delete'
+
+/** Map a raw BE verification_status to the lead-group primary-action tier. */
+function leadGroup(verificationStatus: string): 'new' | 'rejected' | 'approved' {
+  const v = (verificationStatus || '').toUpperCase()
+  if (v === 'REJECTED' || v === 'FAILED') return 'rejected'
+  if (v === 'APPROVED' || v === 'VERIFIED') return 'approved'
+  return 'new'
+}
+
+function LeadRowActions({
+  lead,
+  busy,
+  onAction,
+  onView,
+}: {
+  lead: AdminLead
+  busy: boolean
+  onAction: (lead: AdminLead, action: LeadAction) => void
+  onView: () => void
+}) {
+  const group = leadGroup(lead.verificationStatus)
+  return (
+    <div className="flex flex-wrap items-center gap-1">
+      {group === 'new' && (
+        <Button
+          variant="secondary"
+          size="sm"
+          leadingIcon={<Search className="size-3" />}
+          disabled={busy}
+          onClick={() => onAction(lead, 'analyze')}
+        >
+          Analyze
+        </Button>
+      )}
+      {group === 'rejected' && (
+        <Button
+          variant="secondary"
+          size="sm"
+          leadingIcon={<RefreshCw className="size-3" />}
+          disabled={busy}
+          onClick={() => onAction(lead, 'analyze')}
+        >
+          Recheck
+        </Button>
+      )}
+      {group === 'approved' && (
+        <Button variant="primary" size="sm" disabled={busy} onClick={() => onAction(lead, 'dial')}>
+          Call
+        </Button>
+      )}
+      {lead.phone && (
+        <Button
+          variant="ghost"
+          size="sm"
+          leadingIcon={<Phone className="size-3" />}
+          disabled={busy}
+          title="Dial this lead's phone (Twilio outbound)"
+          onClick={() => onAction(lead, 'dial')}
+        >
+          Dial
+        </Button>
+      )}
+      <Button variant="ghost" size="icon-sm" disabled={busy} title="Approve" onClick={() => onAction(lead, 'approve')}>
+        <Check className="size-3.5" />
+      </Button>
+      {group === 'rejected' ? (
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          disabled={busy}
+          title="Delete permanently"
+          onClick={() => onAction(lead, 'delete')}
+        >
+          <Trash2 className="size-3.5" />
+        </Button>
+      ) : (
+        <Button variant="ghost" size="icon-sm" disabled={busy} title="Reject" onClick={() => onAction(lead, 'reject')}>
+          <X className="size-3.5" />
+        </Button>
+      )}
+      <Button variant="ghost" size="sm" onClick={onView}>
+        View
+      </Button>
+    </div>
+  )
 }
 
 function SortHeader({
@@ -72,12 +174,124 @@ function LeadExtraDrawer({
   lead,
   open,
   onClose,
+  onUpdate,
 }: {
   lead: AdminLead | null
   open: boolean
   onClose: () => void
+  onUpdate?: () => void
 }) {
+  const [editing, setEditing] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [form, setForm] = useState({
+    name: '',
+    title: '',
+    company: '',
+    industry: '',
+    email: '',
+    phone: '',
+    website: '',
+    status: 'new' as LeadStatus,
+  })
+
   if (!lead) return null
+
+  const startEdit = () => {
+    setForm({
+      name: lead.name,
+      title: lead.title ?? '',
+      company: lead.company ?? '',
+      industry: lead.industry ?? '',
+      email: lead.email ?? '',
+      phone: lead.phone ?? '',
+      website: lead.website ?? '',
+      status: lead.status,
+    })
+    setEditing(true)
+  }
+
+  const set = (k: 'name' | 'title' | 'company' | 'industry' | 'email' | 'phone' | 'website') =>
+    (e: ChangeEvent<HTMLInputElement>) => setForm((f) => ({ ...f, [k]: e.target.value }))
+
+  const save = async () => {
+    setSaving(true)
+    try {
+      await repo.updateLead(lead.id, form)
+      onUpdate?.()
+      setEditing(false)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const inputClass =
+    'mt-1 w-full rounded-md border border-border bg-card px-3 py-2 text-sm text-fg placeholder:text-fg-muted focus:outline-none focus:ring-1 focus:ring-accent'
+
+  if (editing) {
+    return (
+      <DetailDrawer
+        open={open}
+        onClose={onClose}
+        title={lead.name}
+        subtitle={lead.company ? `${lead.title} · ${lead.company}` : lead.title || undefined}
+      >
+        <form
+          className="space-y-3 p-4"
+          onSubmit={(e) => {
+            e.preventDefault()
+            void save()
+          }}
+        >
+          <div>
+            <span className="text-xs text-fg-muted">Name</span>
+            <input className={inputClass} value={form.name} onChange={set('name')} />
+          </div>
+          <div>
+            <span className="text-xs text-fg-muted">Job title</span>
+            <input className={inputClass} value={form.title} onChange={set('title')} />
+          </div>
+          <div>
+            <span className="text-xs text-fg-muted">Company</span>
+            <input className={inputClass} value={form.company} onChange={set('company')} />
+          </div>
+          <div>
+            <span className="text-xs text-fg-muted">Industry</span>
+            <input className={inputClass} value={form.industry} onChange={set('industry')} />
+          </div>
+          <div>
+            <span className="text-xs text-fg-muted">Email</span>
+            <input className={inputClass} value={form.email} onChange={set('email')} />
+          </div>
+          <div>
+            <span className="text-xs text-fg-muted">Phone</span>
+            <input className={inputClass} value={form.phone} onChange={set('phone')} />
+          </div>
+          <div>
+            <span className="text-xs text-fg-muted">Website</span>
+            <input className={inputClass} value={form.website} onChange={set('website')} />
+          </div>
+          <div>
+            <span className="text-xs text-fg-muted">Status</span>
+            <select
+              className={inputClass}
+              value={form.status}
+              onChange={(e) => setForm((f) => ({ ...f, status: e.target.value as LeadStatus }))}
+            >
+              {LEAD_STATUSES.map((s) => (
+                <option key={s} value={s}>
+                  {s.replaceAll('_', ' ')}
+                </option>
+              ))}
+            </select>
+          </div>
+          <Button type="submit" variant="primary" size="sm" className="w-full" disabled={saving}>
+            {saving ? 'Saving…' : 'Save changes'}
+          </Button>
+        </form>
+      </DetailDrawer>
+    )
+  }
+
   return (
     <DetailDrawer
       open={open}
@@ -86,6 +300,11 @@ function LeadExtraDrawer({
       subtitle={lead.company ? `${lead.title} · ${lead.company}` : lead.title || undefined}
     >
       <div className="space-y-5">
+        <div className="flex justify-end">
+          <Button variant="secondary" size="sm" onClick={startEdit}>
+            Edit
+          </Button>
+        </div>
         <div className="flex flex-wrap items-center gap-2">
           <LeadStatusBadge status={lead.status} />
           {lead.verificationStatus && lead.verificationStatus !== 'UNVERIFIED' && (
@@ -169,6 +388,38 @@ export default function AdminLeads() {
   const [sort, setSort] = useState<{ key: SortKey; dir: SortDir }>({ key: 'lastActivity', dir: 'desc' })
   const [page, setPage] = useState(1)
   const [preview, setPreview] = useState<AdminLead | null>(null)
+  const [actionMsg, setActionMsg] = useState('')
+  const [busyId, setBusyId] = useState<string | null>(null)
+
+  const runAction = async (lead: AdminLead, action: LeadAction) => {
+    setBusyId(lead.id)
+    setActionMsg('')
+    try {
+      if (action === 'analyze') {
+        await repo.verifyLead(lead.id)
+        setActionMsg(`Verification queued for ${lead.name}`)
+      } else if (action === 'dial') {
+        if (!window.confirm(`Call ${lead.name} at ${lead.phone || 'their number'}? This places a real outbound call.`)) return
+        const r = await repo.dialLead(lead.id, lead.offerCampaignId)
+        setActionMsg(`Calling ${r.to || 'lead'}${r.callSid ? ` — SID ${r.callSid}` : ''}`)
+      } else if (action === 'approve') {
+        await repo.manualVerifyLead(lead.id, 'approve')
+        setActionMsg(`Approved ${lead.name}`)
+      } else if (action === 'reject') {
+        await repo.manualVerifyLead(lead.id, 'reject')
+        setActionMsg(`Rejected ${lead.name}`)
+      } else if (action === 'delete') {
+        if (!window.confirm(`Delete "${lead.name}"? This permanently removes the lead record.`)) return
+        await repo.deleteLead(lead.id)
+        setActionMsg(`Deleted ${lead.name}`)
+      }
+      reload()
+    } catch (e) {
+      setActionMsg(`${action} failed: ${e instanceof Error ? e.message : String(e)}`)
+    } finally {
+      setBusyId(null)
+    }
+  }
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
@@ -242,6 +493,11 @@ export default function AdminLeads() {
         ) : (
           <>
             <p className="text-xs text-fg-muted">{filtered.length} leads</p>
+            {actionMsg && (
+              <p aria-live="polite" className="text-xs text-fg-secondary">
+                {actionMsg}
+              </p>
+            )}
 
             <div className="surface overflow-hidden">
               <div className="hidden overflow-x-auto md:block">
@@ -290,9 +546,7 @@ export default function AdminLeads() {
                           {lead.lastContactAt ? formatRelativeCompact(lead.lastContactAt, NOW) : '—'}
                         </td>
                         <td className="px-4 py-3">
-                          <Button variant="ghost" size="sm" onClick={() => setPreview(lead)}>
-                            View
-                          </Button>
+                          <LeadRowActions lead={lead} busy={busyId === lead.id} onAction={runAction} onView={() => setPreview(lead)} />
                         </td>
                       </tr>
                     ))}
@@ -302,29 +556,33 @@ export default function AdminLeads() {
 
               <div className="space-y-2 p-3 md:hidden">
                 {slice.map((lead) => (
-                  <button
-                    key={lead.id}
-                    type="button"
-                    onClick={() => setPreview(lead)}
-                    className="interactive w-full rounded-md border border-line bg-surface-1 p-3 text-left"
-                  >
-                    <div className="flex items-start justify-between">
-                      <div className="min-w-0">
-                        <div className="truncate font-medium text-fg">{lead.name}</div>
-                        <div className="truncate text-xs text-fg-muted">
-                          {lead.campaignName ? `${lead.campaignName} · ` : ''}
-                          {lead.company || lead.title || '—'}
+                  <div key={lead.id} className="rounded-md border border-line bg-surface-1 p-3">
+                    <button
+                      type="button"
+                      onClick={() => setPreview(lead)}
+                      className="interactive w-full text-left"
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="min-w-0">
+                          <div className="truncate font-medium text-fg">{lead.name}</div>
+                          <div className="truncate text-xs text-fg-muted">
+                            {lead.campaignName ? `${lead.campaignName} · ` : ''}
+                            {lead.company || lead.title || '—'}
+                          </div>
                         </div>
+                        <LeadScore score={lead.score} compact />
                       </div>
-                      <LeadScore score={lead.score} compact />
+                      <div className="mt-2 flex flex-wrap items-center gap-2">
+                        <LeadStatusBadge status={lead.status} size="sm" />
+                        <span className="text-2xs text-fg-muted">
+                          {lead.lastContactAt ? formatRelativeCompact(lead.lastContactAt, NOW) : 'No activity'}
+                        </span>
+                      </div>
+                    </button>
+                    <div className="mt-2 border-t border-line pt-2">
+                      <LeadRowActions lead={lead} busy={busyId === lead.id} onAction={runAction} onView={() => setPreview(lead)} />
                     </div>
-                    <div className="mt-2 flex flex-wrap items-center gap-2">
-                      <LeadStatusBadge status={lead.status} size="sm" />
-                      <span className="text-2xs text-fg-muted">
-                        {lead.lastContactAt ? formatRelativeCompact(lead.lastContactAt, NOW) : 'No activity'}
-                      </span>
-                    </div>
-                  </button>
+                  </div>
                 ))}
               </div>
 
@@ -345,7 +603,7 @@ export default function AdminLeads() {
           </>
         )}
 
-        <LeadExtraDrawer lead={preview} open={!!preview} onClose={() => setPreview(null)} />
+        <LeadExtraDrawer lead={preview} open={!!preview} onClose={() => setPreview(null)} onUpdate={reload} />
       </PageContainer>
     </PageTransition>
   )
