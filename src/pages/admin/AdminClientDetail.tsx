@@ -157,6 +157,45 @@ export default function AdminClientDetail() {
             />
           )}
         </Reveal>
+
+        {/* Engagement & billing — the deal structure for this client */}
+        <Reveal>
+          <div className="surface p-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h2 className="text-sm font-semibold text-fg">Engagement &amp; billing</h2>
+              <Button variant="ghost" size="sm" leadingIcon={<Pencil />} onClick={() => setEditing(true)}>
+                Edit
+              </Button>
+            </div>
+            {client.engagementType ? (
+              <dl className="mt-3 grid gap-3 text-sm sm:grid-cols-3">
+                <div>
+                  <dt className="text-2xs text-fg-muted">Type</dt>
+                  <dd className="mt-0.5 font-medium text-fg">
+                    {client.engagementType === 'specific' ? 'Specific — one-time' : 'Retainer — weekly'}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-2xs text-fg-muted">
+                    {client.engagementType === 'specific' ? 'Amount' : 'Weekly amount'}
+                  </dt>
+                  <dd className="mt-0.5 font-medium tabular text-fg">
+                    ${(client.engagementType === 'specific' ? client.specificAmount : client.retainerWeeklyAmount) ?? 0}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-2xs text-fg-muted">Starts</dt>
+                  <dd className="mt-0.5 font-medium tabular text-fg">{client.engagementStart || '—'}</dd>
+                </div>
+              </dl>
+            ) : (
+              <p className="mt-1 text-sm text-fg-muted">
+                No engagement set yet — choose a one-time <span className="text-fg">specific</span> deal or a{' '}
+                <span className="text-fg">weekly retainer</span>.
+              </p>
+            )}
+          </div>
+        </Reveal>
         <Link to="/admin/clients" className="text-xs text-accent">← All clients</Link>
       </PageContainer>
       <ClientFormModal

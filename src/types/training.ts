@@ -41,6 +41,8 @@ export interface TrainingSessionResult {
   summary: string
   strengths: string[]
   gaps: string[]
+  /** Behavior/flow changes the evaluator suggests (vs the operator's process). */
+  flowSuggestions?: string[]
   suggestionsAdded: number
   deterministic: boolean
   /** Email/phone/meeting captured from the talk (empty when nothing found). */

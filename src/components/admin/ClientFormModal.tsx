@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { FieldGroup, FieldLabel, FieldError } from '@/components/ui/Field'
 import { Select } from '@/components/ui/Select'
+import { DateField } from '@/components/ui/fields/DateField'
 import type { Client } from '@/types'
 
 interface ClientFormModalProps {
@@ -22,6 +23,10 @@ export function ClientFormModal({ open, onClose, client, onSaved }: ClientFormMo
   const [contactName, setContactName] = useState('')
   const [email, setEmail] = useState('')
   const [role, setRole] = useState('')
+  const [engagementType, setEngagementType] = useState<'specific' | 'retainer_weekly' | ''>('')
+  const [specificAmount, setSpecificAmount] = useState('')
+  const [retainerWeeklyAmount, setRetainerWeeklyAmount] = useState('')
+  const [engagementStart, setEngagementStart] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
@@ -34,6 +39,10 @@ export function ClientFormModal({ open, onClose, client, onSaved }: ClientFormMo
     setContactName(client?.primaryContact?.name ?? '')
     setEmail(client?.primaryContact?.email ?? '')
     setRole(client?.primaryContact?.role ?? '')
+    setEngagementType(client?.engagementType ?? '')
+    setSpecificAmount(client?.specificAmount ? String(client.specificAmount) : '')
+    setRetainerWeeklyAmount(client?.retainerWeeklyAmount ? String(client.retainerWeeklyAmount) : '')
+    setEngagementStart(client?.engagementStart ?? '')
     setError('')
   }, [open, client])
 
@@ -50,6 +59,10 @@ export function ClientFormModal({ open, onClose, client, onSaved }: ClientFormMo
         slug: slug.trim(),
         industry: industry.trim(),
         plan,
+        engagementType,
+        specificAmount: engagementType === 'specific' ? Number(specificAmount) || 0 : 0,
+        retainerWeeklyAmount: engagementType === 'retainer_weekly' ? Number(retainerWeeklyAmount) || 0 : 0,
+        engagementStart,
         primaryContact: {
           name: contactName.trim(),
           email: email.trim(),
@@ -113,6 +126,63 @@ export function ClientFormModal({ open, onClose, client, onSaved }: ClientFormMo
           <FieldLabel htmlFor="cf-industry">Industry</FieldLabel>
           <Input id="cf-industry" value={industry} onChange={(e) => setIndustry(e.target.value)} placeholder="Finance" />
         </FieldGroup>
+        <div className="rounded-md border border-line p-3">
+          <p className="text-sm font-medium text-fg">Engagement &amp; billing</p>
+          <div className="mt-3 grid grid-cols-2 gap-3">
+            <FieldGroup>
+              <FieldLabel htmlFor="cf-engagement-type">Type</FieldLabel>
+              <Select
+                id="cf-engagement-type"
+                value={engagementType}
+                onChange={(v) => setEngagementType(v as typeof engagementType)}
+                ariaLabel="Engagement type"
+                options={[
+                  { value: '', label: 'Not set' },
+                  { value: 'specific', label: 'Specific — one-time' },
+                  { value: 'retainer_weekly', label: 'Retainer — weekly' },
+                ]}
+                className="w-full"
+              />
+            </FieldGroup>
+            <FieldGroup>
+              {engagementType === 'retainer_weekly' ? (
+                <>
+                  <FieldLabel htmlFor="cf-retainer-amount">Weekly amount ($)</FieldLabel>
+                  <Input
+                    id="cf-retainer-amount"
+                    type="number"
+                    min="0"
+                    value={retainerWeeklyAmount}
+                    onChange={(e) => setRetainerWeeklyAmount(e.target.value)}
+                    placeholder="e.g. 1200"
+                  />
+                </>
+              ) : (
+                <>
+                  <FieldLabel htmlFor="cf-specific-amount">Amount ($)</FieldLabel>
+                  <Input
+                    id="cf-specific-amount"
+                    type="number"
+                    min="0"
+                    value={specificAmount}
+                    onChange={(e) => setSpecificAmount(e.target.value)}
+                    placeholder="e.g. 3000"
+                  />
+                </>
+              )}
+            </FieldGroup>
+          </div>
+          <FieldGroup className="mt-3">
+            <FieldLabel htmlFor="cf-engagement-start">Starts on</FieldLabel>
+            <DateField
+              id="cf-engagement-start"
+              value={engagementStart}
+              onChange={setEngagementStart}
+              className="w-full"
+              placeholder="Pick the start date…"
+            />
+          </FieldGroup>
+        </div>
         <div className="border-t border-line pt-4">
           <p className="mb-3 text-sm font-medium text-fg">Primary contact</p>
           <div className="grid grid-cols-2 gap-3">

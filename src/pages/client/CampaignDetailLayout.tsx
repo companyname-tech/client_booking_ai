@@ -9,6 +9,8 @@ import { LoadingState } from '@/components/ui/LoadingState'
 import { ErrorState } from '@/components/ui/ErrorState'
 import { spring } from '@/lib/motion'
 import { cn } from '@/lib/utils'
+import { useAuth } from '@/contexts/AuthContext'
+import { canUse } from '@/lib/permissions'
 import { PageTransition } from '@/components/motion/PageTransition'
 import { Reveal } from '@/components/motion/Reveal'
 import { PageContainer, WorkspaceEyebrow } from '@/components/layout/PageHeader'
@@ -22,13 +24,15 @@ interface Tab {
   to: string
   label: string
   end?: boolean
+  /** Console family required to see/open the tab (catalog-mapped tabs only). */
+  perm?: string
 }
 
 const clientTabs: Tab[] = [
   { to: '', label: 'Overview', end: true },
-  { to: 'leads', label: 'Leads' },
-  { to: 'calls', label: 'Calls & Recordings' },
-  { to: 'activity', label: 'Activity' },
+  { to: 'leads', label: 'Leads', perm: 'leads.view' },
+  { to: 'calls', label: 'Calls & Recordings', perm: 'calls.view' },
+  { to: 'activity', label: 'Activity', perm: 'activity.view' },
   { to: 'analytics', label: 'Analytics' },
   { to: 'integrations', label: 'Integrations' },
 ]
@@ -36,6 +40,7 @@ const clientTabs: Tab[] = [
 export default function CampaignDetailLayout({ zone = 'client' }: { zone?: 'client' | 'admin' }) {
   const { id } = useParams()
   const navigate = useNavigate()
+  const { session } = useAuth()
   const [statusOverride, setStatusOverride] = useState<CampaignStatus | null>(null)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [deleteBusy, setDeleteBusy] = useState(false)
@@ -108,7 +113,9 @@ export default function CampaignDetailLayout({ zone = 'client' }: { zone?: 'clie
 
   // Both zones show the same data tabs — the lifecycle stage is conveyed by the
   // CampaignLifecycle progress in Overview, not by separate lifecycle tab pages.
-  const visibleTabs = clientTabs
+  // Catalog-mapped tabs (leads/calls/activity) hide for restricted sessions
+  // that lack the family grant; workspace-internal tabs stay for everyone.
+  const visibleTabs = clientTabs.filter((t) => canUse(session, t.perm))
 
   return (
     <PageTransition>

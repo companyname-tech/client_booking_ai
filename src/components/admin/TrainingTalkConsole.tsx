@@ -4,6 +4,7 @@ import {
   CalendarClock,
   CircleCheck,
   ContactRound,
+  Lightbulb,
   Loader2,
   Mail,
   Mic,
@@ -12,10 +13,14 @@ import {
   Radio,
   Square,
   TriangleAlert,
+  Workflow,
 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Select } from '@/components/ui/Select'
+import { Textarea } from '@/components/ui/Textarea'
 import { repo } from '@/api/repository'
+import { mediaUrl } from '@/api/adapters/http/repository'
+import { RecordingAudio } from '@/components/recordings/RecordingAudio'
 import type {
   TrainingCampaignRow,
   TrainingExtractedData,
@@ -144,6 +149,12 @@ export function TrainingTalkConsole({
   const [lines, setLines] = useState<TranscriptLine[]>([])
   const [error, setError] = useState('')
   const [result, setResult] = useState<TrainingSessionResult | null>(null)
+  const [recordingSrc, setRecordingSrc] = useState('')
+  const [flowSuggestions, setFlowSuggestions] = useState<string[]>([])
+  const [processText, setProcessText] = useState('')
+  const [processLoaded, setProcessLoaded] = useState(false)
+  const [processBusy, setProcessBusy] = useState(false)
+  const [processNotice, setProcessNotice] = useState('')
   const liveRef = useRef<LiveSession>(freshSession())
   const turnsRef = useRef<TrainingTalkTurn[]>([])
   const conversationIdRef = useRef('')
@@ -160,6 +171,47 @@ export function TrainingTalkConsole({
       })
     }
   }, [campaignId, campaign, agents])
+
+  // Load the operator's saved conversation-process description for the picked
+  // campaign (the intended flow the findings compare against).
+  useEffect(() => {
+    setProcessText('')
+    setProcessLoaded(false)
+    setProcessNotice('')
+    if (!campaignId) return
+    let active = true
+    repo
+      .getConversationProcess(campaignId)
+      .then((r) => {
+        if (active) {
+          setProcessText(r.process ?? '')
+          setProcessLoaded(true)
+        }
+      })
+      .catch(() => {
+        if (active) {
+          setProcessText('')
+          setProcessLoaded(true)
+        }
+      })
+    return () => {
+      active = false
+    }
+  }, [campaignId])
+
+  const saveProcess = async () => {
+    if (!campaignId) return
+    setProcessBusy(true)
+    setProcessNotice('')
+    try {
+      await repo.saveConversationProcess(campaignId, processText)
+      setProcessNotice('Saved — the findings will compare the talk against this flow.')
+    } catch (e) {
+      setProcessNotice(`Save failed: ${e instanceof Error ? e.message : String(e)}`)
+    } finally {
+      setProcessBusy(false)
+    }
+  }
 
   // Cleanup audio + sockets when the component unmounts mid-talk.
   useEffect(() => {
@@ -269,6 +321,8 @@ export function TrainingTalkConsole({
     }
     setError('')
     setResult(null)
+    setRecordingSrc('')
+    setFlowSuggestions([])
     setLines([])
     turnsRef.current = []
     setPhase('connecting')
@@ -282,7 +336,8 @@ export function TrainingTalkConsole({
     const wsUrl =
       `${proto}://${window.location.host}/api/agent/rtc` +
       `?mode=training&offer_id=${encodeURIComponent(campaign.offerCampaignId)}` +
-      `&agent_id=${encodeURIComponent(agentId)}&auto_hangup=0`
+      `&agent_id=${encodeURIComponent(agentId)}&auto_hangup=0` +
+      `&conversation_id=${encodeURIComponent(conversationIdRef.current)}`
     const ws = new WebSocket(wsUrl)
     ws.binaryType = 'arraybuffer'
     liveRef.current.ws = ws
@@ -398,6 +453,12 @@ export function TrainingTalkConsole({
         // A retry of an already-recorded conversation — show the stored result.
       }
       setResult(reply.trainingSession)
+      setRecordingSrc(
+        mediaUrl((reply.trainingSession as TrainingSessionResult & { recording_url?: string }).recording_url),
+      )
+      setFlowSuggestions(
+        (reply.trainingSession as TrainingSessionResult & { flow_suggestions?: string[] }).flow_suggestions ?? [],
+      )
       setPhase('done')
       setStatusText(
         `Training talk recorded — the campaign's training state was updated from this real conversation.`,
@@ -473,6 +534,36 @@ export function TrainingTalkConsole({
         </label>
       </div>
 
+      {/* Conversation process — the operator's intended logic */}
+      {campaignId ? (
+        <div className="mt-4 rounded-md border border-line bg-surface-1 p-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <div className="flex items-center gap-1.5 text-sm font-semibold text-fg">
+                <Workflow className="size-4 text-accent" />
+                Conversation process
+              </div>
+              <p className="mt-0.5 text-xs text-fg-muted">
+                Describe how the agent should run this conversation — the findings section will suggest behavior
+                and flow changes against it.
+              </p>
+            </div>
+            <Button size="sm" variant="primary" disabled={processBusy || !processLoaded} onClick={() => void saveProcess()}>
+              {processBusy ? 'Saving…' : 'Save flow'}
+            </Button>
+          </div>
+          <Textarea
+            value={processText}
+            onChange={(e) => setProcessText(e.target.value)}
+            rows={3}
+            disabled={processBusy}
+            placeholder="e.g. 1) Greet and confirm the person 2) Ask how they are 3) Introduce the offer in 1-2 lines 4) Ask how they bring clients today 5) Offer the AI outreach 6) Ask for email + confirm it once 7) Agree a day and time 8) End politely…"
+            className="mt-2 w-full text-xs"
+          />
+          {processNotice ? <p className="mt-1 text-2xs text-fg-secondary">{processNotice}</p> : null}
+        </div>
+      ) : null}
+
       {/* Live controls */}
       <div className="mt-4 flex flex-wrap items-center gap-3">
         {phase === 'idle' || phase === 'done' || phase === 'error' ? (
@@ -521,6 +612,20 @@ export function TrainingTalkConsole({
         </p>
       ) : null}
 
+      {/* The saved recording of this talk (playback with progress) */}
+      {recordingSrc ? (
+        <div className="mt-4 rounded-md border border-line bg-surface-1 p-3">
+          <div className="mb-2 flex items-center gap-1.5 text-2xs font-semibold uppercase tracking-wide text-fg-muted">
+            <AudioLines className="size-3.5 text-accent" />
+            Recording — this talk was saved
+          </div>
+          <RecordingAudio src={recordingSrc} rowKey={recordingSrc} className="max-w-xl" />
+          <p className="mt-1.5 text-2xs text-fg-faint">
+            Operator on the left channel, agent on the right — replay to perfect the performance.
+          </p>
+        </div>
+      ) : null}
+
       {/* Server-graded result of the REAL conversation */}
       {result ? (
         <div className="mt-4 rounded-md border border-line bg-surface-1 p-4">
@@ -567,6 +672,22 @@ export function TrainingTalkConsole({
                   {g}
                 </span>
               ))}
+            </div>
+          ) : null}
+          {flowSuggestions.length > 0 ? (
+            <div className="mt-3 rounded-md border border-warning/20 bg-warning/5 p-3">
+              <div className="flex items-center gap-1.5 text-2xs font-semibold uppercase tracking-wide text-warning">
+                <Lightbulb className="size-3.5" />
+                Suggested behavior &amp; flow changes
+              </div>
+              <ul className="mt-2 space-y-1.5">
+                {flowSuggestions.map((f) => (
+                  <li key={f} className="flex items-start gap-1.5 text-xs text-fg-secondary">
+                    <span className="mt-1.5 size-1 shrink-0 rounded-full bg-warning" />
+                    {f}
+                  </li>
+                ))}
+              </ul>
             </div>
           ) : null}
           {renderExtracted(result.extracted) ? (

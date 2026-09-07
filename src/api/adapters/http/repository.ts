@@ -840,6 +840,17 @@ export const httpRepository = {
       { seconds },
     )
   },
+  async getConversationProcess(offerId: string): Promise<{ offerCampaignId: string; process: string }> {
+    return apiClient.get<{ offerCampaignId: string; process: string }>(
+      `/admin/campaigns/${offerId}/training/process`,
+    )
+  },
+  async saveConversationProcess(offerId: string, process: string): Promise<{ offerCampaignId: string; process: string }> {
+    return apiClient.put<{ offerCampaignId: string; process: string }>(
+      `/admin/campaigns/${offerId}/training/process`,
+      { process },
+    )
+  },
   async updateCampaign(id: string, patch: Partial<OfferCampaign>): Promise<OfferCampaign> {
     const wire = await apiClient.put<OfferWire>(`/offers/${id}`, {
       title: patch.offerName ?? patch.name,
@@ -1241,7 +1252,7 @@ async function bulkDelete(path: string, ids: string[]): Promise<{ affected: numb
  * Raw relative paths must never reach an <audio> element (they would resolve
  * against the FE origin root and 404).
  */
-function mediaUrl(path: string | undefined): string {
+export function mediaUrl(path: string | undefined): string {
   if (!path) return ''
   return path.startsWith('http') ? path : `${env.apiBaseUrl}${path}`
 }
@@ -1267,7 +1278,7 @@ function toUser(w: AdminUserWire): AdminUser {
     email: w.email,
     role,
     clientIds: w.client_ids ?? [],
-    permissions: role === 'admin' ? (w.permissions ?? []) : [],
+    permissions: role === 'super_admin' ? [] : (w.permissions ?? []),
     active: w.active ?? true,
     tokenVersion: w.token_version ?? 0,
     createdAt: w.created_at ?? '',

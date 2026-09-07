@@ -24,6 +24,12 @@ export interface Client {
   slug: string
   industry: string
   plan: 'starter' | 'growth' | 'enterprise'
+  /** specific = one-time engagement · retainer_weekly = weekly retainer. */
+  engagementType?: 'specific' | 'retainer_weekly' | ''
+  specificAmount?: number
+  retainerWeeklyAmount?: number
+  /** DD/MM/YYYY engagement start (calendar picker). */
+  engagementStart?: string
   createdAt: string
   primaryContact: PrimaryContact
 }
@@ -39,6 +45,10 @@ export interface ClientInput {
   slug?: string
   industry?: string
   plan?: Client['plan']
+  engagementType?: Client['engagementType']
+  specificAmount?: number
+  retainerWeeklyAmount?: number
+  engagementStart?: string
   primaryContact?: Partial<PrimaryContact>
 }
 
