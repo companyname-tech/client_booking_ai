@@ -1,4 +1,19 @@
-import type { CampaignStatus, Tone } from '@/types'
+import type { CampaignStatus, Lead, Tone } from '@/types'
+
+/**
+ * A lead as shown on the Super Admin → Leads screen: the client-shared `Lead`
+ * shape plus the campaign it belongs to and the extra fields the admin
+ * inventory surfaces (outcome, meeting, verification, notes, created).
+ */
+export interface AdminLead extends Lead {
+  campaignName: string
+  lastCallOutcome: string
+  lastCallSummary: string
+  meetingLink: string
+  notes: string
+  verificationStatus: string
+  createdAt: string
+}
 
 export type AdminWorkflowStatus =
   | 'submitted'

@@ -14,7 +14,7 @@ import { apiClient } from './client'
 import { ensureEntryIds, stripEntryIds } from '@/lib/pronunciation'
 import type { Agent, OfferCampaign, User, Client, Lead, Call, Booking, CallDetail, LeadDetail, Recording, CampaignFunnelStage, CampaignInsight, CampaignAttentionAlert, CampaignPerformancePoint, CampaignHealthSnapshot, CampaignHealth, Analytics, Activity, AttentionItem, Integration, LeadStatus } from '@/types'
 import type { AppSettings, ConnectionsState, ConnectionKey, TwilioNumber, FishVoice, SettingsSchemaField, AgentModels, AgentVoiceOption, AgentRole } from '@/types/settings'
-import type { AdminCampaignMeta, CampaignReviewData, AuditEvent, AdminNotification, TrainingStatus } from '@/types/admin'
+import type { AdminCampaignMeta, AdminLead, CampaignReviewData, AuditEvent, AdminNotification, TrainingStatus } from '@/types/admin'
 import type { CampaignAnalyticsData, AnalyticsFilters } from '@/types/campaignAnalytics'
 import type { EnrichedLead, LeadHubMetrics, LeadHubStats, LeadSegment, LeadHubFilters, LeadIntelligenceProfile, LeadNote } from '@/types/leadIntelligence'
 import type { AICommandOverview, AIActivityEvent, AIConversationSummary, AIConversationDetail, AIObjection, AILearningPattern, AIImprovement, AIFollowUp, AIEscalation, AIBookingConversation, AIInsight, AIHealthSnapshot, AIAgentProfile, AIPerformanceSnapshot, AICommandFilters } from '@/types/aiCommand'
@@ -241,6 +241,19 @@ function toLead(wire: LeadWire): Lead {
   }
 }
 
+function toAdminLead(wire: LeadWire): AdminLead {
+  return {
+    ...toLead(wire),
+    campaignName: wire.offer ?? '',
+    lastCallOutcome: wire.last_call_outcome ?? '',
+    lastCallSummary: wire.last_call_summary ?? '',
+    meetingLink: wire.meeting_link ?? '',
+    notes: wire.notes ?? '',
+    verificationStatus: wire.verification_status ?? 'UNVERIFIED',
+    createdAt: wire.created_at ?? '',
+  }
+}
+
 function toCampaign(wire: OfferWire): OfferCampaign {
   const leadCount = wire.lead_count ?? 0
   const status = leadCount > 0 ? 'active' : 'draft'
@@ -334,6 +347,13 @@ export const httpRepository = {
   async getLead(_offerCampaignId: string, leadId: string): Promise<LeadDetail> {
     const lead = await apiClient.get<LeadWire>(`/leads/${leadId}`)
     return { ...toLead(lead), timeline: [], analysis: { summary: lead.last_call_summary ?? '', signals: [], confidence: 0 } }
+  },
+  async getAdminLeads(): Promise<AdminLead[]> {
+    // Platform-wide inventory: all leads across every campaign. The backend
+    // caps /leads at limit=100 by default, so request the same high ceiling
+    // the CSV export uses to mean "all" (see backend route_export_leads_csv).
+    const res = await apiClient.get<{ leads?: LeadWire[]; total?: number }>('/leads?limit=10000')
+    return (res?.leads ?? []).map(toAdminLead)
   },
   async getCalls(_offerCampaignId?: string): Promise<Call[]> {
     const calls = await apiClient.get<CallWire[]>('/calls')

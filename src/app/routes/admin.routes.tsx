@@ -3,8 +3,6 @@ import { Navigate } from 'react-router-dom'
 import {
   Activity,
   Disc3,
-  Phone,
-  Users,
 } from 'lucide-react'
 import PlaceholderPage from '@/pages/PlaceholderPage'
 import { campaignSubRoutes } from './client.routes'
@@ -16,6 +14,8 @@ const AdminAITraining = lazy(() => import('@/pages/admin/AdminAITraining'))
 const AdminClients = lazy(() => import('@/pages/admin/AdminClients'))
 const AdminClientDetail = lazy(() => import('@/pages/admin/AdminClientDetail'))
 const AdminSettings = lazy(() => import('@/pages/admin/AdminSettings'))
+const AdminLeads = lazy(() => import('@/pages/admin/AdminLeads'))
+const AdminCalls = lazy(() => import('@/pages/admin/AdminCalls'))
 const CampaignDetailLayout = lazy(() => import('@/pages/client/CampaignDetailLayout'))
 const CampaignDetailOverview = lazy(() => import('@/pages/client/CampaignDetailOverview'))
 
@@ -37,8 +37,8 @@ export const adminRoutes = [
   { path: 'clients', element: <AdminClients /> },
   { path: 'clients/:id', element: <AdminClientDetail /> },
   { path: 'activity', element: <PlaceholderPage zone="admin" title="Activity" description="Platform-wide audit trail and system events." icon={<Activity />} /> },
-  { path: 'leads', element: <PlaceholderPage zone="admin" title="Leads" description="Platform-wide lead inventory." icon={<Users />} /> },
-  { path: 'calls', element: <PlaceholderPage zone="admin" title="Calls" description="Monitor live and historical calls across agents." icon={<Phone />} /> },
+  { path: 'leads', element: <AdminLeads /> },
+  { path: 'calls', element: <AdminCalls /> },
   { path: 'recordings', element: <PlaceholderPage zone="admin" title="Recordings" description="QA review of call recordings." icon={<Disc3 />} /> },
   { path: 'settings', element: <AdminSettings /> },
 ]
