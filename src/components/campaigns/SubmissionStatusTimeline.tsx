@@ -5,10 +5,9 @@ import { cn } from '@/lib/utils'
 
 const STEPS = [
   { id: 'onboarding', label: 'Onboarding', short: 'Onboard' },
-  { id: 'ai_training', label: 'AI Training', short: 'AI' },
   { id: 'legal_review', label: 'Legal Review', short: 'Legal' },
   { id: 'approval', label: 'Approval', short: 'Approve' },
-  { id: 'launch', label: 'OfferCampaign Launch', short: 'Launch' },
+  { id: 'launch', label: 'Campaign Launch', short: 'Launch' },
 ] as const
 
 export interface SubmissionStatusTimelineProps {
@@ -23,7 +22,7 @@ export const SubmissionStatusTimeline = memo(function SubmissionStatusTimeline({
   className,
 }: SubmissionStatusTimelineProps) {
   const reduce = useReducedMotion()
-  const currentIndex = 1 // AI Training pending after onboarding complete
+  const currentIndex = 2 // Approval pending after onboarding and legal review
 
   return (
     <div className={cn('relative min-w-0 max-w-full', className)} role="group" aria-label="Submission status">

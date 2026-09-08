@@ -18,19 +18,25 @@ import { AIAgentStatus } from '@/components/campaign/AIAgentStatus'
 import { NeedsAttention } from '@/components/campaign/NeedsAttention'
 import { CampaignInsights } from '@/components/campaign/CampaignInsights'
 import { CampaignLifecycle } from '@/components/campaign/CampaignLifecycle'
+import { CampaignApprovalActions } from '@/components/campaign/CampaignApprovalActions'
 import { useCampaignContext } from './campaignContext'
 
 export default function CampaignDetailOverview() {
-  const { campaign, zone, effectiveStatus } = useCampaignContext()
+  const { campaign, zone, effectiveStatus, refreshCampaign, updateCampaignBudget } = useCampaignContext()
   const awaitingApproval = effectiveStatus === 'awaiting_approval'
   const [period, setPeriod] = useState<7 | 14 | 30>(14)
   const [localBudget, setLocalBudget] = useState<OfferCampaign['budget'] | null>(null)
+  const handleBudgetUpdated = (next: OfferCampaign['budget']) => {
+    setLocalBudget(next)
+    updateCampaignBudget(next)
+  }
   const displayBudget = localBudget ?? campaign.budget
 
   // Offer editing (most important element) — saved value is held locally.
   const [editingOffer, setEditingOffer] = useState(false)
   const [offerDraft, setOfferDraft] = useState('')
   const [savingOffer, setSavingOffer] = useState(false)
+  const [offerError, setOfferError] = useState('')
   const [localOffer, setLocalOffer] = useState<string | null>(null)
   const displayOffer = localOffer ?? campaign.valueProposition ?? ''
 
@@ -58,10 +64,16 @@ export default function CampaignDetailOverview() {
   }
   const saveOffer = async () => {
     setSavingOffer(true)
+    setOfferError('')
     try {
       await repo.updateCampaignOffer(campaign.id, { pitch: offerDraft.trim() })
       setLocalOffer(offerDraft.trim())
       setEditingOffer(false)
+      // Re-sync the layout-held campaign so the saved pitch survives tab
+      // switches (the layout only refetches on mount/[id,zone]).
+      void refreshCampaign()
+    } catch (e) {
+      setOfferError(e instanceof Error ? e.message : 'Failed to save offer')
     } finally {
       setSavingOffer(false)
     }
@@ -74,7 +86,7 @@ export default function CampaignDetailOverview() {
   const [agents, activityRaw, health, funnel, insights, alerts] = data
   const agent = campaign.agentId ? agents.find((a) => a.id === campaign.agentId) : undefined
   const activity = activityRaw.filter((a) => !a.offerCampaignId || a.offerCampaignId === campaign.id)
-  const stageProgress = campaign.stage === 'ai_training' && agent ? agent.trainingProgress : (campaign.progress % 17) * 5
+  const stageProgress = (campaign.progress % 17) * 5
   const isOperational = ['active', 'paused', 'completed'].includes(effectiveStatus) || campaign.metrics.leadsFound > 100
   const basePath = `/${zone}/campaigns/${campaign.id}`
 
@@ -86,8 +98,14 @@ export default function CampaignDetailOverview() {
             <CampaignStatus status="awaiting_approval" size="md" />
             <h2 className="mt-3 text-lg font-semibold text-fg">Your campaign is under review</h2>
             <p className="mt-1 max-w-xl text-sm text-fg-secondary">
-              Our team is reviewing your submission and preparing your AI agent. You&apos;ll be notified when it&apos;s approved.
+              Our team is reviewing your submission. You&apos;ll be notified when it&apos;s approved.
             </p>
+            <CampaignApprovalActions
+              campaign={campaign}
+              zone={zone}
+              onUpdated={refreshCampaign}
+              embedded
+            />
           </Card>
         </Reveal>
       )}
@@ -113,6 +131,11 @@ export default function CampaignDetailOverview() {
                   placeholder="Write the offer pitch the AI uses when contacting leads — what you sell, for whom, and the value."
                   className="bg-surface-1"
                 />
+                {offerError && (
+                  <p role="alert" aria-live="polite" className="text-xs text-danger">
+                    {offerError}
+                  </p>
+                )}
                 <div className="flex justify-end gap-2">
                   <Button variant="ghost" size="sm" onClick={() => setEditingOffer(false)} disabled={savingOffer}>
                     Cancel
@@ -151,6 +174,12 @@ export default function CampaignDetailOverview() {
         <CampaignLifecycle campaign={{ ...campaign, status: effectiveStatus }} stageProgress={stageProgress} />
       </Reveal>
 
+      {!awaitingApproval && (
+        <Reveal>
+          <CampaignApprovalActions campaign={campaign} zone={zone} onUpdated={refreshCampaign} />
+        </Reveal>
+      )}
+
       {isOperational && !awaitingApproval ? (
         <>
           <Reveal>
@@ -159,7 +188,7 @@ export default function CampaignDetailOverview() {
               budget={displayBudget}
               campaignId={campaign.id}
               zone={zone}
-              onBudgetUpdated={setLocalBudget}
+              onBudgetUpdated={handleBudgetUpdated}
             />
           </Reveal>
 

@@ -23,15 +23,19 @@ function AgentTelegramRow({
   const [saving, setSaving] = useState(false)
   const [disconnecting, setDisconnecting] = useState(false)
   const [confirmDisconnect, setConfirmDisconnect] = useState(false)
+  const [error, setError] = useState('')
 
   async function handleSave() {
     const trimmed = token.trim()
     if (!trimmed) return
     setSaving(true)
+    setError('')
     try {
       const updated = await repo.saveAgentTelegramConnection(agent.id, trimmed)
       onUpdated(updated)
       setToken('')
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to save connection')
     } finally {
       setSaving(false)
     }
@@ -39,10 +43,13 @@ function AgentTelegramRow({
 
   async function handleDisconnect() {
     setDisconnecting(true)
+    setError('')
     try {
       const updated = await repo.disconnectAgentTelegram(agent.id)
       onUpdated(updated)
       setToken('')
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to disconnect')
     } finally {
       setDisconnecting(false)
       setConfirmDisconnect(false)
@@ -92,6 +99,11 @@ function AgentTelegramRow({
               {disconnecting ? 'Disconnecting…' : 'Disconnect'}
             </Button>
           </div>
+          {error && (
+            <p role="alert" aria-live="polite" className="text-xs text-danger">
+              {error}
+            </p>
+          )}
         </div>
       </div>
 

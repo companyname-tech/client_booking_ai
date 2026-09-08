@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Plus, Sparkles, Upload } from 'lucide-react'
 import { repo } from '@/data/repository'
 import { useCampaignContext } from './campaignContext'
@@ -13,6 +13,7 @@ import { AddLeadModal } from '@/components/leads/AddLeadModal'
 import { GenerateLeadsModal } from '@/components/leads/hub/GenerateLeadsModal'
 import { ImportLeadsModal } from '@/components/leads/hub/ImportLeadsModal'
 import type { Lead } from '@/types'
+import { cn } from '@/lib/utils'
 import { Reveal } from '@/components/motion/Reveal'
 
 export default function CampaignLeads() {
@@ -23,14 +24,21 @@ export default function CampaignLeads() {
     () => [{ id: campaign.id, name: campaign.name, leadGen: campaign.leadGen }],
     [campaign.id, campaign.name, campaign.leadGen],
   )
-  const { filters, setFilters, filtered } = useLeadFilters(leads ?? [])
+  const { filters, setFilters, filtered, counts } = useLeadFilters(leads ?? [])
   const [page, setPage] = useState(1)
   const [selected, setSelected] = useState<Lead | null>(null)
   const [editMode, setEditMode] = useState(false)
   const [addOpen, setAddOpen] = useState(false)
   const [genOpen, setGenOpen] = useState(false)
   const [importOpen, setImportOpen] = useState(false)
-  const [dialMsg, setDialMsg] = useState('')
+  const [toast, setToast] = useState<{ text: string; isError?: boolean } | null>(null)
+  const [busyLeadId, setBusyLeadId] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!toast) return
+    const t = window.setTimeout(() => setToast(null), 5000)
+    return () => clearTimeout(t)
+  }, [toast])
 
   const openView = (lead: Lead) => {
     setEditMode(false)
@@ -44,14 +52,38 @@ export default function CampaignLeads() {
     setSelected(null)
     setEditMode(false)
   }
+  // A drawer save must refresh the list too — otherwise the edited lead stays
+  // stale in the table until the page reloads (same pattern as add/generate/import).
+  const handleDrawerUpdated = () => {
+    closeDetail()
+    refreshLeads()
+  }
+
+  const verifyLead = async (lead: Lead, action: 'approve' | 'reject') => {
+    setBusyLeadId(lead.id)
+    setToast({ text: action === 'approve' ? `Approved ${lead.name}` : `Rejected ${lead.name}` })
+    try {
+      await repo.manualVerifyLead(lead.id, action)
+      refreshLeads()
+    } catch (e) {
+      setToast({
+        text: e instanceof Error ? `${action} failed: ${e.message}` : `${action} failed`,
+        isError: true,
+      })
+    } finally {
+      setBusyLeadId(null)
+    }
+  }
 
   const dialLead = async (lead: Lead) => {
-    setDialMsg('')
+    setToast({ text: `Calling to ${lead.name}` })
     try {
-      const r = await repo.dialLead(lead.id, campaign.id)
-      setDialMsg(`Calling ${lead.name}${r.callSid ? ` — call ${r.callSid}` : ''}…`)
+      await repo.dialLead(lead.id, campaign.id)
     } catch (e) {
-      setDialMsg(e instanceof Error ? `Call failed: ${e.message}` : 'Call failed')
+      setToast({
+        text: e instanceof Error ? `Call failed: ${e.message}` : 'Call failed',
+        isError: true,
+      })
     }
   }
   const { data: detail } = useAsyncData(
@@ -80,24 +112,43 @@ export default function CampaignLeads() {
             </Button>
           </div>
         </div>
-        <LeadFilters value={filters} onChange={(v) => { setFilters(v); setPage(1) }} total={campaign.metrics.leadsFound} />
+        <LeadFilters
+          value={filters}
+          onChange={(v) => { setFilters(v); setPage(1) }}
+          total={filtered.length}
+          counts={counts}
+        />
       </div>
       <LeadsTable
         leads={filtered}
         onSelect={openView}
         onDial={dialLead}
         onEdit={openEdit}
+        onApprove={(lead) => void verifyLead(lead, 'approve')}
+        onReject={(lead) => void verifyLead(lead, 'reject')}
+        busyLeadId={busyLeadId}
         page={page}
         onPageChange={setPage}
       />
-      {dialMsg && <p aria-live="polite" className="text-xs text-fg-secondary">{dialMsg}</p>}
     </Reveal>
   )
 
   return (
     <>
+      {toast && (
+        <div
+          role="status"
+          aria-live="polite"
+          className={cn(
+            'fixed bottom-5 right-5 z-50 rounded-md border bg-surface-2 px-4 py-2.5 text-sm shadow-2',
+            toast.isError ? 'border-danger text-danger' : 'border-accent/40 text-fg',
+          )}
+        >
+          {toast.text}
+        </div>
+      )}
       {body}
-      <LeadDrawer lead={detail ?? null} open={!!selected} onClose={closeDetail} startInEdit={editMode} onUpdate={closeDetail} />
+      <LeadDrawer lead={detail ?? null} open={!!selected} onClose={closeDetail} startInEdit={editMode} onUpdate={handleDrawerUpdated} />
       <AddLeadModal
         open={addOpen}
         onClose={() => setAddOpen(false)}

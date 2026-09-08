@@ -1,6 +1,6 @@
 import type { Lead } from '@/types'
 import { NOW } from '@/data/time'
-import { Pencil, Phone } from 'lucide-react'
+import { Check, Pencil, Phone, X } from 'lucide-react'
 import { formatRelativeCompact, initials } from '@/lib/utils'
 import { LeadScore } from './LeadScore'
 import { LeadStatusBadge } from './LeadStatusBadge'
@@ -13,6 +13,9 @@ export function LeadsTable({
   onSelect,
   onDial,
   onEdit,
+  onApprove,
+  onReject,
+  busyLeadId,
   page,
   pageSize = 15,
   onPageChange,
@@ -23,6 +26,9 @@ export function LeadsTable({
   onDial?: (lead: Lead) => void
   /** When provided, renders an Edit action on each row. */
   onEdit?: (lead: Lead) => void
+  onApprove?: (lead: Lead) => void
+  onReject?: (lead: Lead) => void
+  busyLeadId?: string | null
   page: number
   pageSize?: number
   onPageChange: (p: number) => void
@@ -73,6 +79,28 @@ export function LeadsTable({
                 </td>
                 <td className="px-5 py-3">
                   <div className="flex items-center justify-end gap-1">
+                    {onApprove && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        leadingIcon={<Check className="size-3.5" />}
+                        disabled={busyLeadId === lead.id}
+                        onClick={() => onApprove(lead)}
+                      >
+                        Approve
+                      </Button>
+                    )}
+                    {onReject && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        leadingIcon={<X className="size-3.5" />}
+                        disabled={busyLeadId === lead.id}
+                        onClick={() => onReject(lead)}
+                      >
+                        Reject
+                      </Button>
+                    )}
                     {onDial && (
                       <Button variant="secondary" size="sm" leadingIcon={<Phone className="size-3.5" />} onClick={() => onDial(lead)}>
                         Call
@@ -112,7 +140,29 @@ export function LeadsTable({
                 <span className="text-2xs text-fg-muted">{lead.location}</span>
               </div>
             </button>
-            <div className="flex items-center justify-end gap-1 border-t border-line px-2 py-1.5">
+            <div className="flex flex-wrap items-center justify-end gap-1 border-t border-line px-2 py-1.5">
+              {onApprove && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  leadingIcon={<Check className="size-3.5" />}
+                  disabled={busyLeadId === lead.id}
+                  onClick={() => onApprove(lead)}
+                >
+                  Approve
+                </Button>
+              )}
+              {onReject && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  leadingIcon={<X className="size-3.5" />}
+                  disabled={busyLeadId === lead.id}
+                  onClick={() => onReject(lead)}
+                >
+                  Reject
+                </Button>
+              )}
               {onDial && (
                 <Button variant="secondary" size="sm" leadingIcon={<Phone className="size-3.5" />} onClick={() => onDial(lead)}>
                   Call

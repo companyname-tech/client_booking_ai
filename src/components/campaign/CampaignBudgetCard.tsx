@@ -1,7 +1,9 @@
 import { useState } from 'react'
-import { Plus, Wallet } from 'lucide-react'
+import { Pencil, Plus, Wallet } from 'lucide-react'
 import type { Budget, ClientBudgetSummary, OfferCampaign } from '@/types'
 import { repo } from '@/data/repository'
+import { useAuth } from '@/contexts/AuthContext'
+import { canUse } from '@/lib/permissions'
 import { formatCurrency, formatPercent } from '@/lib/utils'
 import { AnimatedNumber } from '@/components/motion/AnimatedNumber'
 import { ProgressBar } from '@/components/ui/ProgressBar'
@@ -9,6 +11,7 @@ import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
 import { Input } from '@/components/ui/Input'
 import { FieldLabel, FieldError } from '@/components/ui/Field'
+import { BudgetEditor, type BudgetDraft } from '@/components/admin/CampaignSectionEditors'
 
 export function CampaignBudgetCard({
   campaignId,
@@ -21,13 +24,18 @@ export function CampaignBudgetCard({
   zone: 'client' | 'admin'
   onBudgetUpdated?: (next: OfferCampaign['budget']) => void
 }) {
+  const { session } = useAuth()
+  const canEditBudget = canUse(session, 'campaigns.edit')
   const budgetPct = budget.total > 0 ? (budget.used / budget.total) * 100 : 0
   const [open, setOpen] = useState(false)
+  const [editOpen, setEditOpen] = useState(false)
   const [summary, setSummary] = useState<ClientBudgetSummary | null>(null)
   const [amount, setAmount] = useState('')
   const [loadingSummary, setLoadingSummary] = useState(false)
   const [busy, setBusy] = useState(false)
+  const [editBusy, setEditBusy] = useState(false)
   const [error, setError] = useState('')
+  const [editError, setEditError] = useState('')
 
   const parsedAmount = Number(amount.replace(/[^0-9.]/g, ''))
   const validAmount = Number.isFinite(parsedAmount) && parsedAmount > 0
@@ -82,6 +90,26 @@ export function CampaignBudgetCard({
     }
   }
 
+  const closeEdit = () => {
+    if (editBusy) return
+    setEditOpen(false)
+    setEditError('')
+  }
+
+  const saveBudget = async (draft: BudgetDraft) => {
+    setEditBusy(true)
+    setEditError('')
+    try {
+      const updated = await repo.updateCampaignBudget(campaignId, draft)
+      onBudgetUpdated?.(updated.budget)
+      closeEdit()
+    } catch (e) {
+      setEditError(e instanceof Error ? e.message : 'Failed to update campaign budget')
+    } finally {
+      setEditBusy(false)
+    }
+  }
+
   const topUp = async () => {
     if (!validAmount) {
       setError('Enter an amount greater than zero.')
@@ -112,6 +140,11 @@ export function CampaignBudgetCard({
             <span className="text-sm tabular text-fg-secondary">
               {budget.total > 0 ? formatPercent(budgetPct, 1) : '0%'} used
             </span>
+            {canEditBudget && (
+              <Button variant="ghost" size="sm" leadingIcon={<Pencil />} onClick={() => setEditOpen(true)}>
+                Edit budget
+              </Button>
+            )}
             {zone === 'client' && (
               <Button variant="secondary" size="sm" leadingIcon={<Plus />} onClick={() => void openModal()}>
                 Add budget
@@ -126,6 +159,33 @@ export function CampaignBudgetCard({
           </p>
         )}
       </div>
+
+      <Modal
+        open={editOpen}
+        onClose={closeEdit}
+        size="md"
+        fitContent
+        title="Edit campaign budget"
+        description="Set the total cap, daily spend, and expected duration for this campaign."
+      >
+        <div className="px-5 py-4">
+          <BudgetEditor
+            seed={{
+              total: budget.total,
+              daily: budget.daily,
+              expectedDurationDays: budget.expectedDurationDays,
+            }}
+            saving={editBusy}
+            onCancel={closeEdit}
+            onSave={(draft) => void saveBudget(draft)}
+          />
+          {editError && (
+            <div className="mt-3">
+              <FieldError>{editError}</FieldError>
+            </div>
+          )}
+        </div>
+      </Modal>
 
       <Modal
         open={open}

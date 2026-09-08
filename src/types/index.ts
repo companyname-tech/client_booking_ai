@@ -86,13 +86,12 @@ export interface CampaignBudgetAddResult extends ClientBudgetSummary {
 /** Lifecycle stage of a campaign — drives the ProgressTimeline. */
 export const CAMPAIGN_STAGES = [
   'onboarding',
-  'ai_training',
   'legal_review',
   'approved',
   'calling',
   'optimization',
 ] as const
-export type CampaignStage = (typeof CAMPAIGN_STAGES)[number]
+export type CampaignStage = (typeof CAMPAIGN_STAGES)[number] | 'ai_training'
 
 /** Operational status shown in lists and badges. */
 export type CampaignStatus =
@@ -154,6 +153,8 @@ export interface OfferCampaign {
   source?: string
   /** Lead-generation form defaults for this campaign (BE gen_* fields). */
   leadGen?: CampaignLeadGenDefaults
+  /** User-initiated pause persisted on the offer (BE `user_paused`, default false). */
+  userPaused?: boolean
   status: CampaignStatus
   stage: CampaignStage
   targetAudience: string
@@ -198,6 +199,8 @@ export interface Lead {
   phone?: string
   status: LeadStatus
   score: number // 0..100 AI fit score
+  /** Raw BE verification_status when present (approve/reject pipeline). */
+  verificationStatus?: string
   lastContactAt?: string
 }
 

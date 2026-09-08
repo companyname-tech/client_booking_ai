@@ -21,9 +21,15 @@ export function isBudgetStopped(campaign: Pick<OfferCampaign, 'status' | 'stage'
 
 /** Apply the budget stop rule on top of the stored lifecycle status. */
 export function resolveOperationalStatus(
-  campaign: Pick<OfferCampaign, 'status' | 'stage' | 'source' | 'budget'>,
+  campaign: Pick<OfferCampaign, 'status' | 'stage' | 'source' | 'budget' | 'userPaused'>,
   userOverride?: CampaignStatus | null,
 ): CampaignStatus {
+  // A stored user pause (persisted via PUT /offers/{id} {user_paused:true}) is
+  // an override that survives refresh: it wins over the lifecycle status AND
+  // over the budget-stop rule (a paused campaign with a configured budget must
+  // still read as paused). Resuming clears the flag and lets the budget-stop
+  // rule force paused again when there is no runnable budget.
+  if (campaign.userPaused) return 'paused'
   if (isBudgetStopped(campaign)) return 'paused'
   const base = userOverride ?? campaign.status
   if (base === 'awaiting_agent_assignment') return campaign.status

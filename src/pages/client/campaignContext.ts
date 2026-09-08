@@ -7,6 +7,8 @@ export interface CampaignOutletContext {
   effectiveStatus: CampaignStatus
   pauseCampaign: () => void
   resumeCampaign: () => void
+  refreshCampaign: () => Promise<void>
+  updateCampaignBudget: (budget: OfferCampaign['budget']) => void
 }
 
 export function useCampaignContext() {

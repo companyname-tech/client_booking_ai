@@ -67,8 +67,8 @@ export default function AdminClientSettings() {
           }
           description={
             isNew
-              ? 'Create a client workspace, set an initial wallet balance, and configure engagement details.'
-              : 'All workspace, engagement, contact, and wallet settings for this client.'
+              ? 'Create a client workspace, set budget, and configure busy days on the calendar.'
+              : 'Workspace, contact, busy-day calendar, and wallet settings for this client.'
           }
           actions={
             <Link to={isNew ? '/admin/clients' : `/admin/clients/${client!.id}`}>

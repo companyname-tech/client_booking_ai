@@ -21,6 +21,7 @@ import { CampaignHeader } from '@/components/campaign/CampaignHeader'
 import { CopyableName } from '@/components/ui/CopyableName'
 import { CampaignAgentAssign } from '@/components/campaign/CampaignAgentAssign'
 import { hasRunnableBudget, isBudgetStopped, isTrainingCampaign, resolveCampaignDisplayStatus } from '@/lib/campaignOperationalStatus'
+import { mergeCampaignWithMeta } from '@/lib/campaignAdminMeta'
 
 interface Tab {
   to: string
@@ -50,6 +51,8 @@ export default function CampaignDetailLayout({ zone = 'client' }: { zone?: 'clie
   const [deleteBusy, setDeleteBusy] = useState(false)
   const [deleteError, setDeleteError] = useState('')
   const [copyNotice, setCopyNotice] = useState('')
+  const [pauseBusy, setPauseBusy] = useState(false)
+  const [pauseError, setPauseError] = useState('')
 
   const { data, loading, error, reload } = useAsyncData(
     () =>
@@ -57,10 +60,14 @@ export default function CampaignDetailLayout({ zone = 'client' }: { zone?: 'clie
         id ? repo.getCampaign(id) : Promise.resolve(undefined),
         repo.getCurrentClient(),
         repo.getAgents(),
+        zone === 'admin' && id ? repo.getAdminMeta(id).catch(() => undefined) : Promise.resolve(undefined),
       ]),
-    [id],
+    [id, zone],
   )
-  const campaign = campaignOverride ?? data?.[0]
+  const rawCampaign = campaignOverride ?? data?.[0]
+  const adminMeta = data?.[3]
+  const campaign =
+    rawCampaign && adminMeta ? mergeCampaignWithMeta(rawCampaign, adminMeta) : rawCampaign
   const client = data?.[1]
   const agents = data?.[2] ?? []
 
@@ -110,10 +117,55 @@ export default function CampaignDetailLayout({ zone = 'client' }: { zone?: 'clie
   const assignedAgent = campaign.agentId ? agents.find((a) => a.id === campaign.agentId) : undefined
   const budgetStopped = isBudgetStopped(campaign)
   const canAssignAgent = zone === 'admin' && canUse(session, 'campaigns.edit')
-  const pauseCampaign = () => setStatusOverride('paused')
+  const persistPause = async (paused: boolean) => {
+    setPauseBusy(true)
+    setPauseError('')
+    try {
+      await repo.setCampaignPaused(campaign.id, paused)
+      // Mirror the persisted value onto the local campaign so the UI reflects
+      // it immediately (the stored flag also survives refresh via toCampaign).
+      const current = campaignOverride ?? data?.[0] ?? campaign
+      setCampaignOverride({ ...current, userPaused: paused })
+      setStatusOverride(paused ? 'paused' : 'active')
+    } catch (e) {
+      setPauseError(e instanceof Error ? e.message : `Failed to ${paused ? 'pause' : 'resume'} campaign`)
+    } finally {
+      setPauseBusy(false)
+    }
+  }
+  const pauseCampaign = () => {
+    if (pauseBusy) return
+    void persistPause(true)
+  }
   const resumeCampaign = () => {
+    // Budget stop rule: no runnable budget (non-training) means it stays paused.
     if (!isTrainingCampaign(campaign) && !hasRunnableBudget(campaign.budget)) return
-    setStatusOverride('active')
+    if (pauseBusy) return
+    void persistPause(false)
+  }
+
+  const updateCampaignBudget = (budget: OfferCampaign['budget']) => {
+    const base = campaignOverride ?? data?.[0]
+    if (!base) return
+    setCampaignOverride({ ...base, budget })
+    if (hasRunnableBudget(budget)) {
+      setStatusOverride('active')
+    }
+  }
+
+  const refreshCampaign = async () => {
+    if (!id) return
+    setStatusOverride(null)
+    const [fresh, , , meta] = await Promise.all([
+      repo.getCampaign(id),
+      repo.getCurrentClient(),
+      repo.getAgents(),
+      zone === 'admin' ? repo.getAdminMeta(id).catch(() => undefined) : Promise.resolve(undefined),
+    ])
+    if (fresh) {
+      setCampaignOverride(meta ? mergeCampaignWithMeta(fresh, meta) : fresh)
+    }
+    reload({ silent: true })
   }
 
   const runDelete = async () => {
@@ -184,6 +236,11 @@ export default function CampaignDetailLayout({ zone = 'client' }: { zone?: 'clie
                   onDelete={() => setConfirmDelete(true)}
                   zone={zone}
                 />
+                {pauseError && (
+                  <p role="alert" aria-live="polite" className="mt-1.5 text-xs text-danger">
+                    {pauseError}
+                  </p>
+                )}
               </div>
           </div>
           <CampaignAgentAssign
@@ -225,7 +282,7 @@ export default function CampaignDetailLayout({ zone = 'client' }: { zone?: 'clie
           </nav>
         </Reveal>
 
-        <Outlet context={{ campaign, zone, effectiveStatus, pauseCampaign, resumeCampaign }} />
+        <Outlet context={{ campaign, zone, effectiveStatus, pauseCampaign, resumeCampaign, refreshCampaign, updateCampaignBudget }} />
       </PageContainer>
       <ConfirmDialog
         open={confirmDelete}

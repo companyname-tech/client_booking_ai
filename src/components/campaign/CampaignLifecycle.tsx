@@ -2,7 +2,6 @@ import type { OfferCampaign } from '@/types'
 import { campaignStatusMeta, campaignStageMeta } from '@/lib/status'
 import { ProgressTimeline } from '@/components/campaigns/ProgressTimeline'
 import { SubmissionStatusTimeline } from '@/components/campaigns/SubmissionStatusTimeline'
-import { ProgressBar } from '@/components/ui/ProgressBar'
 import { StatusDot } from '@/components/ui/StatusDot'
 
 export function CampaignLifecycle({
@@ -15,10 +14,9 @@ export function CampaignLifecycle({
   const status = campaign.status
   const meta = campaignStatusMeta[status]
   const awaitingApproval = status === 'awaiting_approval'
-  const inSetup = ['draft', 'preparing', 'awaiting_ai_training', 'ai_training', 'legal_review', 'awaiting_approval'].includes(status)
+  const inSetup = ['draft', 'preparing', 'legal_review', 'awaiting_approval'].includes(status)
 
   const statusMessage: Record<string, string> = {
-    ai_training: 'Your campaign is being prepared by our team.',
     awaiting_approval: 'Your campaign is under review before launch.',
     active: 'AI is actively contacting and booking leads.',
     paused: 'OfferCampaign is paused. Resume when ready.',
@@ -36,16 +34,7 @@ export function CampaignLifecycle({
         {campaign.valueProposition && (
           <p className="mt-3 max-w-2xl text-sm font-medium leading-relaxed text-fg">{campaign.valueProposition}</p>
         )}
-        <p className="mt-2 text-sm text-fg-secondary">{statusMessage[status] ?? campaignStageMeta[campaign.stage].description}</p>
-        {status === 'ai_training' && (
-          <div className="mt-4 max-w-xs">
-            <div className="flex justify-between text-xs text-fg-muted">
-              <span>Progress</span>
-              <span className="tabular">{stageProgress ?? campaign.progress}%</span>
-            </div>
-            <ProgressBar value={stageProgress ?? campaign.progress} tone="violet" size="sm" className="mt-2" label="Training progress" />
-          </div>
-        )}
+        <p className="mt-2 text-sm text-fg-secondary">{statusMessage[status] ?? campaignStageMeta[campaign.stage === 'ai_training' ? 'legal_review' : campaign.stage].description}</p>
         <div className="mt-6">
           {awaitingApproval ? (
             <SubmissionStatusTimeline />

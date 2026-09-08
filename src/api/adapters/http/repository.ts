@@ -73,6 +73,7 @@ interface OfferWire {
   meetings_booked?: number
   conversion_rate?: number
   agent_name?: string
+  user_paused?: boolean
   campaign_content?: ReviewCampaignContent
 }
 
@@ -354,6 +355,7 @@ function toLead(wire: LeadWire): Lead {
     phone: wire.phone_numbers?.[0]?.phone_number ?? wire.contact_phone ?? '',
     status: toLeadStatus(wire.lead_status),
     score: Math.round((wire.relevance_score ?? 0) * 100),
+    verificationStatus: wire.verification_status ?? undefined,
     lastContactAt: wire.last_call_at || wire.created_at || undefined,
   }
 }
@@ -429,6 +431,7 @@ function toCampaign(wire: OfferWire): OfferCampaign {
     },
     progress: Math.min(100, Math.round((wire.conversion_rate ?? 0) * 100)),
     agentId: wire.agent_id ?? '',
+    userPaused: wire.user_paused === true,
     createdAt: wire.created_at ?? '',
     lastActivityAt: wire.created_at ?? '',
     history: [],
@@ -436,6 +439,37 @@ function toCampaign(wire: OfferWire): OfferCampaign {
   return {
     ...draft,
     status: resolveOperationalStatus(draft),
+  }
+}
+
+/**
+ * Map the onboarding draft onto the `campaign_content` subdoc the admin
+ * review edits (targeting/budget/booking/integrations). Keeps the exact
+ * shapes toCampaign reads back (criteria/budget) and ReviewCampaignContent
+ * declares, so a draft submitted from onboarding round-trips into the
+ * campaign overview + admin review without loss.
+ */
+function campaignDraftToContent(draft: CampaignDraft): ReviewCampaignContent {
+  return {
+    targeting: {
+      industry: draft.target.industries.join(', '),
+      companySize: draft.target.companySize,
+      decisionMakers: draft.target.decisionMakers,
+      ageRange: `${draft.target.ageMin}-${draft.target.ageMax}`,
+      location: draft.target.geographies.join(', '),
+      ...(draft.target.additionalCriteria.trim() ? { other: draft.target.additionalCriteria.trim() } : {}),
+    },
+    budget: {
+      total: draft.budget.total,
+      daily: draft.budget.daily,
+      currency: 'USD' as const,
+      expectedDurationDays: draft.budget.durationDays,
+    },
+    booking: {
+      titleTemplate: draft.booking.titleTemplate,
+      email: draft.booking.email,
+    },
+    integrations: { ...draft.integrations },
   }
 }
 
@@ -522,7 +556,20 @@ export const httpRepository = {
       category: draft.target.industries[0] ?? '',
       phone: '', // OfferIn requires phone; a campaign/offer has no phone of its own
     })
-    return toCampaign(created)
+    // OfferIn does NOT accept campaign_content (extra fields are dropped by the
+    // BE schema), so the six onboarding sections ride on a follow-up PUT — the
+    // same /offers/{id} campaign_content path the admin review + edit flow use.
+    return this.updateCampaignOffer(created.id, { content: campaignDraftToContent(draft) })
+  },
+  /** Edit an existing campaign from the onboarding flow — PUT /offers/{id} so
+   * re-submitting never creates a duplicate; same payload shape as create. */
+  async updateCampaignFromDraft(id: string, draft: CampaignDraft): Promise<OfferCampaign> {
+    return this.updateCampaignOffer(id, {
+      title: draft.offer.offerName,
+      description: draft.offer.description,
+      pitch: draft.offer.pitch,
+      content: campaignDraftToContent(draft),
+    })
   },
   async createCampaign(input: {
     name: string
@@ -1276,6 +1323,12 @@ export const httpRepository = {
     })
     return toCampaign(wire)
   },
+  /** Persist a user pause/resume on the campaign — PUT /offers/{id} with
+   * `user_paused` (the stored flag survives refetch; see toCampaign). */
+  async setCampaignPaused(id: string, paused: boolean): Promise<OfferCampaign> {
+    const wire = await apiClient.put<OfferWire>(`/offers/${id}`, { user_paused: paused })
+    return toCampaign(wire)
+  },
   /**
    * Save admin review edits on a campaign with one PUT /offers/{id} — the
    * offer-details columns (title/description/pitch/cta), the assigned agent
@@ -1303,6 +1356,23 @@ export const httpRepository = {
     if (input.content !== undefined) body.campaign_content = input.content
     const wire = await apiClient.put<OfferWire>(`/offers/${id}`, body)
     return toCampaign(wire)
+  },
+  /**
+   * Update campaign budget fields while preserving the rest of campaign_content
+   * (stored whole on the offer row — must read-merge-write).
+   */
+  async updateCampaignBudget(
+    id: string,
+    budget: { total: number; daily: number; expectedDurationDays: number },
+  ): Promise<OfferCampaign> {
+    const wire = await apiClient.get<OfferWire>(`/offers/${id}`)
+    const stored = wire.campaign_content ?? {}
+    return this.updateCampaignOffer(id, {
+      content: {
+        ...stored,
+        budget: { ...budget, currency: 'USD' },
+      },
+    })
   },
   async getClient(id: string): Promise<{ client: Client; campaigns: OfferCampaign[] } | undefined> {
     const wire = await apiClient.get<{ client?: Client; campaigns?: OfferWire[] }>(`/admin/clients/${id}`)

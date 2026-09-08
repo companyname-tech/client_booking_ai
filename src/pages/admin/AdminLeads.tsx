@@ -1,5 +1,5 @@
 import { useMemo, useState, type ChangeEvent } from 'react'
-import { ArrowDown, ArrowUp, ArrowUpDown, Check, Phone, Plus, RefreshCw, Search, Trash2, Upload, X } from 'lucide-react'
+import { ArrowDown, ArrowUp, ArrowUpDown, Phone, Plus, RefreshCw, Search, Trash2, Upload } from 'lucide-react'
 import { repo } from '@/api/repository'
 import type { AdminLead } from '@/types/admin'
 import type { LeadStatus } from '@/types'
@@ -25,8 +25,14 @@ import { AddLeadModal } from '@/components/leads/AddLeadModal'
 import { ImportLeadsModal } from '@/components/leads/hub/ImportLeadsModal'
 import type { OfferCampaign } from '@/types'
 import { NOW } from '@/data/time'
-import { formatRelativeCompact, initials } from '@/lib/utils'
+import { formatRelativeCompact, initials, cn } from '@/lib/utils'
 import { CopyableName } from '@/components/ui/CopyableName'
+import { leadStatusMeta } from '@/lib/status'
+import {
+  LEAD_VERIFICATION_SECTIONS,
+  leadVerificationGroup,
+  type LeadVerificationGroup,
+} from '@/lib/leadVerification'
 
 type SortKey = 'campaign' | 'name' | 'industry' | 'status' | 'score' | 'lastActivity' | 'createdAt'
 type SortDir = 'asc' | 'desc'
@@ -115,8 +121,8 @@ function LeadRowActions({
           Dial
         </Button>
       )}
-      <Button variant="ghost" size="icon-sm" disabled={busy} title="Approve" onClick={() => onAction(lead, 'approve')}>
-        <Check className="size-3.5" />
+      <Button variant="ghost" size="sm" disabled={busy} title="Approve" onClick={() => onAction(lead, 'approve')}>
+        Approve
       </Button>
       {group === 'rejected' ? (
         <Button
@@ -129,8 +135,8 @@ function LeadRowActions({
           <Trash2 className="size-3.5" />
         </Button>
       ) : (
-        <Button variant="ghost" size="icon-sm" disabled={busy} title="Reject" onClick={() => onAction(lead, 'reject')}>
-          <X className="size-3.5" />
+        <Button variant="ghost" size="sm" disabled={busy} title="Reject" onClick={() => onAction(lead, 'reject')}>
+          Reject
         </Button>
       )}
       <Button variant="ghost" size="sm" onClick={onView}>
@@ -186,10 +192,11 @@ function LeadExtraDrawer({
   lead: AdminLead | null
   open: boolean
   onClose: () => void
-  onUpdate?: () => void
+  onUpdate?: (next: AdminLead) => void
 }) {
   const [editing, setEditing] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState('')
   const [form, setForm] = useState({
     name: '',
     title: '',
@@ -222,10 +229,15 @@ function LeadExtraDrawer({
 
   const save = async () => {
     setSaving(true)
+    setSaveError('')
     try {
       await repo.updateLead(lead.id, form)
-      onUpdate?.()
+      // Reflect the saved values on the open drawer's row — the BE response is
+      // wire-shaped, so merge from the submitted form (the editable fields).
+      onUpdate?.({ ...lead, ...form })
       setEditing(false)
+    } catch (e) {
+      setSaveError(e instanceof Error ? e.message : 'Failed to save lead')
     } finally {
       setSaving(false)
     }
@@ -292,6 +304,11 @@ function LeadExtraDrawer({
           <Button type="submit" variant="primary" size="sm" className="w-full" disabled={saving}>
             {saving ? 'Saving…' : 'Save changes'}
           </Button>
+          {saveError && (
+            <p role="alert" aria-live="polite" className="text-xs text-danger">
+              {saveError}
+            </p>
+          )}
         </form>
       </DetailDrawer>
     )
@@ -390,6 +407,8 @@ function LeadExtraDrawer({
 export default function AdminLeads() {
   const { data: leads, loading, error, reload } = useAsyncData(() => repo.getAdminLeads(), [])
   const [search, setSearch] = useState('')
+  const [verificationGroup, setVerificationGroup] = useState<LeadVerificationGroup>('all')
+  const [statusFilters, setStatusFilters] = useState<LeadStatus[]>([])
   const [sort, setSort] = useState<{ key: SortKey; dir: SortDir }>({ key: 'createdAt', dir: 'desc' })
   const [page, setPage] = useState(1)
   const [preview, setPreview] = useState<AdminLead | null>(null)
@@ -405,6 +424,12 @@ export default function AdminLeads() {
   const openImport = () => {
     void repo.getCampaigns().then(setCampaigns).catch(() => setCampaigns([]))
     setImporting(true)
+  }
+
+  /** LeadExtraDrawer save → update the open drawer's row + refresh the table. */
+  const handleExtraDrawerUpdated = (next: AdminLead) => {
+    setPreview(next)
+    reload()
   }
 
   const runAction = async (lead: AdminLead, action: LeadAction) => {
@@ -444,9 +469,23 @@ export default function AdminLeads() {
     void runAction(lead, action)
   }
 
+  const verificationCounts = useMemo(() => {
+    const base: Record<LeadVerificationGroup, number> = { all: (leads ?? []).length, new: 0, approved: 0, rejected: 0 }
+    for (const lead of leads ?? []) {
+      base[leadVerificationGroup(lead.verificationStatus)] += 1
+    }
+    return base
+  }, [leads])
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
     let rows = leads ?? []
+    if (verificationGroup !== 'all') {
+      rows = rows.filter((l) => leadVerificationGroup(l.verificationStatus) === verificationGroup)
+    }
+    if (statusFilters.length) {
+      rows = rows.filter((l) => statusFilters.includes(l.status))
+    }
     if (q) {
       rows = rows.filter((l) =>
         [l.name, l.company, l.title, l.email, l.phone, l.industry, l.campaignName]
@@ -475,7 +514,7 @@ export default function AdminLeads() {
           return (a.createdAt ?? '').localeCompare(b.createdAt ?? '') * dir
       }
     })
-  }, [leads, search, sort])
+  }, [leads, search, verificationGroup, statusFilters, sort])
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
   const safePage = Math.min(page, totalPages)
@@ -554,6 +593,62 @@ export default function AdminLeads() {
           <Button variant="primary" size="sm" leadingIcon={<Plus className="size-3.5" />} onClick={() => setAdding(true)}>
             Add lead
           </Button>
+        </div>
+
+        <div className="space-y-4 rounded-lg border border-line bg-surface-1 p-4">
+          <section aria-label="Verification">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-fg-muted">Verification</h3>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {LEAD_VERIFICATION_SECTIONS.map((section) => {
+                const active = verificationGroup === section.id
+                return (
+                  <button
+                    key={section.id}
+                    type="button"
+                    onClick={() => { setVerificationGroup(section.id); setPage(1) }}
+                    className={cn(
+                      'rounded-full border px-3 py-1 text-xs font-medium transition-colors',
+                      active
+                        ? 'border-accent bg-accent-soft text-accent'
+                        : 'border-line bg-surface-2 text-fg-secondary hover:border-line-strong hover:text-fg',
+                    )}
+                  >
+                    {section.label}
+                    <span className="ml-1.5 tabular text-fg-muted">{verificationCounts[section.id]}</span>
+                  </button>
+                )
+              })}
+            </div>
+          </section>
+
+          <section aria-label="Lead status">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-fg-muted">Status</h3>
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {LEAD_STATUSES.map((status) => {
+                const active = statusFilters.includes(status)
+                return (
+                  <button
+                    key={status}
+                    type="button"
+                    onClick={() => {
+                      setStatusFilters((prev) =>
+                        prev.includes(status) ? prev.filter((s) => s !== status) : [...prev, status],
+                      )
+                      setPage(1)
+                    }}
+                    className={cn(
+                      'rounded-full border px-2.5 py-0.5 text-2xs font-medium transition-colors',
+                      active
+                        ? 'border-accent/50 bg-accent-soft/40 text-accent'
+                        : 'border-line bg-surface-2 text-fg-muted hover:text-fg-secondary',
+                    )}
+                  >
+                    {leadStatusMeta[status].label}
+                  </button>
+                )
+              })}
+            </div>
+          </section>
         </div>
 
         <BulkActionBar
@@ -733,7 +828,7 @@ export default function AdminLeads() {
           campaigns={campaigns.map((c) => ({ id: c.id, name: c.name }))}
           onImported={reload}
         />
-        <LeadExtraDrawer lead={preview} open={!!preview} onClose={() => setPreview(null)} onUpdate={reload} />
+        <LeadExtraDrawer lead={preview} open={!!preview} onClose={() => setPreview(null)} onUpdate={handleExtraDrawerUpdated} />
         <ConfirmDialog
           open={confirmBulk}
           onClose={() => setConfirmBulk(false)}

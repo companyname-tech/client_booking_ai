@@ -12,7 +12,7 @@ const WF_LABEL: Record<string, string> = {
   awaiting_approval: 'Awaiting Approval',
   submitted: 'Submitted',
   compliance_review: 'Compliance Review',
-  training: 'AI Training Required',
+  training: 'Awaiting Approval',
   changes_requested: 'Client Changes Requested',
   approved: 'Ready to Launch',
   launching: 'Launching',

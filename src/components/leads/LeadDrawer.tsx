@@ -55,6 +55,7 @@ export function LeadDrawer({
 }) {
   const [editing, setEditing] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState('')
   const [form, setForm] = useState<LeadForm>({
     name: '',
     title: '',
@@ -105,10 +106,14 @@ export function LeadDrawer({
 
   const save = async () => {
     setSaving(true)
+    setSaveError('')
     try {
       const updated = await repo.updateLead(lead.id, form)
       onUpdate?.({ ...lead, ...updated })
       setEditing(false)
+    } catch (e) {
+      // Surface the failure inline — never swallow a save error silently.
+      setSaveError(e instanceof Error ? e.message : 'Failed to save lead')
     } finally {
       setSaving(false)
     }
@@ -185,6 +190,11 @@ export function LeadDrawer({
                 className="mt-1 w-full"
               />
             </div>
+            {saveError && (
+              <p role="alert" aria-live="polite" className="text-xs text-danger">
+                {saveError}
+              </p>
+            )}
             <Button type="submit" variant="primary" size="sm" className="w-full" disabled={saving}>
               {saving ? 'Saving…' : 'Save changes'}
             </Button>

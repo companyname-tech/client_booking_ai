@@ -22,12 +22,11 @@ export interface CampaignProgressPanelProps {
  * ProgressTimeline with context: current state, agent, next step.
  */
 export function CampaignProgressPanel({ campaign, agent, zone = 'client', className }: CampaignProgressPanelProps) {
-  const stageIndex = CAMPAIGN_STAGES.indexOf(campaign.stage)
-  const next = CAMPAIGN_STAGES[stageIndex + 1]
-  const stageMeta = campaignStageMeta[campaign.stage]
-  // Training progress comes from the agent when in AI training, otherwise
-  // approximate from overall campaign progress.
-  const stageProgress = campaign.stage === 'ai_training' && agent ? agent.trainingProgress : (campaign.progress % 17) * 5
+  const lifecycleStage = campaign.stage === 'ai_training' ? 'legal_review' : campaign.stage
+  const stageIndex = CAMPAIGN_STAGES.indexOf(lifecycleStage as (typeof CAMPAIGN_STAGES)[number])
+  const next = stageIndex >= 0 ? CAMPAIGN_STAGES[stageIndex + 1] : undefined
+  const stageMeta = campaignStageMeta[campaign.stage === 'ai_training' ? 'legal_review' : campaign.stage]
+  const stageProgress = (campaign.progress % 17) * 5
 
   return (
     <Stagger
@@ -74,7 +73,7 @@ export function CampaignProgressPanel({ campaign, agent, zone = 'client', classN
       </Reveal>
 
       <Reveal className="relative my-auto min-w-0 py-7 sm:py-8">
-        <ProgressTimeline current={campaign.stage} stageProgress={stageProgress} compact />
+        <ProgressTimeline current={lifecycleStage} stageProgress={stageProgress} compact />
       </Reveal>
 
       <Reveal className="relative flex flex-col gap-3 border-t border-line pt-4 sm:flex-row sm:items-center sm:justify-between">

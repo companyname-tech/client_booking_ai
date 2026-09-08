@@ -6,6 +6,14 @@ import { CAMPAIGN_STAGES } from '@/types'
 import { campaignStageMeta } from '@/lib/status'
 import { cn } from '@/lib/utils'
 
+/** Legacy campaigns may still carry the removed ai_training stage — map it forward. */
+function normalizeLifecycleStage(stage: CampaignStage): (typeof CAMPAIGN_STAGES)[number] {
+  if (stage === 'ai_training') return 'legal_review'
+  return CAMPAIGN_STAGES.includes(stage as (typeof CAMPAIGN_STAGES)[number])
+    ? (stage as (typeof CAMPAIGN_STAGES)[number])
+    : 'onboarding'
+}
+
 export interface ProgressTimelineProps {
   current: CampaignStage
   /** 0..100 completion of the current stage; drives the partial fill. */
@@ -17,7 +25,7 @@ export interface ProgressTimelineProps {
 }
 
 /**
- * OfferCampaign lifecycle: ONBOARDING → AI TRAINING → LEGAL REVIEW → APPROVED →
+ * OfferCampaign lifecycle: ONBOARDING → LEGAL REVIEW → APPROVED →
  * CALLING → OPTIMIZATION. Shared between the Client Zone and Super Admin.
  */
 export const ProgressTimeline = memo(function ProgressTimeline({
@@ -28,7 +36,8 @@ export const ProgressTimeline = memo(function ProgressTimeline({
   className,
 }: ProgressTimelineProps) {
   const reduce = useReducedMotion()
-  const currentIndex = CAMPAIGN_STAGES.indexOf(current)
+  const lifecycleStage = normalizeLifecycleStage(current)
+  const currentIndex = CAMPAIGN_STAGES.indexOf(lifecycleStage)
   const steps = CAMPAIGN_STAGES.length
   // Track runs from the centre of the first node to the centre of the last.
   const fill = (currentIndex + Math.min(Math.max(stageProgress, 0), 100) / 100) / (steps - 1)

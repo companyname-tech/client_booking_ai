@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react'
 import { useLocation } from 'react-router-dom'
-import { Wallet } from 'lucide-react'
 import { repo } from '@/api/repository'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Card, SectionHeader } from '@/components/ui/Card'
 import { FieldGroup, FieldLabel, FieldError } from '@/components/ui/Field'
 import { Select } from '@/components/ui/Select'
+import { ClientBudgetWidget } from '@/components/admin/ClientBudgetWidget'
+import { ClientBusyDaysWidget } from '@/components/admin/ClientBusyDaysWidget'
 import { formatCurrency } from '@/lib/utils'
 import type { Client, ClientBudgetSummary } from '@/types'
 
@@ -23,10 +24,8 @@ export function ClientSettingsPanel({
   const [slug, setSlug] = useState('')
   const [industry, setIndustry] = useState('')
   const [plan, setPlan] = useState<'starter' | 'growth' | 'enterprise'>('growth')
-  const [engagementType, setEngagementType] = useState<Client['engagementType']>('')
   const [specificAmount, setSpecificAmount] = useState('')
   const [retainerWeeklyAmount, setRetainerWeeklyAmount] = useState('')
-  const [engagementStart, setEngagementStart] = useState('')
   const [contactName, setContactName] = useState('')
   const [email, setEmail] = useState('')
   const [role, setRole] = useState('')
@@ -43,10 +42,8 @@ export function ClientSettingsPanel({
     setSlug(client?.slug ?? '')
     setIndustry(client?.industry ?? '')
     setPlan(client?.plan ?? 'growth')
-    setEngagementType(client?.engagementType ?? '')
     setSpecificAmount(client?.specificAmount ? String(client.specificAmount) : '')
     setRetainerWeeklyAmount(client?.retainerWeeklyAmount ? String(client.retainerWeeklyAmount) : '')
-    setEngagementStart(client?.engagementStart ?? '')
     setContactName(client?.primaryContact?.name ?? '')
     setEmail(client?.primaryContact?.email ?? '')
     setRole(client?.primaryContact?.role ?? '')
@@ -58,6 +55,9 @@ export function ClientSettingsPanel({
   useEffect(() => {
     if (location.hash === '#wallet') {
       document.getElementById('client-wallet')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
+    if (location.hash === '#busy-days') {
+      document.getElementById('client-busy-days')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
     }
   }, [location.hash, client?.id])
 
@@ -88,10 +88,8 @@ export function ClientSettingsPanel({
         slug: slug.trim(),
         industry: industry.trim(),
         plan,
-        engagementType: engagementType ?? '',
         specificAmount: parseMoney(specificAmount),
         retainerWeeklyAmount: parseMoney(retainerWeeklyAmount),
-        engagementStart: engagementStart.trim(),
         primaryContact: {
           name: contactName.trim(),
           email: email.trim(),
@@ -169,51 +167,6 @@ export function ClientSettingsPanel({
       </Card>
 
       <Card className="p-5 sm:p-6">
-        <SectionHeader title="Engagement" description="Contract type and agreed amounts for this client." />
-        <div className="mt-5 grid gap-4 sm:grid-cols-2">
-          <FieldGroup>
-            <FieldLabel htmlFor="cs-engagement-type">Engagement type</FieldLabel>
-            <Select
-              id="cs-engagement-type"
-              value={engagementType ?? ''}
-              onChange={(v) => setEngagementType(v as Client['engagementType'])}
-              ariaLabel="Engagement type"
-              options={[
-                { value: '', label: 'Not set' },
-                { value: 'specific', label: 'Specific (one-time)' },
-                { value: 'retainer_weekly', label: 'Weekly retainer' },
-              ]}
-              className="w-full"
-            />
-          </FieldGroup>
-          <FieldGroup>
-            <FieldLabel htmlFor="cs-engagement-start">Engagement start</FieldLabel>
-            <Input id="cs-engagement-start" value={engagementStart} onChange={(e) => setEngagementStart(e.target.value)} placeholder="DD/MM/YYYY" />
-          </FieldGroup>
-          <FieldGroup>
-            <FieldLabel htmlFor="cs-specific-amount">Specific amount ($)</FieldLabel>
-            <Input
-              id="cs-specific-amount"
-              inputMode="decimal"
-              value={specificAmount}
-              onChange={(e) => setSpecificAmount(e.target.value)}
-              placeholder="0"
-            />
-          </FieldGroup>
-          <FieldGroup>
-            <FieldLabel htmlFor="cs-retainer-amount">Weekly retainer ($)</FieldLabel>
-            <Input
-              id="cs-retainer-amount"
-              inputMode="decimal"
-              value={retainerWeeklyAmount}
-              onChange={(e) => setRetainerWeeklyAmount(e.target.value)}
-              placeholder="0"
-            />
-          </FieldGroup>
-        </div>
-      </Card>
-
-      <Card className="p-5 sm:p-6">
         <SectionHeader title="Primary contact" description="Owner or main point of contact for this workspace." />
         <div className="mt-5 grid gap-4 sm:grid-cols-2">
           <FieldGroup>
@@ -231,79 +184,22 @@ export function ClientSettingsPanel({
         </div>
       </Card>
 
-      {isNew && (
-        <Card className="p-5 sm:p-6">
-          <SectionHeader
-            title="Initial wallet balance"
-            description="Prepaid funds this client can allocate into campaign budgets. You can add more deposits after the workspace is created."
-          />
-          <div className="mt-5 max-w-sm">
-            <FieldGroup>
-              <FieldLabel htmlFor="cs-initial-wallet">Starting balance ($)</FieldLabel>
-              <Input
-                id="cs-initial-wallet"
-                inputMode="decimal"
-                value={initialWalletBalance}
-                onChange={(e) => setInitialWalletBalance(e.target.value)}
-                placeholder="e.g. 1000"
-              />
-            </FieldGroup>
-          </div>
-        </Card>
-      )}
+      <ClientBusyDaysWidget clientId={client?.id} />
 
-      {!isNew && (
-        <Card id="client-wallet" className="p-5 sm:p-6">
-          <SectionHeader
-            title="Wallet & deposits"
-            description="Prepaid balance the client can allocate into campaign budgets. Record manual deposits from AOA."
-          />
-          <div className="mt-5 grid gap-4 lg:grid-cols-[1fr_minmax(0,20rem)]">
-            <div className="grid gap-3 sm:grid-cols-3">
-              <div className="rounded-lg border border-line bg-surface-1 px-4 py-3">
-                <div className="text-2xs uppercase tracking-wide text-fg-muted">Available</div>
-                <div className="mt-1 text-xl font-semibold tabular text-fg">
-                  {budget ? formatCurrency(budget.availableBalance) : '—'}
-                </div>
-              </div>
-              <div className="rounded-lg border border-line bg-surface-1 px-4 py-3">
-                <div className="text-2xs uppercase tracking-wide text-fg-muted">On campaigns</div>
-                <div className="mt-1 text-xl font-semibold tabular text-fg">
-                  {budget ? formatCurrency(budget.allocatedToCampaigns) : '—'}
-                </div>
-              </div>
-              <div className="rounded-lg border border-line bg-surface-1 px-4 py-3">
-                <div className="text-2xs uppercase tracking-wide text-fg-muted">Currency</div>
-                <div className="mt-1 text-xl font-semibold text-fg">{budget?.currency ?? 'USD'}</div>
-              </div>
-            </div>
-            <div className="rounded-lg border border-line bg-surface-1 p-4">
-              <div className="mb-3 flex items-center gap-2">
-                <Wallet className="size-4 text-accent" />
-                <p className="text-sm font-medium text-fg">Manual deposit</p>
-              </div>
-              <FieldGroup>
-                <FieldLabel htmlFor="cs-deposit">Amount ($)</FieldLabel>
-                <Input
-                  id="cs-deposit"
-                  inputMode="decimal"
-                  value={depositAmount}
-                  onChange={(e) => setDepositAmount(e.target.value)}
-                  placeholder="e.g. 1000"
-                />
-              </FieldGroup>
-              <Button
-                variant="primary"
-                className="mt-3 w-full"
-                onClick={() => void recordDeposit()}
-                disabled={depositing}
-              >
-                {depositing ? 'Recording…' : 'Record deposit'}
-              </Button>
-            </div>
-          </div>
-        </Card>
-      )}
+      <ClientBudgetWidget
+        mode={isNew ? 'create' : 'edit'}
+        specificAmount={specificAmount}
+        onSpecificAmountChange={setSpecificAmount}
+        retainerWeeklyAmount={retainerWeeklyAmount}
+        onRetainerWeeklyAmountChange={setRetainerWeeklyAmount}
+        initialWalletBalance={initialWalletBalance}
+        onInitialWalletBalanceChange={setInitialWalletBalance}
+        budget={budget}
+        depositAmount={depositAmount}
+        onDepositAmountChange={setDepositAmount}
+        onRecordDeposit={recordDeposit}
+        depositing={depositing}
+      />
 
       <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line pt-4">
         <div className="min-h-5 text-sm">

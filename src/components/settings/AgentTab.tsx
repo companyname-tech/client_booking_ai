@@ -43,6 +43,7 @@ export default function AgentTab() {
   const [callerDraft, setCallerDraft] = useState<CallerDraft>({ displayName: '', company: '' })
   const [savingId, setSavingId] = useState<string | null>(null)
   const [savingCaller, setSavingCaller] = useState(false)
+  const [actionError, setActionError] = useState('')
 
   useEffect(() => {
     if (agentsData) setAgents(agentsData)
@@ -89,11 +90,14 @@ export default function AgentTab() {
 
   const saveCallerIdentity = async () => {
     setSavingCaller(true)
+    setActionError('')
     try {
       await repo.saveSettings({
         caller_display_name: callerDraft.displayName,
         caller_company_name: callerDraft.company,
       })
+    } catch (e) {
+      setActionError(e instanceof Error ? e.message : 'Failed to save caller identity')
     } finally {
       setSavingCaller(false)
     }
@@ -103,30 +107,43 @@ export default function AgentTab() {
     const draft = drafts[id]
     if (!draft) return
     setSavingId(id)
+    setActionError('')
     try {
       const saved = await repo.updateAgent(id, draft)
       setAgents((prev) => prev.map((a) => (a.id === id ? saved : a)))
       setDrafts((prev) => ({ ...prev, [id]: saved }))
+    } catch (e) {
+      setActionError(e instanceof Error ? e.message : 'Failed to save agent')
     } finally {
       setSavingId(null)
     }
   }
 
   const createAgent = async () => {
-    const created = await repo.createAgent({ name: 'New Agent' })
-    setAgents((prev) => [...prev, created])
-    setDrafts((prev) => ({ ...prev, [created.id]: { ...created } }))
-    setExpandedId(created.id)
+    setActionError('')
+    try {
+      const created = await repo.createAgent({ name: 'New Agent' })
+      setAgents((prev) => [...prev, created])
+      setDrafts((prev) => ({ ...prev, [created.id]: { ...created } }))
+      setExpandedId(created.id)
+    } catch (e) {
+      setActionError(e instanceof Error ? e.message : 'Failed to create agent')
+    }
   }
 
   const removeAgent = async (id: string) => {
-    await repo.deleteAgent(id)
-    setAgents((prev) => prev.filter((a) => a.id !== id))
-    setDrafts((prev) => {
-      const { [id]: _removed, ...rest } = prev
-      return rest
-    })
-    if (expandedId === id) setExpandedId(null)
+    setActionError('')
+    try {
+      await repo.deleteAgent(id)
+      setAgents((prev) => prev.filter((a) => a.id !== id))
+      setDrafts((prev) => {
+        const { [id]: _removed, ...rest } = prev
+        return rest
+      })
+      if (expandedId === id) setExpandedId(null)
+    } catch (e) {
+      setActionError(e instanceof Error ? e.message : 'Failed to delete agent')
+    }
   }
 
   if (loading) return <LoadingState rows={4} />
@@ -135,6 +152,11 @@ export default function AgentTab() {
 
   return (
     <div className="space-y-6">
+      {actionError && (
+        <p role="alert" aria-live="polite" className="rounded-md border border-danger/30 bg-danger/5 px-3 py-2 text-xs text-danger">
+          {actionError}
+        </p>
+      )}
       {/* Caller identity */}
       <Card flush className="px-5">
         <div className="py-4">

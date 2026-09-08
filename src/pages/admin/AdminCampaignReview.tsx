@@ -325,7 +325,7 @@ export default function AdminCampaignReview() {
           onClose={() => setModal(null)}
           onSubmit={handleApprove}
           campaignName={campaign.name}
-          checks={['Targeting', 'Offer', 'AI Training', 'Integrations', 'Compliance']}
+          checks={['Targeting', 'Offer', 'Integrations', 'Compliance']}
           complianceWarning={review.complianceItems.some((c) => c.status === 'needs_review' || c.status === 'warning')}
         />
         <RejectCampaignModal

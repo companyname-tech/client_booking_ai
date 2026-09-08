@@ -25,7 +25,9 @@ function campaignToDraftSeed(campaign: OfferCampaign): Partial<CampaignDraft> {
       offerName: campaign.offerName,
       description: '',
       benefits: [],
-      pitch: '',
+      // Seed the pitch from the stored value so an edit round-trips it instead
+      // of wiping it on save (the update path writes pitch → value_proposition).
+      pitch: campaign.valueProposition ?? '',
     },
     budget: {
       total: campaign.budget.total,
@@ -55,6 +57,12 @@ function OnboardingEditor({ existing }: { existing?: OfferCampaign }) {
   })
 
   const handleSubmit = async (draft: CampaignDraft) => {
+    // Editing an existing campaign must UPDATE it (PUT /offers/{id}) — the old
+    // code always POSTed, creating a duplicate and navigating to the new id.
+    if (existing) {
+      const campaign = await repo.updateCampaignFromDraft(existing.id, draft)
+      return campaign.id
+    }
     const campaign = await repo.createCampaignFromDraft(draft)
     return campaign.id
   }
