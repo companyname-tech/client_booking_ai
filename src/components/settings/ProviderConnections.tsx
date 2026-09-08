@@ -50,6 +50,11 @@ function fieldsFor(conn: ProviderConnection): FieldSpec[] {
       ]
     case 'telegram':
       return [{ field: 'telegram_bot_token', label: 'Bot token', kind: 'secret' }]
+    case 'facebook':
+      return [
+        { field: 'meta_app_id', label: 'App ID', kind: 'text' },
+        { field: 'meta_app_secret', label: 'App secret', kind: 'secret' },
+      ]
     case 'email':
       return []
   }
@@ -63,6 +68,7 @@ const ALWAYS_SEND = new Set([
   'google_meet_host_email',
   'zoom_account_id',
   'zoom_client_id',
+  'meta_app_id',
 ])
 
 function initialValues(conn: ProviderConnection, email: EmailConnection): Record<string, string> {

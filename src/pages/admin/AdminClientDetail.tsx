@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { Pencil, Plus } from 'lucide-react'
+import { Plus, Settings } from 'lucide-react'
 import { repo } from '@/api/repository'
 import { useAsyncData } from '@/hooks/useAsyncData'
 import { useBulkSelection } from '@/hooks/useBulkSelection'
@@ -15,18 +15,21 @@ import { LoadingState } from '@/components/ui/LoadingState'
 import { ErrorState } from '@/components/ui/ErrorState'
 import { BulkActionBar } from '@/components/ui/BulkActionBar'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
-import { ClientFormModal } from '@/components/admin/ClientFormModal'
 import { ClientMeetingsCalendar } from '@/components/calendar/ClientMeetingsCalendar'
 import { NewCampaignModal } from '@/components/admin/NewCampaignModal'
 import { EditCampaignModal } from '@/components/admin/EditCampaignModal'
+import { formatCurrency } from '@/lib/utils'
 import type { OfferCampaign } from '@/types'
 
 export default function AdminClientDetail() {
   const { id } = useParams()
-  const [editing, setEditing] = useState(false)
   const [creating, setCreating] = useState(false)
   const { data, loading, error, reload } = useAsyncData(
     async () => (id ? repo.getClient(id) : undefined),
+    [id],
+  )
+  const { data: budget } = useAsyncData(
+    async () => (id ? repo.getAdminClientBudget(id).catch(() => null) : null),
     [id],
   )
 
@@ -106,9 +109,11 @@ export default function AdminClientDetail() {
               <Button variant="primary" leadingIcon={<Plus />} onClick={() => setCreating(true)}>
                 New campaign
               </Button>
-              <Button variant="secondary" leadingIcon={<Pencil />} onClick={() => setEditing(true)}>
-                Edit
-              </Button>
+              <Link to={`/admin/clients/${client.id}/settings`}>
+                <Button variant="secondary" leadingIcon={<Settings />}>
+                  Settings
+                </Button>
+              </Link>
             </>
           }
         />
@@ -123,10 +128,14 @@ export default function AdminClientDetail() {
           </Reveal>
         )}
         <Reveal>
-          <div className="grid gap-4 sm:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <div className="surface p-4"><div className="text-2xs text-fg-muted">Campaigns</div><div className="text-2xl font-semibold tabular">{campaigns.length}</div></div>
             <div className="surface p-4"><div className="text-2xs text-fg-muted">Active</div><div className="text-2xl font-semibold tabular">{campaigns.filter((c) => c.status === 'active').length}</div></div>
             <div className="surface p-4"><div className="text-2xs text-fg-muted">Bookings</div><div className="text-2xl font-semibold tabular">{campaigns.reduce((s, c) => s + c.metrics.bookings, 0)}</div></div>
+            <div className="surface p-4">
+              <div className="text-2xs text-fg-muted">Wallet available</div>
+              <div className="text-2xl font-semibold tabular">{budget ? formatCurrency(budget.availableBalance) : '—'}</div>
+            </div>
           </div>
         </Reveal>
         <Reveal>
@@ -165,12 +174,6 @@ export default function AdminClientDetail() {
 
         <Link to="/admin/clients" className="text-xs text-accent">← All clients</Link>
       </PageContainer>
-      <ClientFormModal
-        open={editing}
-        client={client}
-        onClose={() => setEditing(false)}
-        onSaved={reload}
-      />
       <NewCampaignModal
         open={creating}
         fixedClient={{ id: client.id, name: client.name }}

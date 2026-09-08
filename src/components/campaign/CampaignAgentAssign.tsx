@@ -89,7 +89,8 @@ export function CampaignAgentAssign({
       <Modal
         open={modalOpen}
         onClose={close}
-        size="sm"
+        size="md"
+        fitContent
         title={mode === 'create' ? 'Create agent' : mode === 'select' ? 'Select agent' : 'Assign agent'}
         description={
           mode === 'choose'
@@ -157,7 +158,7 @@ export function CampaignAgentAssign({
           )}
 
           {mode === 'select' && (
-            <div>
+            <div className="min-h-80">
               <FieldLabel htmlFor="campaign-agent-select" required>Agent</FieldLabel>
               <Select
                 id="campaign-agent-select"

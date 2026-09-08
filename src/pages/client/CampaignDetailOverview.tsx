@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import type { OfferCampaign } from '@/types'
 import { repo } from '@/data/repository'
 import { useAsyncData } from '@/hooks/useAsyncData'
 import { LoadingState } from '@/components/ui/LoadingState'
@@ -23,6 +24,8 @@ export default function CampaignDetailOverview() {
   const { campaign, zone, effectiveStatus } = useCampaignContext()
   const awaitingApproval = effectiveStatus === 'awaiting_approval'
   const [period, setPeriod] = useState<7 | 14 | 30>(14)
+  const [localBudget, setLocalBudget] = useState<OfferCampaign['budget'] | null>(null)
+  const displayBudget = localBudget ?? campaign.budget
 
   // Offer editing (most important element) — saved value is held locally.
   const [editingOffer, setEditingOffer] = useState(false)
@@ -151,7 +154,13 @@ export default function CampaignDetailOverview() {
       {isOperational && !awaitingApproval ? (
         <>
           <Reveal>
-            <CampaignMetricsGrid metrics={campaign.metrics} budget={campaign.budget} />
+            <CampaignMetricsGrid
+              metrics={campaign.metrics}
+              budget={displayBudget}
+              campaignId={campaign.id}
+              zone={zone}
+              onBudgetUpdated={setLocalBudget}
+            />
           </Reveal>
 
           <div className="grid gap-6 lg:grid-cols-3">

@@ -22,7 +22,7 @@ import {
   updateLocalTrainingProcessOperationComment,
   upsertLocalTrainingProcessOperation,
 } from '@/lib/trainingProcessOperationJournal'
-import type { Agent, OfferCampaign, User, Client, ClientInput, ClientPage, Lead, Call, Booking, CallDetail, LeadDetail, Recording, CallHistoryEntry, CampaignFunnelStage, CampaignInsight, CampaignAttentionAlert, CampaignPerformancePoint, CampaignHealthSnapshot, CampaignHealth, Analytics, Activity, AttentionItem, Integration, LeadStatus, Meeting, WorkspaceAnalytics } from '@/types'
+import type { Agent, OfferCampaign, User, Client, ClientInput, ClientPage, ClientBudgetSummary, CampaignBudgetAddResult, Lead, Call, Booking, CallDetail, LeadDetail, Recording, CallHistoryEntry, CampaignFunnelStage, CampaignInsight, CampaignAttentionAlert, CampaignPerformancePoint, CampaignHealthSnapshot, CampaignHealth, Analytics, Activity, AttentionItem, Integration, LeadStatus, Meeting, WorkspaceAnalytics } from '@/types'
 import type { AppSettings, ConnectionsState, ConnectionKey, TwilioNumber, FishVoice, SettingsSchemaField, AgentModels, AgentVoiceOption, AgentRole } from '@/types/settings'
 import type { AdminCampaignMeta, AdminLead, CampaignReviewData, AuditEvent, AdminNotification, ActivityLogEntry, ActivitySource, ReviewCampaignContent } from '@/types/admin'
 import type { CampaignAnalyticsData, AnalyticsFilters } from '@/types/campaignAnalytics'
@@ -462,6 +462,28 @@ export const httpRepository = {
   async getCurrentClient(): Promise<Client> {
     return apiClient.get<Client>('/workspace')
   },
+  async getClientBudgetSummary(): Promise<ClientBudgetSummary> {
+    return apiClient.get<ClientBudgetSummary>('/workspace/budget')
+  },
+  async topUpClientWallet(amount: number): Promise<ClientBudgetSummary> {
+    return apiClient.post<ClientBudgetSummary>('/workspace/budget/top-up', { amount })
+  },
+  async getAdminClientBudget(clientId: string): Promise<ClientBudgetSummary> {
+    return apiClient.get<ClientBudgetSummary>(`/admin/clients/${clientId}/budget`)
+  },
+  async depositClientWallet(clientId: string, amount: number): Promise<ClientBudgetSummary> {
+    return apiClient.post<ClientBudgetSummary>(`/admin/clients/${clientId}/budget/deposit`, { amount })
+  },
+  async addCampaignBudget(
+    campaignId: string,
+    amount: number,
+    fundFrom: 'wallet' | 'payment' = 'wallet',
+  ): Promise<CampaignBudgetAddResult> {
+    return apiClient.post<CampaignBudgetAddResult>(`/offers/${campaignId}/budget/add`, {
+      amount,
+      fundFrom,
+    })
+  },
   async getClients(params?: { q?: string; page?: number; pageSize?: number }): Promise<ClientPage> {
     const qs = new URLSearchParams()
     if (params?.q) qs.set('q', params.q)
@@ -510,6 +532,7 @@ export const httpRepository = {
     company?: string
     clientId?: string
     type?: CampaignType
+    budget?: number
   }): Promise<OfferCampaign> {
     const created = await apiClient.post<OfferWire>('/offers', {
       title: input.name,
@@ -522,6 +545,11 @@ export const httpRepository = {
       source: campaignTypeToSource(input.type ?? 'live'),
       phone: '', // OfferIn requires phone; a campaign/offer has no phone of its own
     })
+    if (input.budget !== undefined && input.budget > 0) {
+      return this.updateCampaignOffer(created.id, {
+        content: { budget: { total: input.budget, currency: 'USD' } },
+      })
+    }
     return toCampaign(created)
   },
 

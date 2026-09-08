@@ -1,10 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 
+export interface ReloadOptions {
+  /** Refresh data without swapping the page into a loading shell. */
+  silent?: boolean
+}
+
 export interface AsyncState<T> {
   data: T | null
   loading: boolean
   error: string | null
-  reload: () => void
+  reload: (options?: ReloadOptions) => void
 }
 
 function message(err: unknown): string {
@@ -26,10 +31,12 @@ export function useAsyncData<T>(
   const loadRef = useRef(load)
   loadRef.current = load
 
-  const run = useCallback(() => {
+  const run = useCallback((options?: ReloadOptions) => {
     let cancelled = false
-    setLoading(true)
-    setError(null)
+    if (!options?.silent) {
+      setLoading(true)
+      setError(null)
+    }
     loadRef.current()
       .then((value) => {
         if (cancelled) return
@@ -49,8 +56,8 @@ export function useAsyncData<T>(
 
   useEffect(() => run(), [run])
 
-  const reload = useCallback(() => {
-    run()
+  const reload = useCallback((options?: ReloadOptions) => {
+    run(options)
   }, [run])
 
   return { data, loading, error, reload }

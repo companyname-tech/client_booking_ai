@@ -17,12 +17,14 @@ export interface ModalProps {
   size?: 'sm' | 'md' | 'lg'
   /** Hide the header entirely (e.g. for the command menu). */
   bare?: boolean
+  /** Grow with content instead of clipping children behind an inner scroller. */
+  fitContent?: boolean
   className?: string
 }
 
 const sizeClasses = { sm: 'max-w-sm', md: 'max-w-lg', lg: 'max-w-2xl' }
 
-export function Modal({ open, onClose, title, description, children, footer, size = 'md', bare, className }: ModalProps) {
+export function Modal({ open, onClose, title, description, children, footer, size = 'md', bare, fitContent, className }: ModalProps) {
   const id = useId()
   const panelRef = useRef<HTMLDivElement>(null)
   const onCloseRef = useRef(onClose)
@@ -79,7 +81,10 @@ export function Modal({ open, onClose, title, description, children, footer, siz
             animate="animate"
             exit="exit"
             className={cn(
-              'surface-overlay relative flex max-h-[calc(100dvh-12vh-16px)] w-full flex-col overflow-hidden sm:max-h-[calc(100dvh-16vh-16px)]',
+              'surface-overlay relative flex w-full flex-col',
+              fitContent
+                ? 'overflow-visible'
+                : 'max-h-[calc(100dvh-12vh-16px)] overflow-hidden sm:max-h-[calc(100dvh-16vh-16px)]',
               sizeClasses[size],
               className,
             )}
@@ -103,7 +108,13 @@ export function Modal({ open, onClose, title, description, children, footer, siz
                 </Button>
               </div>
             )}
-            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">{children}</div>
+            <div
+              className={cn(
+                fitContent ? 'overflow-visible' : 'min-h-0 flex-1 overflow-y-auto overscroll-contain',
+              )}
+            >
+              {children}
+            </div>
             {footer && (
               <div className="flex shrink-0 items-center justify-end gap-2 border-t border-line px-5 py-3">
                 {footer}

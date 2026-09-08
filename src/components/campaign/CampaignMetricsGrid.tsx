@@ -1,9 +1,21 @@
 import type { OfferCampaign, CampaignMetrics } from '@/types'
 import { formatCurrency, formatNumber, formatPercent } from '@/lib/utils'
 import { AnimatedNumber } from '@/components/motion/AnimatedNumber'
-import { ProgressBar } from '@/components/ui/ProgressBar'
+import { CampaignBudgetCard } from '@/components/campaign/CampaignBudgetCard'
 
-export function CampaignMetricsGrid({ metrics, budget }: { metrics: CampaignMetrics; budget: OfferCampaign['budget'] }) {
+export function CampaignMetricsGrid({
+  metrics,
+  budget,
+  campaignId,
+  zone = 'client',
+  onBudgetUpdated,
+}: {
+  metrics: CampaignMetrics
+  budget: OfferCampaign['budget']
+  campaignId?: string
+  zone?: 'client' | 'admin'
+  onBudgetUpdated?: (next: OfferCampaign['budget']) => void
+}) {
   const primary = [
     { label: 'Leads found', value: metrics.leadsFound, context: '+18.4% this week', emphasis: true },
     { label: 'Bookings', value: metrics.bookings, context: '+12 this week', emphasis: true },
@@ -15,7 +27,7 @@ export function CampaignMetricsGrid({ metrics, budget }: { metrics: CampaignMetr
     { label: 'Booking rate', value: metrics.bookingRate, context: 'of contacted leads', isPercent: true },
     { label: 'Details requested', value: metrics.detailsRequested, context: 'pending follow-up' },
   ]
-  const budgetPct = (budget.used / budget.total) * 100
+  const budgetPct = budget.total > 0 ? (budget.used / budget.total) * 100 : 0
 
   return (
     <div className="space-y-4">
@@ -45,16 +57,26 @@ export function CampaignMetricsGrid({ metrics, budget }: { metrics: CampaignMetr
         ))}
       </div>
 
-      <div className="rounded-lg border border-line bg-surface-2 px-5 py-4">
-        <div className="flex items-baseline justify-between gap-4">
-          <div>
-            <AnimatedNumber value={budget.used} format={formatCurrency} className="text-xl font-semibold text-fg" />
-            <span className="ml-1 text-sm text-fg-muted">/ {formatCurrency(budget.total)}</span>
+      {campaignId ? (
+        <CampaignBudgetCard
+          campaignId={campaignId}
+          budget={budget}
+          zone={zone}
+          onBudgetUpdated={onBudgetUpdated}
+        />
+      ) : (
+        <div className="rounded-lg border border-line bg-surface-2 px-5 py-4">
+          <div className="flex items-baseline justify-between gap-4">
+            <div>
+              <AnimatedNumber value={budget.used} format={formatCurrency} className="text-xl font-semibold text-fg" />
+              <span className="ml-1 text-sm text-fg-muted">/ {formatCurrency(budget.total)}</span>
+            </div>
+            <span className="text-sm tabular text-fg-secondary">
+              {budget.total > 0 ? formatPercent(budgetPct, 1) : '0%'} used
+            </span>
           </div>
-          <span className="text-sm tabular text-fg-secondary">{formatPercent(budgetPct, 1)} used</span>
         </div>
-        <ProgressBar value={budgetPct} tone="warning" size="sm" className="mt-3" label="Budget used" />
-      </div>
+      )}
     </div>
   )
 }

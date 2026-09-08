@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import { Plus, Sparkles, Upload } from 'lucide-react'
 import { repo } from '@/data/repository'
 import { useCampaignContext } from './campaignContext'
@@ -18,6 +18,7 @@ import { Reveal } from '@/components/motion/Reveal'
 export default function CampaignLeads() {
   const { campaign } = useCampaignContext()
   const { data: leads, loading, error, reload } = useAsyncData(() => repo.getLeads(campaign.id), [campaign.id])
+  const refreshLeads = useCallback(() => reload({ silent: true }), [reload])
   const { filters, setFilters, filtered } = useLeadFilters(leads ?? [])
   const [page, setPage] = useState(1)
   const [selected, setSelected] = useState<Lead | null>(null)
@@ -54,10 +55,11 @@ export default function CampaignLeads() {
     [campaign.id, selected],
   )
 
-  if (loading) return <LoadingState rows={6} />
-  if (error) return <ErrorState message={error} onRetry={reload} />
-
-  return (
+  const body = loading ? (
+    <LoadingState rows={6} />
+  ) : error ? (
+    <ErrorState message={error} onRetry={reload} />
+  ) : (
     <Reveal className="space-y-6">
       <div>
         <div className="mb-3 flex items-center justify-between">
@@ -85,32 +87,35 @@ export default function CampaignLeads() {
         onPageChange={setPage}
       />
       {dialMsg && <p aria-live="polite" className="text-xs text-fg-secondary">{dialMsg}</p>}
-      <LeadDrawer lead={detail ?? null} open={!!selected} onClose={closeDetail} startInEdit={editMode} onUpdate={closeDetail} />
+    </Reveal>
+  )
 
+  return (
+    <>
+      {body}
+      <LeadDrawer lead={detail ?? null} open={!!selected} onClose={closeDetail} startInEdit={editMode} onUpdate={closeDetail} />
       <AddLeadModal
         open={addOpen}
         onClose={() => setAddOpen(false)}
-        onAdded={reload}
+        onAdded={refreshLeads}
         fixedOfferId={campaign.id}
         fixedCampaignName={campaign.name}
       />
-
       <GenerateLeadsModal
         open={genOpen}
         onClose={() => setGenOpen(false)}
         campaigns={[{ id: campaign.id, name: campaign.name, leadGen: campaign.leadGen }]}
         fixedCampaignId={campaign.id}
         leadGenDefaults={campaign.leadGen}
-        onGenerated={reload}
+        onGenerated={refreshLeads}
       />
-
       <ImportLeadsModal
         open={importOpen}
         onClose={() => setImportOpen(false)}
         campaigns={[{ id: campaign.id, name: campaign.name }]}
         fixedCampaignId={campaign.id}
-        onImported={reload}
+        onImported={refreshLeads}
       />
-    </Reveal>
+    </>
   )
 }

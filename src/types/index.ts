@@ -27,6 +27,8 @@ export interface Client {
   /** specific = one-time engagement · retainer_weekly = weekly retainer. */
   engagementType?: 'specific' | 'retainer_weekly' | ''
   specificAmount?: number
+  /** Prepaid funds available to allocate into campaign budgets. */
+  walletBalance?: number
   retainerWeeklyAmount?: number
   /** DD/MM/YYYY engagement start (calendar picker). */
   engagementStart?: string
@@ -57,6 +59,23 @@ export interface ClientPage {
   total: number
   page: number
   pageSize: number
+}
+
+export interface ClientBudgetSummary {
+  clientId: ID
+  walletBalance: number
+  allocatedToCampaigns: number
+  availableBalance: number
+  currency: 'USD'
+}
+
+export interface CampaignBudgetAddResult extends ClientBudgetSummary {
+  campaignBudget: {
+    offerId: ID
+    total: number
+    added: number
+    currency: string
+  }
 }
 
 // ---------------------------------------------------------------------------

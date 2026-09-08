@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Pencil, Plus, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Plus, ChevronLeft, ChevronRight, Settings } from 'lucide-react'
 import { repo } from '@/api/repository'
 import { useAsyncData } from '@/hooks/useAsyncData'
 import { PageTransition } from '@/components/motion/PageTransition'
@@ -16,7 +16,6 @@ import { BulkActionBar } from '@/components/ui/BulkActionBar'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { useBulkSelection } from '@/hooks/useBulkSelection'
 import { cn } from '@/lib/utils'
-import { ClientFormModal } from '@/components/admin/ClientFormModal'
 import { CopyableName } from '@/components/ui/CopyableName'
 import type { Client } from '@/types'
 
@@ -28,7 +27,6 @@ export default function AdminClients() {
   const [q, setQ] = useState('')
   const [plan, setPlan] = useState<'all' | Client['plan']>('all')
   const [page, setPage] = useState(1)
-  const [modal, setModal] = useState<{ open: boolean; client: Client | null }>({ open: false, client: null })
   const [confirmBulk, setConfirmBulk] = useState(false)
   const [bulkBusy, setBulkBusy] = useState(false)
   const [bulkNotice, setBulkNotice] = useState('')
@@ -85,7 +83,7 @@ export default function AdminClients() {
           title="Clients"
           description="Client workspaces and their campaigns."
           actions={
-            <Button variant="primary" leadingIcon={<Plus />} onClick={() => setModal({ open: true, client: null })}>
+            <Button variant="primary" leadingIcon={<Plus />} onClick={() => navigate('/admin/clients/new/settings')}>
               Add client
             </Button>
           }
@@ -113,7 +111,7 @@ export default function AdminClients() {
               </button>
             ))}
           </div>
-          <Button variant="ghost" onClick={reload} className="lg:ml-auto">
+          <Button variant="ghost" onClick={() => void reload()} className="lg:ml-auto">
             Refresh
           </Button>
         </div>
@@ -176,10 +174,10 @@ export default function AdminClients() {
                     <Button
                       variant="ghost"
                       size="icon-sm"
-                      aria-label={`Edit ${client.name}`}
-                      onClick={() => setModal({ open: true, client })}
+                      aria-label={`Settings for ${client.name}`}
+                      onClick={() => navigate(`/admin/clients/${client.id}/settings`)}
                     >
-                      <Pencil className="size-3.5" />
+                      <Settings className="size-3.5" />
                     </Button>
                   </div>
                 </div>
@@ -221,12 +219,6 @@ export default function AdminClients() {
           </div>
         )}
       </PageContainer>
-      <ClientFormModal
-        open={modal.open}
-        client={modal.client}
-        onClose={() => setModal({ open: false, client: null })}
-        onSaved={reload}
-      />
       <ConfirmDialog
         open={confirmBulk}
         onClose={() => setConfirmBulk(false)}

@@ -8,6 +8,20 @@ import { Input } from '@/components/ui/Input'
 import { CAMPAIGN_TYPE_OPTIONS, type CampaignType } from '@/lib/campaignTypes'
 import type { Client } from '@/types'
 
+/** Allow digits and a single decimal point while the user types. */
+function sanitizeFloatInput(raw: string): string {
+  const cleaned = raw.replace(/[^0-9.]/g, '')
+  const [whole, ...fraction] = cleaned.split('.')
+  return fraction.length === 0 ? whole : `${whole}.${fraction.join('')}`
+}
+
+function parseOptionalBudget(raw: string): number | undefined {
+  const trimmed = raw.trim()
+  if (!trimmed) return undefined
+  const value = Number(trimmed)
+  return Number.isFinite(value) ? value : undefined
+}
+
 export interface NewCampaignModalProps {
   open: boolean
   onClose: () => void
@@ -30,6 +44,7 @@ export function NewCampaignModal({ open, onClose, onCreated, fixedClient, client
   const [offerName, setOfferName] = useState('')
   const [category, setCategory] = useState('')
   const [campaignType, setCampaignType] = useState<CampaignType>('live')
+  const [budget, setBudget] = useState('')
   const [clientId, setClientId] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -40,13 +55,17 @@ export function NewCampaignModal({ open, onClose, onCreated, fixedClient, client
     setOfferName('')
     setCategory('')
     setCampaignType('live')
+    setBudget('')
     setClientId('')
     setError('')
     setSaving(false)
   }, [open])
 
   const effectiveClientId = fixedClient?.id ?? clientId
-  const canSubmit = !saving && name.trim().length > 0 && effectiveClientId.length > 0
+  const parsedBudget = parseOptionalBudget(budget)
+  const budgetInvalid = budget.trim().length > 0 && parsedBudget === undefined
+  const canSubmit =
+    !saving && name.trim().length > 0 && effectiveClientId.length > 0 && !budgetInvalid
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -63,6 +82,7 @@ export function NewCampaignModal({ open, onClose, onCreated, fixedClient, client
         company,
         clientId: effectiveClientId,
         type: campaignType,
+        budget: parsedBudget,
       })
       onCreated()
       onClose()
@@ -127,6 +147,28 @@ export function NewCampaignModal({ open, onClose, onCreated, fixedClient, client
           <p className="mt-1 text-2xs text-fg-muted">
             {CAMPAIGN_TYPE_OPTIONS.find((option) => option.value === campaignType)?.description}
           </p>
+        </div>
+        <div>
+          <span className="text-xs text-fg-muted">Budget</span>
+          <div className="relative mt-1">
+            <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm text-fg-muted">
+              $
+            </span>
+            <Input
+              inputMode="decimal"
+              className="pl-7 tabular"
+              value={budget}
+              onChange={(e) => setBudget(sanitizeFloatInput(e.target.value))}
+              placeholder="e.g. 500.00"
+              error={budgetInvalid}
+            />
+          </div>
+          <p className="mt-1 text-2xs text-fg-muted">
+            Optional campaign budget cap. Numbers only — decimals allowed.
+          </p>
+          {budgetInvalid && (
+            <p className="mt-1 text-2xs text-danger">Enter a valid number (e.g. 500 or 500.50).</p>
+          )}
         </div>
         <div>
           <span className="text-xs text-fg-muted">Campaign name *</span>
