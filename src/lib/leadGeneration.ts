@@ -80,6 +80,8 @@ export type GenTopLead = {
   intent: number
   url?: string
   duplicateOf?: string
+  matchReason?: string
+  secondBest?: boolean
 }
 
 export type GenCoverage = {
@@ -151,13 +153,19 @@ export function toGenResultView(r: SmartSearchResponse | LeadImportResult): GenR
       intent_score?: number
       evidence_url?: string
       duplicate_of?: string
-    }[]).map((l) => ({
-      name: l.lead_name ?? '',
-      rel: Math.round((l.relevance_score ?? 0) * 100),
-      intent: Math.round((l.intent_score ?? 0) * 100),
-      url: l.evidence_url,
-      duplicateOf: l.duplicate_of,
-    }))
+      match_reason?: string
+    }[]).map((l) => {
+      const matchReason = l.match_reason ?? ''
+      return {
+        name: l.lead_name ?? '',
+        rel: Math.round((l.relevance_score ?? 0) * 100),
+        intent: Math.round((l.intent_score ?? 0) * 100),
+        url: l.evidence_url,
+        duplicateOf: l.duplicate_of,
+        matchReason,
+        secondBest: matchReason.startsWith('Second-best match'),
+      }
+    })
     return {
       smart: true,
       smartView: {

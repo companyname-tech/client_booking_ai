@@ -6,8 +6,8 @@
  * Both call the real backend (POST /leads/smart-search, POST /leads/generate)
  * via `repo` and normalize the reply with `toGenResultView`.
  */
-import { useState, type ReactNode, useEffect } from 'react'
-import { ExternalLink, Sparkles, Target } from 'lucide-react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { ExternalLink, Loader2, Sparkles, Target } from 'lucide-react'
 import { repo } from '@/data/repository'
 import { ApiError } from '@/api/adapters/http/client'
 import { Modal } from '@/components/ui/Modal'
@@ -116,8 +116,8 @@ const PLATFORM_LABEL: Record<string, string> = Object.fromEntries(
   GEN_PLATFORMS.map((p) => [p.value, p.label]),
 )
 
-/** Public search is the default under the backend's zero-cost policy. */
-const DEFAULT_SCAN_PLATFORMS = ['reddit']
+/** Default sources for smart search — web first when the backend has API keys. */
+const DEFAULT_SCAN_PLATFORMS = ['web', 'google_business', 'reddit']
 
 const GEN_CONTACT_TYPES: { value: string; label: string }[] = [
   { value: 'phone', label: 'Phone' },
@@ -195,18 +195,32 @@ export function GenerateLeadsModal({
   }
 
   useEffect(() => {
-    if (!open) return
+    if (!open) {
+      setResult(null)
+      setError(null)
+      setRunning(false)
+      return
+    }
     setCampaignId(fixedCampaignId ?? '')
     const defaults =
       leadGenDefaults ??
       (fixedCampaignId ? campaigns.find((c) => c.id === fixedCampaignId)?.leadGen : undefined)
     applyLeadGenDefaults(defaults)
-  }, [open, fixedCampaignId, leadGenDefaults, campaigns])
+    // Only seed defaults when the modal opens — not on every parent re-render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open])
 
   // Run state
   const [result, setResult] = useState<GenResultView | null>(null)
   const [running, setRunning] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const resultRef = useRef<HTMLDivElement>(null)
+  const submitLock = useRef(false)
+
+  useEffect(() => {
+    if (!result || !resultRef.current) return
+    resultRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }, [result])
 
   const effectiveCampaignId = fixedCampaignId ?? campaignId
   const canRun = !!effectiveCampaignId && !running
@@ -216,6 +230,7 @@ export function GenerateLeadsModal({
   }
 
   async function runSmart() {
+    if (running || submitLock.current) return
     if (!query.trim()) {
       setError('Describe the prospects you want to find.')
       return
@@ -224,6 +239,7 @@ export function GenerateLeadsModal({
       setError('Select a campaign first.')
       return
     }
+    submitLock.current = true
     setRunning(true)
     setError(null)
     setResult(null)
@@ -244,15 +260,17 @@ export function GenerateLeadsModal({
         }),
       )
       setResult(toGenResultView(r))
-      onGenerated?.()
+      queueMicrotask(() => onGenerated?.())
     } catch (e) {
       setError(errorMessage(e))
     } finally {
       setRunning(false)
+      submitLock.current = false
     }
   }
 
   async function runClassic() {
+    if (running || submitLock.current) return
     if (!classicCountry.trim()) {
       setError('Country is required.')
       return
@@ -265,6 +283,7 @@ export function GenerateLeadsModal({
       setError('Select a campaign first.')
       return
     }
+    submitLock.current = true
     setRunning(true)
     setError(null)
     setResult(null)
@@ -280,11 +299,12 @@ export function GenerateLeadsModal({
         }),
       )
       setResult(toGenResultView(r))
-      onGenerated?.()
+      queueMicrotask(() => onGenerated?.())
     } catch (e) {
       setError(errorMessage(e))
     } finally {
       setRunning(false)
+      submitLock.current = false
     }
   }
 
@@ -298,25 +318,60 @@ export function GenerateLeadsModal({
       footer={
         <>
           <Button variant="ghost" onClick={onClose} disabled={running}>
-            Close
+            {result ? 'Close' : 'Cancel'}
           </Button>
-          {mode === 'smart' ? (
-            <Button variant="primary" leadingIcon={<Target className="size-4" />} onClick={() => void runSmart()} disabled={!canRun}>
+          {result ? (
+            <Button variant="primary" onClick={onClose}>
+              Done
+            </Button>
+          ) : mode === 'smart' ? (
+            <Button
+              variant="primary"
+              aria-busy={running}
+              leadingIcon={running ? <Loader2 className="size-4 animate-spin" /> : <Target className="size-4" />}
+              onClick={() => void runSmart()}
+              disabled={!canRun}
+            >
               {running ? 'Searching…' : 'Search prospects'}
             </Button>
           ) : (
-            <Button variant="primary" leadingIcon={<Sparkles className="size-4" />} onClick={() => void runClassic()} disabled={!canRun}>
+            <Button
+              variant="primary"
+              aria-busy={running}
+              leadingIcon={running ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />}
+              onClick={() => void runClassic()}
+              disabled={!canRun}
+            >
               {running ? 'Generating…' : 'Generate leads'}
             </Button>
           )}
         </>
       }
     >
-      <div className="space-y-5 px-5 py-4">
+      <div className="relative space-y-5 px-5 py-4" aria-busy={running}>
+        {running && (
+          <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 rounded-md bg-bg/85 px-6 text-center backdrop-blur-[2px]">
+            <Loader2 className="size-9 animate-spin text-accent" aria-hidden />
+            <p className="text-sm font-medium text-fg">
+              {mode === 'smart' ? 'Searching prospects…' : 'Generating leads…'}
+            </p>
+            <p className="max-w-sm text-xs text-fg-muted">
+              Scanning your selected sources. This can take up to a minute depending on the query.
+            </p>
+          </div>
+        )}
+
+        {error && <div className="rounded-md border border-danger/30 bg-danger-soft px-3 py-2 text-sm text-danger">{error}</div>}
+
+        {result && (
+          <div ref={resultRef}>
+            <GenResultBox result={result} />
+          </div>
+        )}
+
         <p className="rounded-md border border-line bg-surface-2 p-3 text-xs text-fg-muted">
-          Zero-cost mode is enabled by default. Public Reddit search may be limited or unavailable.
-          Paid web, social and Google Maps discovery, including classic generation, are blocked in this mode.
-          You can also import an existing contact list as CSV.
+          Smart search uses Web and Google Business when API keys are configured, then Reddit as a free fallback.
+          Classic generation stays disabled in zero-cost mode. You can also import an existing contact list as CSV.
         </p>
         {/* Campaign picker (hidden when the lead view is campaign-scoped). */}
         {!fixedCampaignId && (
@@ -590,12 +645,17 @@ export function GenerateLeadsModal({
           </div>
         )}
 
-        {error && <div className="rounded-md border border-danger/30 bg-danger-soft px-3 py-2 text-sm text-danger">{error}</div>}
-
-        {result && <GenResultBox result={result} />}
       </div>
     </Modal>
   )
+}
+
+function formatSearchError(error: string): string {
+  if (/403 blocked/i.test(error) && /reddit/i.test(error)) {
+    return 'Reddit blocked this search from the server (403). Try a shorter query or import contacts via CSV.'
+  }
+  if (error.length > 280) return `${error.slice(0, 280)}…`
+  return error
 }
 
 function GenResultBox({ result }: { result: GenResultView }) {
@@ -657,25 +717,42 @@ function GenResultBox({ result }: { result: GenResultView }) {
             </div>
           )}
 
-          {sv.topLeads.length > 0 && (
+          {sv.topLeads.length > 0 ? (
             <div className="rounded-md border border-line bg-surface-2 p-3">
               <div className="label-caps mb-2">Top matches</div>
               <div className="space-y-1.5">
-                {sv.topLeads.slice(0, 5).map((l, i) => (
-                  <div key={i} className="flex items-center gap-2 text-sm">
-                    <span className="min-w-0 flex-1 truncate text-fg">{l.name}</span>
-                    <span className="shrink-0 text-xs text-fg-muted">
-                      {l.rel}% / {l.intent}%
-                    </span>
-                    {l.url && (
-                      <a href={l.url} target="_blank" rel="noreferrer" className="shrink-0 text-fg-muted hover:text-fg">
-                        <ExternalLink className="size-3.5" />
-                      </a>
+                {sv.topLeads.slice(0, 10).map((l, i) => (
+                  <div key={i} className="rounded-sm border border-line/60 px-2 py-1.5">
+                    <div className="flex items-center gap-2 text-sm">
+                      <span className="min-w-0 flex-1 truncate text-fg">{l.name}</span>
+                      <span className="shrink-0 text-xs text-fg-muted">
+                        {l.rel}% / {l.intent}%
+                      </span>
+                      {l.secondBest && (
+                        <span className="shrink-0 rounded-full border border-warning/30 bg-warning-soft px-1.5 py-0.5 text-2xs text-warning">
+                          Second best
+                        </span>
+                      )}
+                      {l.url && (
+                        <a href={l.url} target="_blank" rel="noreferrer" className="shrink-0 text-fg-muted hover:text-fg">
+                          <ExternalLink className="size-3.5" />
+                        </a>
+                      )}
+                      {l.duplicateOf && <span className="shrink-0 text-xs text-warning">dup → {l.duplicateOf}</span>}
+                    </div>
+                    {l.matchReason && (
+                      <p className="mt-1 text-xs text-fg-muted">{l.matchReason}</p>
                     )}
-                    {l.duplicateOf && <span className="shrink-0 text-xs text-warning">dup → {l.duplicateOf}</span>}
                   </div>
                 ))}
               </div>
+            </div>
+          ) : (
+            <div className="rounded-md border border-line bg-surface-2 px-3 py-2.5 text-sm text-fg-secondary">
+              No matching prospects were found for this search.
+              {(result.imported ?? 0) > 0
+                ? ' Some leads may already appear in your campaign table.'
+                : ' Try a shorter query, another source, or upload a CSV contact list.'}
             </div>
           )}
         </>
@@ -698,7 +775,7 @@ function GenResultBox({ result }: { result: GenResultView }) {
       {result.errors.length > 0 && (
         <div className="rounded-md border border-danger/30 bg-danger-soft px-3 py-2 text-sm text-danger">
           {result.errors.map((e, i) => (
-            <div key={i}>{e}</div>
+            <div key={i}>{formatSearchError(e)}</div>
           ))}
         </div>
       )}

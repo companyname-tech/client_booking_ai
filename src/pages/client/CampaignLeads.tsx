@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { Plus, Sparkles, Upload } from 'lucide-react'
 import { repo } from '@/data/repository'
 import { useCampaignContext } from './campaignContext'
@@ -19,6 +19,10 @@ export default function CampaignLeads() {
   const { campaign } = useCampaignContext()
   const { data: leads, loading, error, reload } = useAsyncData(() => repo.getLeads(campaign.id), [campaign.id])
   const refreshLeads = useCallback(() => reload({ silent: true }), [reload])
+  const genCampaigns = useMemo(
+    () => [{ id: campaign.id, name: campaign.name, leadGen: campaign.leadGen }],
+    [campaign.id, campaign.name, campaign.leadGen],
+  )
   const { filters, setFilters, filtered } = useLeadFilters(leads ?? [])
   const [page, setPage] = useState(1)
   const [selected, setSelected] = useState<Lead | null>(null)
@@ -104,7 +108,7 @@ export default function CampaignLeads() {
       <GenerateLeadsModal
         open={genOpen}
         onClose={() => setGenOpen(false)}
-        campaigns={[{ id: campaign.id, name: campaign.name, leadGen: campaign.leadGen }]}
+        campaigns={genCampaigns}
         fixedCampaignId={campaign.id}
         leadGenDefaults={campaign.leadGen}
         onGenerated={refreshLeads}
