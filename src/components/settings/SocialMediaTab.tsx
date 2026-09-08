@@ -1,21 +1,17 @@
-import { ProviderConnections } from './ProviderConnections'
+import { AgentTelegramConnections } from './AgentTelegramConnections'
 import { SchemaSettingsCard } from './SchemaSettingsCard'
 
 /**
- * Settings → Social media tab — Telegram bot connection plus social channel
- * credentials: Facebook, Instagram, Telegram search, Reddit and the Google
- * Places API key (used by the Google Business/Maps lead-scan source).
+ * Settings → Social media tab — per-agent Telegram bot connections plus social
+ * channel credentials: Facebook, Instagram, Telegram search, Reddit and the
+ * Google Places API key (used by the Google Business/Maps lead-scan source).
  * Agent-scoped voice/model fields are NOT shown here (they live per-agent
  * under the Agent tab).
  */
 export function SocialMediaTab() {
   return (
     <>
-      <ProviderConnections
-        only={['telegram']}
-        title="Telegram"
-        description="Connect your Telegram bot for 1:1 client messaging. Paste the token from @BotFather."
-      />
+      <AgentTelegramConnections />
       <SchemaSettingsCard
         title="Social media"
         description="Social channel connections and credentials — Facebook, Instagram, Telegram search, Reddit, Google Business/Maps (Places API)."

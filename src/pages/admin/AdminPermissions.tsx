@@ -9,6 +9,7 @@ import { ErrorState } from '@/components/ui/ErrorState'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { Button } from '@/components/ui/Button'
 import { PermissionsEditorModal } from '@/components/admin/PermissionsEditorModal'
+import { CopyableName } from '@/components/ui/CopyableName'
 import { roleLabel } from '@/lib/permissions'
 import { cn } from '@/lib/utils'
 import type { AdminUser, PermissionCatalog, PermissionDescriptor } from '@/types/admin'
@@ -111,7 +112,13 @@ export default function AdminPermissions() {
                   {(users ?? []).map((u) => (
                     <tr key={u.id} className="border-b border-line last:border-0 hover:bg-white/[0.02]">
                       <td className="px-5 py-3">
-                        <div className="font-medium text-fg">{u.name || '—'}</div>
+                        <CopyableName
+                          name={u.name || u.email}
+                          id={u.id}
+                          compact
+                          className="font-medium text-fg"
+                          onCopied={setNotice}
+                        />
                         <div className="text-xs text-fg-muted">{u.email}</div>
                       </td>
                       <td className="px-3 py-3">

@@ -1,5 +1,5 @@
 import { useMemo, useState, type ChangeEvent } from 'react'
-import { ArrowDown, ArrowUp, ArrowUpDown, Check, Phone, Plus, RefreshCw, Search, Trash2, X } from 'lucide-react'
+import { ArrowDown, ArrowUp, ArrowUpDown, Check, Phone, Plus, RefreshCw, Search, Trash2, Upload, X } from 'lucide-react'
 import { repo } from '@/api/repository'
 import type { AdminLead } from '@/types/admin'
 import type { LeadStatus } from '@/types'
@@ -22,8 +22,11 @@ import { StatusBadge } from '@/components/ui/StatusBadge'
 import { LeadScore } from '@/components/leads/LeadScore'
 import { LeadStatusBadge } from '@/components/leads/LeadStatusBadge'
 import { AddLeadModal } from '@/components/leads/AddLeadModal'
+import { ImportLeadsModal } from '@/components/leads/hub/ImportLeadsModal'
+import type { OfferCampaign } from '@/types'
 import { NOW } from '@/data/time'
 import { formatRelativeCompact, initials } from '@/lib/utils'
+import { CopyableName } from '@/components/ui/CopyableName'
 
 type SortKey = 'campaign' | 'name' | 'industry' | 'status' | 'score' | 'lastActivity' | 'createdAt'
 type SortDir = 'asc' | 'desc'
@@ -391,11 +394,18 @@ export default function AdminLeads() {
   const [page, setPage] = useState(1)
   const [preview, setPreview] = useState<AdminLead | null>(null)
   const [adding, setAdding] = useState(false)
+  const [importing, setImporting] = useState(false)
+  const [campaigns, setCampaigns] = useState<OfferCampaign[]>([])
   const [actionMsg, setActionMsg] = useState('')
   const [busyId, setBusyId] = useState<string | null>(null)
   const [confirmBulk, setConfirmBulk] = useState(false)
   const [bulkBusy, setBulkBusy] = useState(false)
   const [confirmAction, setConfirmAction] = useState<{ lead: AdminLead; action: 'dial' | 'delete' } | null>(null)
+
+  const openImport = () => {
+    void repo.getCampaigns().then(setCampaigns).catch(() => setCampaigns([]))
+    setImporting(true)
+  }
 
   const runAction = async (lead: AdminLead, action: LeadAction) => {
     setBusyId(lead.id)
@@ -538,6 +548,9 @@ export default function AdminLeads() {
             options={ORDER_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
             className="w-full shrink-0 sm:w-40"
           />
+          <Button variant="secondary" size="sm" leadingIcon={<Upload className="size-3.5" />} onClick={openImport}>
+            Upload CSV
+          </Button>
           <Button variant="primary" size="sm" leadingIcon={<Plus className="size-3.5" />} onClick={() => setAdding(true)}>
             Add lead
           </Button>
@@ -606,7 +619,13 @@ export default function AdminLeads() {
                               {initials(lead.name)}
                             </span>
                             <div className="min-w-0">
-                              <div className="truncate font-medium text-fg">{lead.name}</div>
+                              <CopyableName
+                                name={lead.name}
+                                id={lead.id}
+                                compact
+                                className="font-medium text-fg"
+                                onCopied={setActionMsg}
+                              />
                               <div className="truncate text-xs text-fg-muted">{lead.company || lead.title || '—'}</div>
                             </div>
                           </div>
@@ -662,7 +681,13 @@ export default function AdminLeads() {
                     >
                       <div className="flex items-start justify-between">
                         <div className="min-w-0">
-                          <div className="truncate font-medium text-fg">{lead.name}</div>
+                          <CopyableName
+                            name={lead.name}
+                            id={lead.id}
+                            compact
+                            className="font-medium text-fg"
+                            onCopied={setActionMsg}
+                          />
                           <div className="truncate text-xs text-fg-muted">
                             {lead.campaignName ? `${lead.campaignName} · ` : ''}
                             {lead.company || lead.title || '—'}
@@ -702,6 +727,12 @@ export default function AdminLeads() {
         )}
 
         <AddLeadModal open={adding} onClose={() => setAdding(false)} onAdded={reload} />
+        <ImportLeadsModal
+          open={importing}
+          onClose={() => setImporting(false)}
+          campaigns={campaigns.map((c) => ({ id: c.id, name: c.name }))}
+          onImported={reload}
+        />
         <LeadExtraDrawer lead={preview} open={!!preview} onClose={() => setPreview(null)} onUpdate={reload} />
         <ConfirmDialog
           open={confirmBulk}

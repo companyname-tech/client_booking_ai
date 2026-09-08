@@ -6,6 +6,7 @@ import { NOW } from '@/data/time'
 import { formatRelativeCompact } from '@/lib/utils'
 import { cn } from '@/lib/utils'
 import { StatusDot } from '@/components/ui/StatusDot'
+import { CopyableName } from '@/components/ui/CopyableName'
 
 const WF_LABEL: Record<string, string> = {
   awaiting_approval: 'Awaiting Approval',
@@ -70,13 +71,15 @@ export function PriorityQueue({
         const badgeClass = WF_BADGE[m.workflowStatus] ?? 'bg-info-soft/20 text-info'
         return (
           <li key={m.offerCampaignId}>
-            <Link
-              to={`/admin/campaigns/${m.offerCampaignId}/review`}
-              className="interactive group flex flex-col gap-3 rounded-lg border border-line bg-surface-2 p-4 transition-colors hover:border-line-strong hover:bg-surface-3/50 sm:flex-row sm:items-center sm:justify-between"
-            >
-              <div className="min-w-0">
-                <div className="font-medium text-fg group-hover:text-accent">{campaign.name}</div>
-                <div className="mt-0.5 text-xs text-fg-muted">{client?.name}</div>
+            <div className="flex flex-col gap-3 rounded-lg border border-line bg-surface-2 p-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0 flex-1">
+                <CopyableName name={campaign.name} id={campaign.id} compact className="font-medium text-fg" />
+                <Link
+                  to={`/admin/campaigns/${m.offerCampaignId}/review`}
+                  className="interactive mt-0.5 block text-xs text-fg-muted hover:text-fg-secondary"
+                >
+                  {client?.name}
+                </Link>
                 <div className="mt-2 flex flex-wrap items-center gap-2 text-2xs">
                   <span className={cn('inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-medium', badgeClass)}>
                     <StatusDot tone={tone} size={5} />
@@ -86,7 +89,10 @@ export function PriorityQueue({
                   <span className="text-fg-muted">Risk: {m.riskLevel}</span>
                 </div>
               </div>
-              <div className="flex items-center gap-4">
+              <Link
+                to={`/admin/campaigns/${m.offerCampaignId}/review`}
+                className="interactive group flex items-center gap-4"
+              >
                 <div className="text-right">
                   <div className="text-2xs text-fg-muted">AI Readiness</div>
                   <div className="text-lg font-semibold tabular text-violet">{m.aiReadiness}%</div>
@@ -94,8 +100,8 @@ export function PriorityQueue({
                 <span className="inline-flex items-center gap-1 text-xs font-medium text-accent">
                   Review <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" />
                 </span>
-              </div>
-            </Link>
+              </Link>
+            </div>
           </li>
         )
       })}

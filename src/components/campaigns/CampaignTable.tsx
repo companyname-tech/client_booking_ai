@@ -10,6 +10,7 @@ import { ProgressBar } from '@/components/ui/ProgressBar'
 import { Sparkline } from '@/components/ui/Sparkline'
 import { CampaignStatus } from './CampaignStatus'
 import { SelectCheckbox } from '@/components/ui/SelectCheckbox'
+import { CopyableName } from '@/components/ui/CopyableName'
 
 export interface CampaignSelection {
   selected: ReadonlySet<string>
@@ -25,6 +26,7 @@ export interface CampaignTableProps {
   className?: string
   /** Optional bulk-selection state — renders a checkbox column (admin lists). */
   selection?: CampaignSelection
+  onCopied?: (label: string) => void
 }
 
 const progressTone = (c: OfferCampaign) =>
@@ -45,11 +47,13 @@ const Row = memo(function Row({
   onOpen,
   selected,
   onToggle,
+  onCopied,
 }: {
   campaign: OfferCampaign
   onOpen: () => void
   selected?: boolean
   onToggle?: (id: string) => void
+  onCopied?: (label: string) => void
 }) {
   const { metrics, budget } = campaign
 
@@ -71,7 +75,14 @@ const Row = memo(function Row({
       <td className={cell}>
         <div className="flex items-center gap-2.5">
           <div className="min-w-0">
-            <div className="truncate text-sm font-medium text-fg">{campaign.name}</div>
+            <CopyableName
+              name={campaign.name}
+              id={campaign.id}
+              compact
+              rowHover
+              className="text-sm font-medium text-fg"
+              onCopied={onCopied}
+            />
             <div className="truncate text-xs text-fg-muted">{campaign.targetAudience}</div>
           </div>
         </div>
@@ -115,15 +126,17 @@ const CardRow = memo(function CardRow({
   onOpen,
   selected,
   onToggle,
+  onCopied,
 }: {
   campaign: OfferCampaign
   onOpen: () => void
   selected?: boolean
   onToggle?: (id: string) => void
+  onCopied?: (label: string) => void
 }) {
   const { metrics, budget } = campaign
   return (
-    <Reveal as="li">
+    <Reveal as="li" className="group">
       <div className="flex items-center gap-2 px-4 pt-3">
         {onToggle ? (
           <SelectCheckbox checked={!!selected} onChange={() => onToggle(campaign.id)} label={`Select ${campaign.name}`} />
@@ -131,44 +144,53 @@ const CardRow = memo(function CardRow({
           <span className="size-4" />
         )}
       </div>
-      <button
-        type="button"
-        onClick={onOpen}
-        className="interactive ring-focus flex w-full flex-col gap-3 px-4 py-4 text-left outline-none hover:bg-white/[0.025]"
-      >
-        <div className="flex w-full items-start justify-between gap-3">
-          <div className="min-w-0">
-            <div className="truncate text-sm font-medium text-fg">{campaign.name}</div>
+      <div className="px-4 pb-4">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <CopyableName
+              name={campaign.name}
+              id={campaign.id}
+              compact
+              rowHover
+              className="text-sm font-medium text-fg"
+              onCopied={onCopied}
+            />
             <div className="truncate text-xs text-fg-muted">{campaign.targetAudience}</div>
           </div>
           <CampaignStatus status={campaign.status} />
         </div>
-        <dl className="grid w-full grid-cols-4 gap-2">
-          {[
-            ['Leads', formatNumber(metrics.leadsFound)],
-            ['Calls', formatNumber(metrics.callsCompleted)],
-            ['Bookings', formatNumber(metrics.bookings)],
-            ['Conv.', metrics.conversionRate ? formatPercent(metrics.conversionRate) : '—'],
-          ].map(([k, v]) => (
-            <div key={k}>
-              <dt className="text-2xs text-fg-muted">{k}</dt>
-              <dd className="text-sm font-medium tabular text-fg">{v}</dd>
-            </div>
-          ))}
-        </dl>
-        <div className="flex w-full items-center gap-3">
-          <ProgressBar value={campaign.progress} tone={progressTone(campaign)} size="xs" className="flex-1" label={`${campaign.name} progress`} />
-          <span className="text-xs tabular text-fg-secondary">{campaign.progress}%</span>
-          <span className="text-2xs tabular text-fg-faint">
-            {formatCurrency(budget.used)} / {formatCurrency(budget.total)}
-          </span>
-        </div>
-      </button>
+        <button
+          type="button"
+          onClick={onOpen}
+          className="interactive ring-focus mt-3 flex w-full flex-col gap-3 rounded-md text-left outline-none hover:bg-white/[0.025]"
+        >
+          <dl className="grid w-full grid-cols-4 gap-2">
+            {[
+              ['Leads', formatNumber(metrics.leadsFound)],
+              ['Calls', formatNumber(metrics.callsCompleted)],
+              ['Bookings', formatNumber(metrics.bookings)],
+              ['Conv.', metrics.conversionRate ? formatPercent(metrics.conversionRate) : '—'],
+            ].map(([k, v]) => (
+              <div key={k}>
+                <dt className="text-2xs text-fg-muted">{k}</dt>
+                <dd className="text-sm font-medium tabular text-fg">{v}</dd>
+              </div>
+            ))}
+          </dl>
+          <div className="flex w-full items-center gap-3">
+            <ProgressBar value={campaign.progress} tone={progressTone(campaign)} size="xs" className="flex-1" label={`${campaign.name} progress`} />
+            <span className="text-xs tabular text-fg-secondary">{campaign.progress}%</span>
+            <span className="text-2xs tabular text-fg-faint">
+              {formatCurrency(budget.used)} / {formatCurrency(budget.total)}
+            </span>
+          </div>
+        </button>
+      </div>
     </Reveal>
   )
 })
 
-export function CampaignTable({ campaigns, zone = 'client', className, selection }: CampaignTableProps) {
+export function CampaignTable({ campaigns, zone = 'client', className, selection, onCopied }: CampaignTableProps) {
   const navigate = useNavigate()
   const isWide = useIsWide()
   const open = (id: string) => navigate(`/${zone}/campaigns/${id}`)
@@ -184,6 +206,7 @@ export function CampaignTable({ campaigns, zone = 'client', className, selection
               onOpen={() => open(c.id)}
               selected={selection?.selected.has(c.id)}
               onToggle={selection?.toggle}
+              onCopied={onCopied}
             />
           ))}
         </Stagger>
@@ -240,6 +263,7 @@ export function CampaignTable({ campaigns, zone = 'client', className, selection
                 onOpen={() => open(c.id)}
                 selected={selection?.selected.has(c.id)}
                 onToggle={selection?.toggle}
+                onCopied={onCopied}
               />
             ))}
           </Stagger>

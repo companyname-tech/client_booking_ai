@@ -78,6 +78,7 @@ export type CampaignStage = (typeof CAMPAIGN_STAGES)[number]
 export type CampaignStatus =
   | 'draft'
   | 'preparing'
+  | 'awaiting_agent_assignment'
   | 'awaiting_ai_training'
   | 'ai_training'
   | 'legal_review'
@@ -115,6 +116,14 @@ export interface CampaignMetrics {
   detailsRequested: number
 }
 
+/** Per-campaign lead generation defaults (persisted on the offer as gen_*). */
+export interface CampaignLeadGenDefaults {
+  country: string
+  phoneType: string
+  industry: string
+  numberOfLeads: number
+}
+
 export interface OfferCampaign {
   id: ID
   clientId: ID
@@ -123,6 +132,8 @@ export interface OfferCampaign {
   valueProposition?: string // the offer pitch/description (BE value_proposition/description)
   /** Backend offer source (e.g. training campaigns use source=training). */
   source?: string
+  /** Lead-generation form defaults for this campaign (BE gen_* fields). */
+  leadGen?: CampaignLeadGenDefaults
   status: CampaignStatus
   stage: CampaignStage
   targetAudience: string
@@ -358,6 +369,8 @@ export interface Agent {
   audio_model: string // TTS model ("" = default)
   transcription_model: string // caller STT model ("" = default)
   agent_model: string // chat-completions "brain" model
+  telegram_configured?: boolean
+  telegram_masked?: string
 }
 
 export type IntegrationProvider = 'gmail' | 'calendly' | 'zoom'

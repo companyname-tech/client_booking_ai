@@ -144,7 +144,7 @@ export default function AdminClientDetail() {
                 busy={bulkBusy}
               />
               {bulkNotice && <p aria-live="polite" className="text-xs text-fg-secondary">{bulkNotice}</p>}
-              <CampaignTable campaigns={campaigns} zone="admin" selection={selection} />
+              <CampaignTable campaigns={campaigns} zone="admin" selection={selection} onCopied={setBulkNotice} />
             </div>
           ) : (
             <EmptyState

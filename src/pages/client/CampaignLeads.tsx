@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Plus, Sparkles } from 'lucide-react'
+import { Plus, Sparkles, Upload } from 'lucide-react'
 import { repo } from '@/data/repository'
 import { useCampaignContext } from './campaignContext'
 import { useAsyncData } from '@/hooks/useAsyncData'
@@ -11,6 +11,7 @@ import { LeadsTable } from '@/components/leads/LeadsTable'
 import { LeadDrawer } from '@/components/leads/LeadDrawer'
 import { AddLeadModal } from '@/components/leads/AddLeadModal'
 import { GenerateLeadsModal } from '@/components/leads/hub/GenerateLeadsModal'
+import { ImportLeadsModal } from '@/components/leads/hub/ImportLeadsModal'
 import type { Lead } from '@/types'
 import { Reveal } from '@/components/motion/Reveal'
 
@@ -23,6 +24,7 @@ export default function CampaignLeads() {
   const [editMode, setEditMode] = useState(false)
   const [addOpen, setAddOpen] = useState(false)
   const [genOpen, setGenOpen] = useState(false)
+  const [importOpen, setImportOpen] = useState(false)
   const [dialMsg, setDialMsg] = useState('')
 
   const openView = (lead: Lead) => {
@@ -61,6 +63,9 @@ export default function CampaignLeads() {
         <div className="mb-3 flex items-center justify-between">
           <h2 className="text-xl font-semibold text-fg">Leads</h2>
           <div className="flex items-center gap-2">
+            <Button variant="secondary" size="sm" leadingIcon={<Upload className="size-3.5" />} onClick={() => setImportOpen(true)}>
+              Upload CSV
+            </Button>
             <Button variant="secondary" size="sm" leadingIcon={<Plus className="size-3.5" />} onClick={() => setAddOpen(true)}>
               Add lead
             </Button>
@@ -93,9 +98,18 @@ export default function CampaignLeads() {
       <GenerateLeadsModal
         open={genOpen}
         onClose={() => setGenOpen(false)}
+        campaigns={[{ id: campaign.id, name: campaign.name, leadGen: campaign.leadGen }]}
+        fixedCampaignId={campaign.id}
+        leadGenDefaults={campaign.leadGen}
+        onGenerated={reload}
+      />
+
+      <ImportLeadsModal
+        open={importOpen}
+        onClose={() => setImportOpen(false)}
         campaigns={[{ id: campaign.id, name: campaign.name }]}
         fixedCampaignId={campaign.id}
-        onGenerated={reload}
+        onImported={reload}
       />
     </Reveal>
   )

@@ -13,6 +13,7 @@ export function firstAllowedAdminPath(session: AccessSession | null): string | n
     ['/admin/clients', 'clients.view'],
     ['/admin/campaigns', 'campaigns.view'],
     ['/admin/ai-training', 'ai_training.view'],
+    ['/admin/ai-training/settings', 'settings.view'],
     ['/admin/leads', 'leads.view'],
     ['/admin/calls', 'calls.view'],
     ['/admin/activity', 'activity.view'],

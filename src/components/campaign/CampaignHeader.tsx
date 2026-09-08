@@ -1,9 +1,8 @@
 import type { OfferCampaign, CampaignStatus } from '@/types'
-import { campaignStatusMeta } from '@/lib/status'
 import { formatCurrency, formatRelativeTime } from '@/lib/utils'
 import { NOW } from '@/data/time'
-import { CampaignStatus as CampaignStatusBadge } from '@/components/campaigns/CampaignStatus'
 import { Button } from '@/components/ui/Button'
+import { CampaignStatus as CampaignStatusBadge } from '@/components/campaigns/CampaignStatus'
 import { Pause, Play, ArrowRight, Trash2 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
@@ -25,8 +24,6 @@ export function CampaignHeader({
   onDelete?: () => void
   zone: 'client' | 'admin'
 }) {
-  const meta = campaignStatusMeta[effectiveStatus]
-
   const primaryAction = () => {
     if (effectiveStatus === 'active') {
       return (
@@ -71,10 +68,6 @@ export function CampaignHeader({
       <p className="text-sm text-fg-secondary">
         {campaign.targetAudience} · {campaign.geography}
       </p>
-      <div className="flex flex-wrap items-center gap-2">
-        <CampaignStatusBadge status={effectiveStatus} size="md" />
-        <span className="text-xs text-fg-muted">{meta.label}</span>
-      </div>
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-fg-muted">
         <span>Created {new Date(campaign.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
         <span className="size-0.5 rounded-full bg-fg-faint" aria-hidden />
@@ -82,8 +75,9 @@ export function CampaignHeader({
         <span className="size-0.5 rounded-full bg-fg-faint" aria-hidden />
         <span className="tabular">{formatCurrency(campaign.budget.total)} budget</span>
       </div>
-      <div className="flex items-center gap-2 pt-2">
+      <div className="flex flex-wrap items-center gap-2 pt-2">
         {primaryAction()}
+        <CampaignStatusBadge status={effectiveStatus} size="md" />
         {onDelete && (
           <Button
             variant="ghost"

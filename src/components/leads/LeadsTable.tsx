@@ -6,6 +6,7 @@ import { LeadScore } from './LeadScore'
 import { LeadStatusBadge } from './LeadStatusBadge'
 import { Button } from '@/components/ui/Button'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { CopyableName } from '@/components/ui/CopyableName'
 
 export function LeadsTable({
   leads,
@@ -59,7 +60,7 @@ export function LeadsTable({
                       {initials(lead.name)}
                     </span>
                     <div className="min-w-0">
-                      <div className="font-medium text-fg">{lead.name}</div>
+                      <CopyableName name={lead.name} id={lead.id} compact className="font-medium text-fg" />
                       <div className="truncate text-xs text-fg-muted">{lead.company} · {lead.title}</div>
                     </div>
                   </div>
@@ -100,8 +101,8 @@ export function LeadsTable({
               className="interactive w-full rounded-t-md p-3 text-left"
             >
               <div className="flex items-start justify-between">
-                <div>
-                  <div className="font-medium text-fg">{lead.name}</div>
+                <div className="min-w-0 flex-1">
+                  <CopyableName name={lead.name} id={lead.id} compact className="font-medium text-fg" />
                   <div className="text-xs text-fg-muted">{lead.company}</div>
                 </div>
                 <LeadScore score={lead.score} compact />

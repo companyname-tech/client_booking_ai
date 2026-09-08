@@ -124,7 +124,7 @@ export default function AdminCampaigns() {
           <ErrorState message={error} onRetry={reload} />
         ) : (
           <Reveal>
-            <CampaignTable campaigns={filtered} zone="admin" selection={selection} />
+            <CampaignTable campaigns={filtered} zone="admin" selection={selection} onCopied={setBulkNotice} />
           </Reveal>
         )}
         <p className="text-xs text-fg-muted">

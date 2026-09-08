@@ -1,5 +1,4 @@
-import { memo } from 'react'
-import { Link } from 'react-router-dom'
+import { memo, type KeyboardEvent } from 'react'
 import type { Tone } from '@/types'
 import type { ActivityLogEntry } from '@/types/admin'
 import { ACTIVITY_SOURCE_META } from '@/lib/activity'
@@ -34,21 +33,24 @@ const Item = memo(function Item({
   entry,
   selected,
   onToggle,
-  rowTo,
+  onSelect,
 }: {
   entry: ActivityLogEntry
   selected?: boolean
   onToggle?: (id: string) => void
-  rowTo?: (entry: ActivityLogEntry) => string | undefined
+  onSelect?: (entry: ActivityLogEntry) => void
 }) {
   const meta = ACTIVITY_SOURCE_META[entry.source] ?? ACTIVITY_SOURCE_META.audit
   const Icon = meta.icon
   const label = formatTimestamp(entry.timestamp)
-  const href = entry.offerId
-    ? rowTo
-      ? rowTo(entry)
-      : `/admin/campaigns/${entry.offerId}/activity`
-    : undefined
+
+  const openDetail = () => onSelect?.(entry)
+  const onKeyDown = (e: KeyboardEvent) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault()
+      openDetail()
+    }
+  }
 
   const body = (
     <>
@@ -81,13 +83,16 @@ const Item = memo(function Item({
     </>
   )
 
-  const row = href ? (
-    <Link
-      to={href}
-      className="interactive -mx-2 flex min-w-0 flex-1 items-start gap-3 rounded-md px-2 py-2.5 hover:bg-white/[0.03]"
+  const row = onSelect ? (
+    <button
+      type="button"
+      onClick={openDetail}
+      onKeyDown={onKeyDown}
+      className="interactive -mx-2 flex min-w-0 flex-1 cursor-pointer items-start gap-3 rounded-md px-2 py-2.5 text-left hover:bg-white/[0.03]"
+      aria-label={`View details for ${entry.action}`}
     >
       {body}
-    </Link>
+    </button>
   ) : (
     <div className="-mx-2 flex min-w-0 flex-1 items-start gap-3 px-2 py-2.5">{body}</div>
   )
@@ -107,14 +112,12 @@ const Item = memo(function Item({
 export function ActivityTimeline({
   entries,
   selection,
-  rowTo,
+  onSelect,
 }: {
   entries: ActivityLogEntry[]
   selection?: TimelineSelection
-  /** Per-row link target for entries that carry an offer id. Defaults to the
-   * campaign's Activity view (/admin/campaigns/{id}/activity); pass
-   * `() => undefined` to render a scoped log without links. */
-  rowTo?: (entry: ActivityLogEntry) => string | undefined
+  /** Called when a row is clicked to show full event details. */
+  onSelect?: (entry: ActivityLogEntry) => void
 }) {
   return (
     <div>
@@ -136,7 +139,7 @@ export function ActivityTimeline({
             entry={e}
             selected={selection?.selected.has(e.id)}
             onToggle={selection?.toggle}
-            rowTo={rowTo}
+            onSelect={onSelect}
           />
         ))}
       </ol>

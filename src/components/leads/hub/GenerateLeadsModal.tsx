@@ -6,7 +6,7 @@
  * Both call the real backend (POST /leads/smart-search, POST /leads/generate)
  * via `repo` and normalize the reply with `toGenResultView`.
  */
-import { useState, type ReactNode } from 'react'
+import { useState, type ReactNode, useEffect } from 'react'
 import { ExternalLink, Sparkles, Target } from 'lucide-react'
 import { repo } from '@/data/repository'
 import { ApiError } from '@/api/adapters/http/client'
@@ -23,10 +23,12 @@ import {
   toGenResultView,
   type GenResultView,
 } from '@/lib/leadGeneration'
+import type { CampaignLeadGenDefaults } from '@/types'
 
 export interface CampaignOption {
   id: string
   name: string
+  leadGen?: CampaignLeadGenDefaults
 }
 
 export interface GenerateLeadsModalProps {
@@ -36,6 +38,8 @@ export interface GenerateLeadsModalProps {
   campaigns: CampaignOption[]
   /** When set (campaign-scoped lead view), the offer is fixed and the picker is hidden. */
   fixedCampaignId?: string
+  /** Campaign lead-gen defaults — pre-fills country/industry/phone type when the modal opens. */
+  leadGenDefaults?: CampaignLeadGenDefaults
   /** Called after a successful run so the host can refresh its lead list. */
   onGenerated?: () => void
 }
@@ -112,8 +116,8 @@ const PLATFORM_LABEL: Record<string, string> = Object.fromEntries(
   GEN_PLATFORMS.map((p) => [p.value, p.label]),
 )
 
-/** Default scan = every runnable social source (matches the BE default). */
-const DEFAULT_SCAN_PLATFORMS = GEN_PLATFORMS.filter((p) => !p.disabled).map((p) => p.value)
+/** Public search is the default under the backend's zero-cost policy. */
+const DEFAULT_SCAN_PLATFORMS = ['reddit']
 
 const GEN_CONTACT_TYPES: { value: string; label: string }[] = [
   { value: 'phone', label: 'Phone' },
@@ -148,6 +152,7 @@ export function GenerateLeadsModal({
   onClose,
   campaigns,
   fixedCampaignId,
+  leadGenDefaults,
   onGenerated,
 }: GenerateLeadsModalProps) {
   const [mode, setMode] = useState<Mode>('smart')
@@ -171,6 +176,32 @@ export function GenerateLeadsModal({
   const [classicCountry, setClassicCountry] = useState('')
   const [classicIndustry, setClassicIndustry] = useState('')
   const [classicNumber, setClassicNumber] = useState(10)
+
+  const applyLeadGenDefaults = (defaults?: CampaignLeadGenDefaults) => {
+    if (!defaults) return
+    if (defaults.country) {
+      setCountry(defaults.country)
+      setClassicCountry(defaults.country)
+    }
+    if (defaults.industry) {
+      setIndustry(defaults.industry)
+      setClassicIndustry(defaults.industry)
+    }
+    if (defaults.phoneType) setPhoneType(defaults.phoneType)
+    if (defaults.numberOfLeads > 0) {
+      setClassicNumber(defaults.numberOfLeads)
+      setMaxResults(defaults.numberOfLeads)
+    }
+  }
+
+  useEffect(() => {
+    if (!open) return
+    setCampaignId(fixedCampaignId ?? '')
+    const defaults =
+      leadGenDefaults ??
+      (fixedCampaignId ? campaigns.find((c) => c.id === fixedCampaignId)?.leadGen : undefined)
+    applyLeadGenDefaults(defaults)
+  }, [open, fixedCampaignId, leadGenDefaults, campaigns])
 
   // Run state
   const [result, setResult] = useState<GenResultView | null>(null)
@@ -263,7 +294,7 @@ export function GenerateLeadsModal({
       onClose={onClose}
       size="lg"
       title="Generate leads"
-      description="AI-powered prospect discovery — describe who you want, or run the classic country + industry generator."
+      description="Describe the prospects you want. Search availability depends on the selected sources."
       footer={
         <>
           <Button variant="ghost" onClick={onClose} disabled={running}>
@@ -281,7 +312,12 @@ export function GenerateLeadsModal({
         </>
       }
     >
-      <div className="max-h-[70vh] space-y-5 overflow-y-auto px-5 py-4">
+      <div className="space-y-5 px-5 py-4">
+        <p className="rounded-md border border-line bg-surface-2 p-3 text-xs text-fg-muted">
+          Zero-cost mode is enabled by default. Public Reddit search may be limited or unavailable.
+          Paid web, social and Google Maps discovery, including classic generation, are blocked in this mode.
+          You can also import an existing contact list as CSV.
+        </p>
         {/* Campaign picker (hidden when the lead view is campaign-scoped). */}
         {!fixedCampaignId && (
           <div>
@@ -291,7 +327,10 @@ export function GenerateLeadsModal({
             <Select
               id="gen-campaign"
               value={campaignId}
-              onChange={(v) => setCampaignId(v)}
+              onChange={(v) => {
+                setCampaignId(v)
+                applyLeadGenDefaults(campaigns.find((c) => c.id === v)?.leadGen)
+              }}
               ariaLabel="Campaign"
               placeholder="Select a campaign…"
               options={[

@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { NavLink, Outlet, useNavigate, useParams } from 'react-router-dom'
 import { motion } from 'motion/react'
 import { ArrowLeft } from 'lucide-react'
-import type { CampaignStatus } from '@/types'
+import type { CampaignStatus, OfferCampaign } from '@/types'
 import { repo } from '@/data/repository'
 import { useAsyncData } from '@/hooks/useAsyncData'
 import { LoadingState } from '@/components/ui/LoadingState'
@@ -17,9 +17,10 @@ import { PageContainer, WorkspaceEyebrow } from '@/components/layout/PageHeader'
 import { Button } from '@/components/ui/Button'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
-import { CampaignStatus as CampaignStatusBadge } from '@/components/campaigns/CampaignStatus'
 import { CampaignHeader } from '@/components/campaign/CampaignHeader'
-import { hasRunnableBudget, isBudgetStopped, isTrainingCampaign, resolveOperationalStatus } from '@/lib/campaignOperationalStatus'
+import { CopyableName } from '@/components/ui/CopyableName'
+import { CampaignAgentAssign } from '@/components/campaign/CampaignAgentAssign'
+import { hasRunnableBudget, isBudgetStopped, isTrainingCampaign, resolveCampaignDisplayStatus } from '@/lib/campaignOperationalStatus'
 
 interface Tab {
   to: string
@@ -43,16 +44,25 @@ export default function CampaignDetailLayout({ zone = 'client' }: { zone?: 'clie
   const navigate = useNavigate()
   const { session } = useAuth()
   const [statusOverride, setStatusOverride] = useState<CampaignStatus | null>(null)
+  const [campaignOverride, setCampaignOverride] = useState<OfferCampaign | null>(null)
+  const [assignOpen, setAssignOpen] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [deleteBusy, setDeleteBusy] = useState(false)
   const [deleteError, setDeleteError] = useState('')
+  const [copyNotice, setCopyNotice] = useState('')
 
   const { data, loading, error, reload } = useAsyncData(
-    () => Promise.all([id ? repo.getCampaign(id) : Promise.resolve(undefined), repo.getCurrentClient()]),
+    () =>
+      Promise.all([
+        id ? repo.getCampaign(id) : Promise.resolve(undefined),
+        repo.getCurrentClient(),
+        repo.getAgents(),
+      ]),
     [id],
   )
-  const campaign = data?.[0]
+  const campaign = campaignOverride ?? data?.[0]
   const client = data?.[1]
+  const agents = data?.[2] ?? []
 
   if (loading) {
     return (
@@ -96,8 +106,10 @@ export default function CampaignDetailLayout({ zone = 'client' }: { zone?: 'clie
 
   if (!client) return null
 
-  const effectiveStatus = resolveOperationalStatus(campaign, statusOverride)
+  const effectiveStatus = resolveCampaignDisplayStatus(campaign, statusOverride)
+  const assignedAgent = campaign.agentId ? agents.find((a) => a.id === campaign.agentId) : undefined
   const budgetStopped = isBudgetStopped(campaign)
+  const canAssignAgent = zone === 'admin' && canUse(session, 'campaigns.edit')
   const pauseCampaign = () => setStatusOverride('paused')
   const resumeCampaign = () => {
     if (!isTrainingCampaign(campaign) && !hasRunnableBudget(campaign.budget)) return
@@ -126,8 +138,7 @@ export default function CampaignDetailLayout({ zone = 'client' }: { zone?: 'clie
     <PageTransition>
       <PageContainer className="space-y-6 pb-8">
         <Reveal initial="hidden" animate="show" className="space-y-5">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-            <div className="min-w-0 flex-1">
+          <div className="min-w-0">
               <div className="mb-2 flex items-center gap-3">
                 <NavLink
                   to={`/${zone}/campaigns`}
@@ -138,7 +149,31 @@ export default function CampaignDetailLayout({ zone = 'client' }: { zone?: 'clie
                 <span className="text-fg-faint">/</span>
                 <WorkspaceEyebrow name={zone === 'admin' ? 'Super Admin' : client.name} context={zone === 'admin' ? 'Review' : 'Offer Campaign'} />
               </div>
-              <h1 className="text-2xl font-semibold tracking-tight text-fg sm:text-3xl">{campaign.name}</h1>
+              <h1 className="flex flex-wrap items-baseline gap-x-2 gap-y-1 text-2xl font-semibold tracking-tight text-fg sm:text-3xl">
+                <CopyableName
+                  name={campaign.name}
+                  id={campaign.id}
+                  className="text-2xl font-semibold sm:text-3xl"
+                  onCopied={setCopyNotice}
+                />
+                <span className="font-normal text-fg-muted" aria-hidden>·</span>
+                {assignedAgent ? (
+                  <span className="text-lg font-medium text-fg-secondary">{assignedAgent.name}</span>
+                ) : canAssignAgent ? (
+                  <button
+                    type="button"
+                    onClick={() => setAssignOpen(true)}
+                    className="interactive text-lg font-medium text-accent hover:underline"
+                  >
+                    Assigned agent
+                  </button>
+                ) : (
+                  <span className="text-lg font-medium text-fg-muted">Assigned agent</span>
+                )}
+              </h1>
+              {copyNotice && (
+                <p aria-live="polite" className="mt-1 text-xs text-fg-secondary">{copyNotice}</p>
+              )}
               <div className="mt-3">
                 <CampaignHeader
                   campaign={campaign}
@@ -150,11 +185,17 @@ export default function CampaignDetailLayout({ zone = 'client' }: { zone?: 'clie
                   zone={zone}
                 />
               </div>
-            </div>
-            <div className="flex shrink-0 items-center gap-2 lg:pt-8">
-              <CampaignStatusBadge status={effectiveStatus} size="md" />
-            </div>
           </div>
+          <CampaignAgentAssign
+            campaign={campaign}
+            agents={agents}
+            open={assignOpen}
+            onOpenChange={setAssignOpen}
+            onAssigned={(next) => {
+              setCampaignOverride(next)
+              void reload()
+            }}
+          />
 
           <nav aria-label="Offer Campaign sections" className="hairline-b -mx-4 overflow-x-auto px-4 scrollbar-none sm:mx-0 sm:px-0">
             <div className="flex min-w-max items-center gap-0.5">

@@ -34,7 +34,7 @@ import type { AcceptTrainingSuggestionInput, AcceptTrainingSuggestionResult, Age
 import type { CampaignType } from '@/lib/campaignTypes'
 import { campaignTypeToSource, sourceToCampaignType } from '@/lib/campaignTypes'
 import { resolveOperationalStatus } from '@/lib/campaignOperationalStatus'
-import type { LeadGenerateRequest, LeadImportResult, SmartSearchRequest, SmartSearchResponse } from '@/types/leadGeneration'
+import type { ImportPreviewResponse, LeadGenerateRequest, LeadImportResult, SmartSearchRequest, SmartSearchResponse } from '@/types/leadGeneration'
 import type { CostBalance, CostEvent, CostPricing, CostSummary } from '@/types/costs'
 import type { AdminUser, AdminUserCreateInput, AdminUserUpdateInput, PermissionCatalog, PermissionDescriptor, PermissionRoleDescriptor } from '@/types/admin'
 import type { AvailabilityInstance, AvailabilityKind, AvailabilityRule, CalendarMeeting, GoogleIntegrationState, MeetingStatus as CalendarMeetingStatus } from '@/types/calendar'
@@ -61,6 +61,10 @@ interface OfferWire {
   value?: string
   source?: string
   created_at?: string
+  gen_country?: string
+  gen_phone_type?: string
+  gen_industry?: string
+  gen_number_of_leads?: number
   lead_count?: number
   verification?: Record<string, number>
   approved_leads?: number
@@ -113,6 +117,8 @@ interface AgentWire {
   transcription_model?: string
   agent_model?: string
   pronunciation_lexicon?: PronunciationLexiconEntry[]
+  telegram_configured?: boolean
+  telegram_masked?: string
 }
 
 interface CallWire {
@@ -327,6 +333,8 @@ function toAgent(wire: AgentWire): Agent {
     audio_model: wire.audio_model ?? '',
     transcription_model: wire.transcription_model ?? '',
     agent_model: wire.agent_model ?? '',
+    telegram_configured: wire.telegram_configured ?? false,
+    telegram_masked: wire.telegram_masked ?? '',
   }
 }
 
@@ -397,6 +405,12 @@ function toCampaign(wire: OfferWire): OfferCampaign {
     offerName: wire.title,
     valueProposition: wire.value_proposition || wire.description || '',
     source: wire.source ?? '',
+    leadGen: {
+      country: wire.gen_country ?? '',
+      phoneType: wire.gen_phone_type || 'mobile',
+      industry: wire.gen_industry ?? '',
+      numberOfLeads: wire.gen_number_of_leads ?? 10,
+    },
     status: baseStatus,
     stage: isTraining ? 'ai_training' : baseStatus === 'active' ? 'calling' : 'onboarding',
     targetAudience: targeting ? [targeting.industry, targeting.companySize].filter(Boolean).join(' · ') : '',
@@ -523,6 +537,19 @@ export const httpRepository = {
   async generateLeads(request: LeadGenerateRequest): Promise<LeadImportResult> {
     return apiClient.post<LeadImportResult>('/leads/generate', request)
   },
+  async previewLeadsImport(file: File, offerId = ''): Promise<ImportPreviewResponse> {
+    const form = new FormData()
+    form.append('file', file)
+    if (offerId) form.append('offer_id', offerId)
+    return apiClient.upload<ImportPreviewResponse>('/leads/import/preview', form)
+  },
+  async importLeadsCsv(file: File, offerId = '', dedupMode = 'skip'): Promise<LeadImportResult> {
+    const form = new FormData()
+    form.append('file', file)
+    if (offerId) form.append('offer_id', offerId)
+    form.append('dedup_mode', dedupMode)
+    return apiClient.upload<LeadImportResult>('/leads/import', form)
+  },
   async smartSearch(request: SmartSearchRequest): Promise<SmartSearchResponse> {
     return apiClient.post<SmartSearchResponse>('/leads/smart-search', request)
   },
@@ -631,6 +658,16 @@ export const httpRepository = {
   },
   async deleteAgent(id: string): Promise<void> {
     await apiClient.delete(`/agents/${id}`)
+  },
+  async saveAgentTelegramConnection(agentId: string, telegramBotToken: string): Promise<Agent> {
+    const wire = await apiClient.put<AgentWire>(`/agents/${agentId}/connections`, {
+      telegram_bot_token: telegramBotToken,
+    })
+    return toAgent(wire)
+  },
+  async disconnectAgentTelegram(agentId: string): Promise<Agent> {
+    const wire = await apiClient.delete<AgentWire>(`/agents/${agentId}/connections/telegram`)
+    return toAgent(wire)
   },
   async listAgentVoices(): Promise<AgentVoiceOption[]> {
     const res = await apiClient.get<AgentsVoicesWire>('/agents/voices')

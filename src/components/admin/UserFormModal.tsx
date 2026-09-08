@@ -18,10 +18,15 @@ interface UserFormModalProps {
 }
 
 const ROLES: { value: AdminUserRole; label: string; hint?: string }[] = [
-  { value: 'client_user', label: 'Client user', hint: 'Client workspace account — scoped to the assigned clients.' },
-  { value: 'admin', label: 'Admin', hint: 'Console staff — gets access per the Permissions tab grants.' },
-  { value: 'super_admin', label: 'Super admin', hint: 'Full access to every area, including Users & Permissions.' },
+  { value: 'client_user', label: 'Worker', hint: 'Client workspace account — scoped to the assigned clients.' },
+  { value: 'admin', label: 'Admin', hint: 'Console staff — access is granted per the Permissions tab.' },
 ]
+
+const LEGACY_SUPER_ADMIN_ROLE: { value: AdminUserRole; label: string; hint?: string } = {
+  value: 'super_admin',
+  label: 'Super admin',
+  hint: 'Full access to every area, including Users & Permissions.',
+}
 
 export function UserFormModal({ open, onClose, user, onSaved }: UserFormModalProps) {
   const [name, setName] = useState('')
@@ -57,7 +62,7 @@ export function UserFormModal({ open, onClose, user, onSaved }: UserFormModalPro
     if (!email.trim()) return setError('Email is required')
     if (!user && !password) return setError('Password is required for a new user')
     if (role === 'client_user' && clientIds.length === 0)
-      return setError('A client user must be scoped to at least one client')
+      return setError('A worker must be assigned to at least one client')
     setSaving(true)
     setError('')
     try {
@@ -90,6 +95,8 @@ export function UserFormModal({ open, onClose, user, onSaved }: UserFormModalPro
       setSaving(false)
     }
   }
+
+  const roleOptions = user?.role === 'super_admin' ? [...ROLES, LEGACY_SUPER_ADMIN_ROLE] : ROLES
 
   return (
     <Modal
@@ -134,16 +141,16 @@ export function UserFormModal({ open, onClose, user, onSaved }: UserFormModalPro
               value={role}
               onChange={(v) => setRole(v as AdminUserRole)}
               ariaLabel="Role"
-              options={ROLES}
+              options={roleOptions}
               className="w-full"
             />
-            <p className="text-2xs text-fg-muted">{ROLES.find((r) => r.value === role)?.hint}</p>
+            <p className="text-2xs text-fg-muted">{roleOptions.find((r) => r.value === role)?.hint}</p>
           </FieldGroup>
         </div>
 
         {role === 'client_user' && (
           <FieldGroup>
-            <FieldLabel required>Client access</FieldLabel>
+            <FieldLabel required>Assigned clients</FieldLabel>
             {clients.length === 0 ? (
               <p className="text-xs text-fg-muted">No client workspaces available.</p>
             ) : (

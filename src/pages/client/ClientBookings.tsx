@@ -6,6 +6,7 @@ import { LoadingState } from '@/components/ui/LoadingState'
 import { ErrorState } from '@/components/ui/ErrorState'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { fmtWhen } from '@/lib/callHistory'
+import { CopyableName } from '@/components/ui/CopyableName'
 
 export default function ClientBookings() {
   const { data, loading, error, reload } = useAsyncData(() => repo.getMeetings())
@@ -36,7 +37,7 @@ export default function ClientBookings() {
                 className="flex flex-col gap-3 rounded-lg border border-line bg-surface-1 p-4 sm:flex-row sm:items-center sm:justify-between"
               >
                 <div className="min-w-0">
-                  <div className="font-medium text-fg">{m.leadName || '—'}</div>
+                  <CopyableName name={m.leadName || m.contactName || 'Unknown'} id={m.id} compact className="font-medium text-fg" />
                   <div className="text-xs text-fg-muted">
                     {m.contactName ? `${m.contactName} · ` : ''}
                     {m.offer || '—'}

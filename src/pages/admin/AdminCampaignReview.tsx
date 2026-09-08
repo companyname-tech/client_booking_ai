@@ -8,6 +8,7 @@ import { tweenBase } from '@/lib/motion'
 import { PageTransition } from '@/components/motion/PageTransition'
 import { PageContainer } from '@/components/layout/PageHeader'
 import { Button } from '@/components/ui/Button'
+import { CopyableName } from '@/components/ui/CopyableName'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { LoadingState } from '@/components/ui/LoadingState'
 import { ErrorState } from '@/components/ui/ErrorState'
@@ -223,7 +224,12 @@ export default function AdminCampaignReview() {
             <Link to="/admin/approvals" className="inline-flex items-center gap-1 text-xs text-fg-muted hover:text-fg">
               <ArrowLeft className="size-3.5" /> Approvals
             </Link>
-            <h1 className="mt-2 text-2xl font-semibold text-fg">{campaign.name}</h1>
+            <CopyableName
+              name={campaign.name}
+              id={campaign.id}
+              className="mt-2 text-2xl font-semibold text-fg"
+              onCopied={setToast}
+            />
             <p className="mt-1 text-sm text-fg-muted">{client?.name} · {review.displayId}</p>
             <div className="mt-2 flex flex-wrap items-center gap-2">
               <CampaignStatus status={campaign.status} />

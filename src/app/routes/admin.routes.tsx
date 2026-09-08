@@ -7,6 +7,7 @@ const AdminOverview = lazy(() => import('@/pages/admin/AdminOverview'))
 const AdminCampaigns = lazy(() => import('@/pages/admin/AdminCampaigns'))
 const AdminCampaignReview = lazy(() => import('@/pages/admin/AdminCampaignReview'))
 const AdminAITraining = lazy(() => import('@/pages/admin/AdminAITraining'))
+const AdminTrainingSettings = lazy(() => import('@/pages/admin/AdminTrainingSettings'))
 const AdminClients = lazy(() => import('@/pages/admin/AdminClients'))
 const AdminClientDetail = lazy(() => import('@/pages/admin/AdminClientDetail'))
 const AdminSettings = lazy(() => import('@/pages/admin/AdminSettings'))
@@ -35,6 +36,7 @@ export const adminRoutes = [
   },
   { path: 'approvals', element: <Navigate to="/admin/campaigns" replace /> },
   { path: 'ai-training', element: <PermGate perm="ai_training.view"><AdminAITraining /></PermGate> },
+  { path: 'ai-training/settings', element: <PermGate perm="settings.view"><AdminTrainingSettings /></PermGate> },
   { path: 'clients', element: <PermGate perm="clients.view"><AdminClients /></PermGate> },
   { path: 'clients/:id', element: <PermGate perm="clients.view"><AdminClientDetail /></PermGate> },
   { path: 'activity', element: <PermGate perm="activity.view"><AdminActivity /></PermGate> },

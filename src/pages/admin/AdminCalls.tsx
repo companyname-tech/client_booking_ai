@@ -21,6 +21,7 @@ import { Input } from '@/components/ui/Input'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { formatDuration } from '@/lib/utils'
 import { callHistoryOutcomeLabel, callHistoryOutcomeTone } from '@/lib/status'
+import { CopyableName } from '@/components/ui/CopyableName'
 
 /** "2026-09-07T12:34:56" → "2026-09-07 12:34" (matches the old call-history screen). */
 function fmtWhen(iso: string): string {
@@ -201,7 +202,19 @@ export default function AdminCalls() {
                               />
                             </td>
                             <td className="px-5 py-3 text-xs tabular text-fg-muted">{fmtWhen(c.startedAt)}</td>
-                            <td className="px-3 py-3 font-medium text-fg">{c.leadName || '—'}</td>
+                            <td className="px-3 py-3">
+                              {c.leadId || c.leadName ? (
+                                <CopyableName
+                                  name={c.leadName || 'Unknown lead'}
+                                  id={c.leadId || c.id}
+                                  compact
+                                  className="font-medium text-fg"
+                                  onCopied={setBulkNotice}
+                                />
+                              ) : (
+                                <span className="font-medium text-fg">—</span>
+                              )}
+                            </td>
                             <td className="px-3 py-3 tabular text-fg-secondary">{c.phone || '—'}</td>
                             <td className="px-3 py-3">
                               <StatusBadge tone={callHistoryOutcomeTone(c.outcome)}>
@@ -280,7 +293,17 @@ export default function AdminCalls() {
                       />
                     </div>
                     <div className="flex items-center justify-between gap-2">
-                      <div className="font-medium text-fg">{c.leadName || '—'}</div>
+                      {c.leadId || c.leadName ? (
+                        <CopyableName
+                          name={c.leadName || 'Unknown lead'}
+                          id={c.leadId || c.id}
+                          compact
+                          className="font-medium text-fg"
+                          onCopied={setBulkNotice}
+                        />
+                      ) : (
+                        <div className="font-medium text-fg">—</div>
+                      )}
                       <StatusBadge tone={callHistoryOutcomeTone(c.outcome)}>
                         {callHistoryOutcomeLabel(c.outcome)}
                       </StatusBadge>

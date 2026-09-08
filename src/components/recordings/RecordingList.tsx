@@ -12,6 +12,7 @@ import { Select } from '@/components/ui/Select'
 import { AISummary } from './AISummary'
 import { RecordingPlayer } from './RecordingPlayer'
 import { Transcript } from './Transcript'
+import { CopyableName } from '@/components/ui/CopyableName'
 
 export function RecordingList({ recordings }: { recordings: Recording[] }) {
   const [search, setSearch] = useState('')
@@ -57,7 +58,7 @@ export function RecordingList({ recordings }: { recordings: Recording[] }) {
             className="interactive flex flex-col gap-3 rounded-lg border border-line bg-surface-2 p-4 sm:flex-row sm:items-center sm:justify-between"
           >
             <div className="min-w-0 flex-1">
-              <div className="font-medium text-fg">{rec.leadName}</div>
+              <CopyableName name={rec.leadName} id={rec.leadId} compact className="font-medium text-fg" />
               <div className="text-xs text-fg-muted">{rec.leadCompany}</div>
               <div className="mt-2 flex flex-wrap items-center gap-2">
                 <CallOutcomeBadge outcome={rec.outcome} />

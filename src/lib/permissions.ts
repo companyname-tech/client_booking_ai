@@ -73,5 +73,5 @@ export function canUse(
 export function roleLabel(role: string): string {
   if (role === 'super_admin') return 'Super admin'
   if (role === 'admin') return 'Admin'
-  return 'Client user'
+  return 'Worker'
 }

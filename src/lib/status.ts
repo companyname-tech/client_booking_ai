@@ -10,6 +10,7 @@ interface StatusMeta {
 export const campaignStatusMeta: Record<CampaignStatus, StatusMeta> = {
   draft: { label: 'Draft', tone: 'neutral' },
   preparing: { label: 'Preparing', tone: 'neutral' },
+  awaiting_agent_assignment: { label: 'Awaiting agent assignment', tone: 'danger' },
   awaiting_ai_training: { label: 'Awaiting AI training', tone: 'warning' },
   ai_training: { label: 'AI Training', tone: 'violet', live: true },
   legal_review: { label: 'Legal review', tone: 'warning' },

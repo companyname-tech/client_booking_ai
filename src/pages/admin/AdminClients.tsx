@@ -17,6 +17,7 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { useBulkSelection } from '@/hooks/useBulkSelection'
 import { cn } from '@/lib/utils'
 import { ClientFormModal } from '@/components/admin/ClientFormModal'
+import { CopyableName } from '@/components/ui/CopyableName'
 import type { Client } from '@/types'
 
 const PAGE_SIZE = 10
@@ -145,18 +146,32 @@ export default function AdminClients() {
                       label={`Select ${client.name}`}
                     />
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => navigate(`/admin/clients/${client.id}`)}
-                    className="interactive ring-focus flex min-w-0 flex-1 items-center gap-3 rounded-md text-left outline-none"
-                    aria-label={`Open ${client.name}`}
-                  >
-                    <Avatar name={client.name} size="lg" className="rounded-md" />
-                    <span className="min-w-0">
-                      <span className="block truncate font-medium text-fg">{client.name}</span>
-                      <span className="block truncate text-xs text-fg-muted">{client.industry || 'No industry set'}</span>
-                    </span>
-                  </button>
+                  <div className="flex min-w-0 flex-1 items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => navigate(`/admin/clients/${client.id}`)}
+                      className="interactive ring-focus shrink-0 rounded-md outline-none"
+                      aria-label={`Open ${client.name}`}
+                    >
+                      <Avatar name={client.name} size="lg" className="rounded-md" />
+                    </button>
+                    <div className="min-w-0 flex-1">
+                      <CopyableName
+                        name={client.name}
+                        id={client.id}
+                        compact
+                        className="font-medium text-fg"
+                        onCopied={setBulkNotice}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => navigate(`/admin/clients/${client.id}`)}
+                        className="interactive block w-full truncate text-left text-xs text-fg-muted hover:text-fg"
+                      >
+                        {client.industry || 'No industry set'}
+                      </button>
+                    </div>
+                  </div>
                   <div className="flex shrink-0 items-center gap-1">
                     <Button
                       variant="ghost"

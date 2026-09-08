@@ -25,5 +25,16 @@ export function resolveOperationalStatus(
   userOverride?: CampaignStatus | null,
 ): CampaignStatus {
   if (isBudgetStopped(campaign)) return 'paused'
-  return userOverride ?? campaign.status
+  const base = userOverride ?? campaign.status
+  if (base === 'awaiting_agent_assignment') return campaign.status
+  return base
+}
+
+/** UI status — campaigns without an agent block on "Awaiting agent assignment". */
+export function resolveCampaignDisplayStatus(
+  campaign: Pick<OfferCampaign, 'status' | 'stage' | 'source' | 'budget' | 'agentId'>,
+  userOverride?: CampaignStatus | null,
+): CampaignStatus {
+  if (!campaign.agentId) return 'awaiting_agent_assignment'
+  return resolveOperationalStatus(campaign, userOverride)
 }

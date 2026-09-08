@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Loader2, MessageSquareText, RefreshCw } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { Loader2, MessageSquareText, RefreshCw, Settings } from 'lucide-react'
 import { PageTransition } from '@/components/motion/PageTransition'
 import { PageContainer, PageHeader, WorkspaceEyebrow } from '@/components/layout/PageHeader'
 import { Button } from '@/components/ui/Button'
@@ -14,6 +15,8 @@ import { ProductionCallReviewPanel } from '@/components/admin/ProductionCallRevi
 import { BehaviorVersionPanel } from '@/components/admin/BehaviorVersionPanel'
 import { Reveal } from '@/components/motion/Reveal'
 import { repo } from '@/api/repository'
+import { useAuth } from '@/contexts/AuthContext'
+import { canUse } from '@/lib/permissions'
 import type { TrainingCampaignRow, TrainingSuggestion } from '@/types/training'
 import type { PronunciationAgentOption } from '@/types/pronunciation'
 
@@ -29,6 +32,8 @@ function trainingLabel(status: string): string {
 }
 
 export default function AdminAITraining() {
+  const { session } = useAuth()
+  const canOpenTrainingSettings = canUse(session, 'settings.view')
   const [campaigns, setCampaigns] = useState<TrainingCampaignRow[]>([])
   const [agents, setAgents] = useState<PronunciationAgentOption[]>([])
   const [suggestions, setSuggestions] = useState<TrainingSuggestion[]>([])
@@ -95,6 +100,15 @@ export default function AdminAITraining() {
           eyebrow={<WorkspaceEyebrow name="Super Admin" context="AI Training" />}
           title="AI training workspace"
           description="One campaign at a time: the process you save is used on the next talk. Validate and publish extra rules to pin them on live calls."
+          actions={
+            canOpenTrainingSettings ? (
+              <Link to="/admin/ai-training/settings">
+                <Button variant="secondary" size="sm" leadingIcon={<Settings className="size-3.5" />}>
+                  Settings
+                </Button>
+              </Link>
+            ) : undefined
+          }
         />
 
         <div className="surface grid gap-3 p-4 sm:grid-cols-2">

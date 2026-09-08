@@ -8,6 +8,7 @@ import { RawTranscript } from '@/components/recordings/RawTranscript'
 import { Button } from '@/components/ui/Button'
 import { Select } from '@/components/ui/Select'
 import { callOutcomeLabel, fmtDuration, fmtWhen } from '@/lib/callHistory'
+import { CopyableName } from '@/components/ui/CopyableName'
 
 function newestFirst(recordings: CallHistoryEntry[]): CallHistoryEntry[] {
   return [...recordings].sort((a, b) =>
@@ -95,7 +96,18 @@ export function CallHistoryList({ recordings }: { recordings: CallHistoryEntry[]
                   <Fragment key={rec.id}>
                     <tr className="border-b border-line/50 last:border-0">
                       <td className="whitespace-nowrap px-3 py-2 text-fg-secondary">{fmtWhen(rec.startedAt)}</td>
-                      <td className="px-3 py-2 font-medium text-fg">{rec.leadName || '—'}</td>
+                      <td className="px-3 py-2">
+                        {rec.leadId || rec.leadName ? (
+                          <CopyableName
+                            name={rec.leadName || 'Unknown lead'}
+                            id={rec.leadId || rec.id}
+                            compact
+                            className="font-medium text-fg"
+                          />
+                        ) : (
+                          <span className="font-medium text-fg">—</span>
+                        )}
+                      </td>
                       <td className="whitespace-nowrap px-3 py-2 text-fg-secondary">{rec.phone || '—'}</td>
                       <td className="whitespace-nowrap px-3 py-2 text-fg-secondary">{callOutcomeLabel(rec.outcome)}</td>
                       <td className="whitespace-nowrap px-3 py-2 text-fg-secondary">{fmtDuration(rec.durationSec)}</td>

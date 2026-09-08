@@ -26,6 +26,18 @@ export interface LeadImportDuplicate {
   reasons?: string[]
 }
 
+/** Response of POST /leads/import/preview (backend ImportPreviewResponse). */
+export interface ImportPreviewResponse {
+  file_name?: string
+  offer_id?: string
+  detected_language?: string
+  rows_detected?: number
+  valid_rows?: number
+  warnings?: number
+  errors?: number
+  column_mapping?: Record<string, string>
+}
+
 /** Response of POST /leads/generate + POST /leads/import (backend LeadImportResult). */
 export interface LeadImportResult {
   imported?: number

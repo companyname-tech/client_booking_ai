@@ -8,9 +8,11 @@ import { ErrorState } from '@/components/ui/ErrorState'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { ActivityFilters, useActivityFilters } from '@/components/admin/ActivityFilters'
 import { ActivityTimeline } from '@/components/admin/ActivityTimeline'
+import { ActivityDetailDrawer } from '@/components/admin/ActivityDetailDrawer'
 import { BulkActionBar } from '@/components/ui/BulkActionBar'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { useBulkSelection } from '@/hooks/useBulkSelection'
+import type { ActivityLogEntry } from '@/types/admin'
 
 export default function AdminActivity() {
   const { data, loading, error, reload } = useAsyncData(() => repo.getActivityLog({ limit: 200 }))
@@ -20,6 +22,7 @@ export default function AdminActivity() {
   const [confirmBulk, setConfirmBulk] = useState(false)
   const [bulkBusy, setBulkBusy] = useState(false)
   const [bulkNotice, setBulkNotice] = useState('')
+  const [selectedEntry, setSelectedEntry] = useState<ActivityLogEntry | null>(null)
 
   const runBulkDelete = async () => {
     const ids = filtered.filter((e) => selection.selected.has(e.id)).map((e) => e.id)
@@ -77,12 +80,20 @@ export default function AdminActivity() {
               <EmptyState title="No matching events" description="Try a different search or stream filter." />
             ) : (
               <div className="surface p-4">
-                <ActivityTimeline entries={filtered} selection={selection} />
+                <ActivityTimeline entries={filtered} selection={selection} onSelect={setSelectedEntry} />
               </div>
             )}
           </>
         )}
       </PageContainer>
+      <ActivityDetailDrawer
+        entry={selectedEntry}
+        open={!!selectedEntry}
+        onClose={() => setSelectedEntry(null)}
+        campaignHref={(entry) =>
+          entry.offerId ? `/admin/campaigns/${entry.offerId}/activity` : undefined
+        }
+      />
       <ConfirmDialog
         open={confirmBulk}
         onClose={() => setConfirmBulk(false)}

@@ -79,7 +79,15 @@ export function PermissionsEditorModal({ open, user, catalog, onClose, onSaved }
       return [...next]
     })
 
-  const roleOptions = (catalog?.roles ?? []).map((r) => ({ value: r.value, label: r.label }))
+  const roleOptions = (() => {
+    const base = (catalog?.roles ?? [])
+      .filter((r) => r.value === 'admin' || r.value === 'client_user')
+      .map((r) => ({ value: r.value, label: r.label }))
+    if (user?.role === 'super_admin') {
+      return [...base, { value: 'super_admin', label: 'Super admin' }]
+    }
+    return base
+  })()
 
   const submit = async () => {
     if (!user) return
@@ -104,7 +112,9 @@ export function PermissionsEditorModal({ open, user, catalog, onClose, onSaved }
 
   const selected = (key: string) => checked.includes(key)
   const grantableRole = role === 'admin' || role === 'client_user'
-  const roleHint = (catalog?.roles ?? []).find((r) => r.value === role)?.description
+  const roleHint =
+    (catalog?.roles ?? []).find((r) => r.value === role)?.description ??
+    (role === 'super_admin' ? 'Full access to every area (bootstrap account).' : undefined)
 
   return (
     <Modal
@@ -144,7 +154,7 @@ export function PermissionsEditorModal({ open, user, catalog, onClose, onSaved }
 
         {role === 'client_user' && (
           <div className="rounded-md border border-line-strong bg-surface-2 px-3 py-2.5 text-xs text-fg-secondary">
-            Client-workspace account — scoped to the assigned clients (managed on the Users screen; contact data is
+            Worker account — scoped to the assigned clients (managed on the Users screen; contact data is
             masked).{' '}
             {checked.length === 0
               ? 'No grants selected: this user keeps full access to their assigned clients.'

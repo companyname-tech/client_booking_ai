@@ -10,7 +10,7 @@ import { AnalyticsHeader } from '@/components/analytics/AnalyticsHeader'
 import { AnalyticsSummary, PerformanceComparison } from '@/components/analytics/AnalyticsSummary'
 import { AnalyticsPerformanceChart } from '@/components/analytics/AnalyticsPerformanceChart'
 import { AnalyticsFunnel, DropOffAnalysis } from '@/components/analytics/AnalyticsFunnel'
-import { AIIntelligence, AIRecommendations, AIExecutiveSummary } from '@/components/analytics/AnalyticsAI'
+import { CampaignWeakSpots, AIRecommendations, AIExecutiveSummary } from '@/components/analytics/AnalyticsAI'
 import { TargetingAnalysis, IndustryPerformance, CompanySizePerformance, JobTitlePerformance, GeographicPerformance, AgePerformance } from '@/components/analytics/AnalyticsTargeting'
 import { CallPerformancePanel, CallOutcomeDistribution, ConversationQualityPanel } from '@/components/analytics/AnalyticsCalls'
 import { AIPerformancePanel, AILearningTimeline, AIExperiments, CampaignBenchmark } from '@/components/analytics/AnalyticsAIPerformance'
@@ -82,7 +82,7 @@ export default function CampaignAnalytics() {
             <AnalyticsFunnel stages={analytics.funnel} />
           </div>
           <DropOffAnalysis dropOffs={analytics.dropOffs} />
-          <AIIntelligence insights={analytics.insights} conversationsAnalyzed={analytics.conversationsAnalyzed} />
+          <CampaignWeakSpots weaknesses={analytics.insights} />
           <AIRecommendations items={analytics.recommendations} />
           <TargetingAnalysis targeting={analytics.targeting} />
           <div className="grid gap-6 lg:grid-cols-2">

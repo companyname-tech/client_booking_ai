@@ -7,7 +7,9 @@ import { ErrorState } from '@/components/ui/ErrorState'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { ActivityFilters, useActivityFilters } from '@/components/admin/ActivityFilters'
 import { ActivityTimeline } from '@/components/admin/ActivityTimeline'
+import { ActivityDetailDrawer } from '@/components/admin/ActivityDetailDrawer'
 import { Reveal } from '@/components/motion/Reveal'
+import type { ActivityLogEntry } from '@/types/admin'
 
 /**
  * Per-campaign Activity/Logs tab (mounted under BOTH /client/campaigns/:id and
@@ -26,6 +28,7 @@ export default function CampaignActivity() {
   const entries = data ?? []
   const { filters, setFilters, filtered } = useActivityFilters(entries)
   const [limit, setLimit] = useState(100)
+  const [selectedEntry, setSelectedEntry] = useState<ActivityLogEntry | null>(null)
 
   if (loading) return <LoadingState rows={6} />
   if (error) return <ErrorState message={error} onRetry={reload} />
@@ -57,7 +60,7 @@ export default function CampaignActivity() {
             </div>
           ) : (
             <div className="surface p-4">
-              <ActivityTimeline entries={visible} rowTo={() => undefined} />
+              <ActivityTimeline entries={visible} onSelect={setSelectedEntry} />
               {filtered.length > visible.length && (
                 <button
                   type="button"
@@ -71,6 +74,12 @@ export default function CampaignActivity() {
           )}
         </>
       )}
+
+      <ActivityDetailDrawer
+        entry={selectedEntry}
+        open={!!selectedEntry}
+        onClose={() => setSelectedEntry(null)}
+      />
     </Reveal>
   )
 }
