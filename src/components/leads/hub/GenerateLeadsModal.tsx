@@ -370,8 +370,9 @@ export function GenerateLeadsModal({
         )}
 
         <p className="rounded-md border border-line bg-surface-2 p-3 text-xs text-fg-muted">
-          Smart search uses Web and Google Business when API keys are configured, then Reddit as a free fallback.
-          Classic generation stays disabled in zero-cost mode. You can also import an existing contact list as CSV.
+          Smart search uses Web (OpenAI) when configured, falls back to DeepSeek if OpenAI auth fails,
+          then Reddit and Google Business. Verify DeepSeek-suggested contacts manually before outreach.
+          Classic generation stays disabled in zero-cost mode. You can also import contacts via CSV.
         </p>
         {/* Campaign picker (hidden when the lead view is campaign-scoped). */}
         {!fixedCampaignId && (

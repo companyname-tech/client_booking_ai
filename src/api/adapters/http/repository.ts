@@ -627,11 +627,13 @@ export const httpRepository = {
     await apiClient.download(`/leads/export/csv?${qs.toString()}`, `leads_export_${language}.csv`)
   },
   async getRecordings(offerCampaignId: string): Promise<Recording[]> {
-    const res = await apiClient.get<{ recordings?: RecordingWire[] }>('/recordings')
+    const qs = offerCampaignId ? `?offer_id=${encodeURIComponent(offerCampaignId)}` : ''
+    const res = await apiClient.get<{ recordings?: RecordingWire[] }>(`/recordings${qs}`)
     return (res?.recordings ?? []).map((r) => toRecording(r, offerCampaignId))
   },
-  async getCallHistory(): Promise<CallHistoryEntry[]> {
-    const res = await apiClient.get<{ recordings?: RecordingWire[] }>('/recordings')
+  async getCallHistory(offerCampaignId?: string): Promise<CallHistoryEntry[]> {
+    const qs = offerCampaignId ? `?offer_id=${encodeURIComponent(offerCampaignId)}` : ''
+    const res = await apiClient.get<{ recordings?: RecordingWire[] }>(`/recordings${qs}`)
     return (res?.recordings ?? []).map(toCallHistoryEntry)
   },
   async getCampaignFunnel(_offerCampaignId: string): Promise<CampaignFunnelStage[]> {

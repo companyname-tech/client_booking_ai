@@ -1,4 +1,5 @@
 import { repo } from '@/api/repository'
+import { useCampaignContext } from './campaignContext'
 import { useAsyncData } from '@/hooks/useAsyncData'
 import { LoadingState } from '@/components/ui/LoadingState'
 import { ErrorState } from '@/components/ui/ErrorState'
@@ -6,7 +7,11 @@ import { CallHistoryList } from '@/components/recordings/CallHistoryList'
 import { Reveal } from '@/components/motion/Reveal'
 
 export default function CampaignRecordings() {
-  const { data: calls, loading, error, reload } = useAsyncData(() => repo.getCallHistory())
+  const { campaign } = useCampaignContext()
+  const { data: calls, loading, error, reload } = useAsyncData(
+    () => repo.getCallHistory(campaign.id),
+    [campaign.id],
+  )
 
   if (loading) return <LoadingState rows={5} />
   if (error) return <ErrorState message={error} onRetry={reload} />

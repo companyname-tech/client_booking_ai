@@ -67,7 +67,7 @@ export default function AdminClientSettings() {
           }
           description={
             isNew
-              ? 'Create a client workspace and configure all settings on this page.'
+              ? 'Create a client workspace, set an initial wallet balance, and configure engagement details.'
               : 'All workspace, engagement, contact, and wallet settings for this client.'
           }
           actions={

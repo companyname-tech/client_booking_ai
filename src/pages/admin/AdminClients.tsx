@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Plus, ChevronLeft, ChevronRight, Settings } from 'lucide-react'
+import { Plus, ChevronLeft, ChevronRight, Settings, Wallet } from 'lucide-react'
 import { repo } from '@/api/repository'
 import { useAsyncData } from '@/hooks/useAsyncData'
 import { PageTransition } from '@/components/motion/PageTransition'
@@ -15,7 +15,7 @@ import { SelectCheckbox } from '@/components/ui/SelectCheckbox'
 import { BulkActionBar } from '@/components/ui/BulkActionBar'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { useBulkSelection } from '@/hooks/useBulkSelection'
-import { cn } from '@/lib/utils'
+import { cn, formatCurrency } from '@/lib/utils'
 import { CopyableName } from '@/components/ui/CopyableName'
 import type { Client } from '@/types'
 
@@ -171,6 +171,15 @@ export default function AdminClients() {
                     </div>
                   </div>
                   <div className="flex shrink-0 items-center gap-1">
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      leadingIcon={<Wallet className="size-3.5" />}
+                      onClick={() => navigate(`/admin/clients/${client.id}/settings#wallet`)}
+                      title="View wallet balance and record deposits"
+                    >
+                      {formatCurrency(client.walletBalance ?? 0)}
+                    </Button>
                     <Button
                       variant="ghost"
                       size="icon-sm"

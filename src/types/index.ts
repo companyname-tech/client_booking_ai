@@ -49,6 +49,7 @@ export interface ClientInput {
   plan?: Client['plan']
   engagementType?: Client['engagementType']
   specificAmount?: number
+  walletBalance?: number
   retainerWeeklyAmount?: number
   engagementStart?: string
   primaryContact?: Partial<PrimaryContact>

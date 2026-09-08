@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useLocation } from 'react-router-dom'
 import { Wallet } from 'lucide-react'
 import { repo } from '@/api/repository'
 import { Button } from '@/components/ui/Button'
@@ -17,6 +18,7 @@ export function ClientSettingsPanel({
   onSaved: (client: Client) => void
 }) {
   const isNew = !client?.id
+  const location = useLocation()
   const [name, setName] = useState('')
   const [slug, setSlug] = useState('')
   const [industry, setIndustry] = useState('')
@@ -29,6 +31,7 @@ export function ClientSettingsPanel({
   const [email, setEmail] = useState('')
   const [role, setRole] = useState('')
   const [depositAmount, setDepositAmount] = useState('')
+  const [initialWalletBalance, setInitialWalletBalance] = useState('')
   const [budget, setBudget] = useState<ClientBudgetSummary | null>(null)
   const [saving, setSaving] = useState(false)
   const [depositing, setDepositing] = useState(false)
@@ -47,9 +50,16 @@ export function ClientSettingsPanel({
     setContactName(client?.primaryContact?.name ?? '')
     setEmail(client?.primaryContact?.email ?? '')
     setRole(client?.primaryContact?.role ?? '')
+    setInitialWalletBalance('')
     setError('')
     setNotice('')
   }, [client])
+
+  useEffect(() => {
+    if (location.hash === '#wallet') {
+      document.getElementById('client-wallet')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
+  }, [location.hash, client?.id])
 
   useEffect(() => {
     if (!client?.id) {
@@ -87,6 +97,7 @@ export function ClientSettingsPanel({
           email: email.trim(),
           role: role.trim(),
         },
+        ...(isNew ? { walletBalance: parseMoney(initialWalletBalance) } : {}),
       }
       const saved = isNew
         ? await repo.createClient(payload)
@@ -220,8 +231,29 @@ export function ClientSettingsPanel({
         </div>
       </Card>
 
-      {!isNew && (
+      {isNew && (
         <Card className="p-5 sm:p-6">
+          <SectionHeader
+            title="Initial wallet balance"
+            description="Prepaid funds this client can allocate into campaign budgets. You can add more deposits after the workspace is created."
+          />
+          <div className="mt-5 max-w-sm">
+            <FieldGroup>
+              <FieldLabel htmlFor="cs-initial-wallet">Starting balance ($)</FieldLabel>
+              <Input
+                id="cs-initial-wallet"
+                inputMode="decimal"
+                value={initialWalletBalance}
+                onChange={(e) => setInitialWalletBalance(e.target.value)}
+                placeholder="e.g. 1000"
+              />
+            </FieldGroup>
+          </div>
+        </Card>
+      )}
+
+      {!isNew && (
+        <Card id="client-wallet" className="p-5 sm:p-6">
           <SectionHeader
             title="Wallet & deposits"
             description="Prepaid balance the client can allocate into campaign budgets. Record manual deposits from AOA."
