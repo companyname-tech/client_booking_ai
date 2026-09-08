@@ -118,7 +118,7 @@ export function PhoneField({
       ref={listRef}
       role="listbox"
       aria-label="Countries"
-      className="absolute left-0 top-full z-50 mt-1 max-h-64 w-full min-w-[240px] overflow-y-auto rounded-md border border-line bg-popover p-1 shadow-xl"
+      className="surface-overlay absolute left-0 top-full z-50 mt-1 max-h-64 w-full min-w-[240px] overflow-y-auto p-1"
       onMouseDown={(e) => e.stopPropagation()}
     >
       {filtered.length === 0 ? (
@@ -154,7 +154,7 @@ export function PhoneField({
     <div ref={rootRef} className={cn('relative', className)}>
       <div
         className={cn(
-          'flex w-full items-stretch rounded-md border border-border bg-card focus-within:ring-1 focus-within:ring-accent',
+          'flex w-full items-stretch rounded-md border border-line bg-surface-1 focus-within:ring-1 focus-within:ring-accent',
           showError && 'border-danger/60 focus-within:ring-danger',
           disabled && 'opacity-50',
         )}
@@ -166,7 +166,7 @@ export function PhoneField({
           aria-expanded={open}
           aria-haspopup="listbox"
           title={`Country: ${parsed.country.name}`}
-          className="flex items-center gap-1 rounded-l-md border-r border-border px-2 py-2 text-sm text-fg hover:bg-surface-2"
+          className="flex items-center gap-1 rounded-l-md border-r border-line px-2 py-2 text-sm text-fg hover:bg-surface-2"
         >
           <span className="text-base leading-none">{parsed.country.flag}</span>
           <span className="tabular">{parsed.country.dialCode}</span>

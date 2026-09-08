@@ -1,33 +1,41 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   AudioLines,
-  CalendarClock,
   CircleCheck,
-  ContactRound,
   Lightbulb,
   Loader2,
-  Mail,
   Mic,
   MicOff,
-  Phone,
   Radio,
   Square,
   TriangleAlert,
-  Workflow,
+  ListChecks,
+  Plus,
+  X,
 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
-import { Select } from '@/components/ui/Select'
-import { Textarea } from '@/components/ui/Textarea'
+import { Input } from '@/components/ui/Input'
 import { repo } from '@/api/repository'
-import { mediaUrl } from '@/api/adapters/http/repository'
-import { RecordingAudio } from '@/components/recordings/RecordingAudio'
+import { SpotifyStylePlayer, type SpotifyStylePlayerHandle } from '@/components/recordings/SpotifyStylePlayer'
+import { TrainingSyncedTranscript } from '@/components/recordings/TrainingSyncedTranscript'
+import { ExtractedTalkReview } from '@/components/admin/ExtractedTalkReview'
+import { buildTimedTranscript } from '@/lib/trainingTranscript'
+import {
+  relayRole,
+  relaySpeaker,
+  TranscriptAccumulator,
+} from '@/lib/transcriptAccumulator'
 import type {
   TrainingCampaignRow,
-  TrainingExtractedData,
   TrainingTalkTurn,
   TrainingSessionResult,
 } from '@/types/training'
 import { cn } from '@/lib/utils'
+import {
+  formatEngagementRules,
+  parseEngagementRules,
+  type EngagementRule,
+} from '@/lib/engagementRules'
 
 /** 24 kHz mono PCM16 — the codec the /agent/rtc realtime bridge expects. */
 const PCM_RATE = 24000
@@ -39,12 +47,7 @@ interface TranscriptLine {
   id: number
   speaker: 'user' | 'agent'
   text: string
-}
-
-let lineSeq = 0
-function nextId(): number {
-  lineSeq += 1
-  return lineSeq
+  live?: boolean
 }
 
 /** Stable per-talk id (idempotency key for the training-complete submit). */
@@ -59,50 +62,24 @@ function errText(e: unknown): string {
   return e instanceof Error ? e.message : String(e)
 }
 
-function trainingLabel(status: string): string {
-  const map: Record<string, string> = {
-    not_started: 'Not started',
-    ready: 'Ready',
-    training: 'Training…',
-    trained: 'Trained',
-    needs_improvement: 'Needs improvement',
-  }
-  return map[status] ?? status
-}
-
-/** The extracted contact/booking values the backend pulled from the talk. */
-function renderExtracted(x?: TrainingExtractedData): React.ReactNode {
-  if (!x) return null
-  const emails = x.emails ?? []
-  const phones = x.phones ?? []
-  const meeting = x.meeting
-  const hasMeeting = !!(meeting && (meeting.day || meeting.time))
-  if (emails.length === 0 && phones.length === 0 && !hasMeeting) return null
-  return (
-    <>
-      {emails.length > 0 ? (
-        <div className="flex items-center gap-1.5 text-sm text-fg-secondary">
-          <Mail className="size-3.5 shrink-0 text-accent" />
-          <span className="font-medium text-fg">{emails[0].email}</span>
-          {!emails[0].confirmed ? <span className="text-2xs text-warning">unverified</span> : null}
-          {emails.length > 1 ? <span className="text-xs text-fg-muted">+{emails.length - 1} more</span> : null}
-        </div>
-      ) : null}
-      {phones.length > 0 ? (
-        <div className="flex items-center gap-1.5 text-sm text-fg-secondary">
-          <Phone className="size-3.5 shrink-0 text-accent" />
-          <span className="font-medium text-fg">{phones[0]}</span>
-          {phones.length > 1 ? <span className="text-xs text-fg-muted">+{phones.length - 1} more</span> : null}
-        </div>
-      ) : null}
-      {hasMeeting ? (
-        <div className="flex items-center gap-1.5 text-sm text-fg-secondary">
-          <CalendarClock className="size-3.5 shrink-0 text-accent" />
-          <span className="font-medium text-fg">{[meeting.day, meeting.time].filter(Boolean).join(' · ')}</span>
-        </div>
-      ) : null}
-    </>
-  )
+function waitForTrainingWsClose(ws: WebSocket | null, timeoutMs = 4000): Promise<void> {
+  if (!ws || ws.readyState === WebSocket.CLOSED) return Promise.resolve()
+  return new Promise((resolve) => {
+    const finish = () => {
+      window.clearTimeout(timer)
+      ws.removeEventListener('close', onClose)
+      resolve()
+    }
+    const onClose = () => finish()
+    const timer = window.setTimeout(finish, timeoutMs)
+    ws.addEventListener('close', onClose)
+    try {
+      if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: 'stop' }))
+      ws.close()
+    } catch {
+      finish()
+    }
+  })
 }
 
 interface LiveSession {
@@ -136,46 +113,60 @@ function freshSession(): LiveSession {
 export function TrainingTalkConsole({
   campaigns,
   agents,
+  campaignId,
+  agentId,
   onTrainingUpdated,
 }: {
   campaigns: TrainingCampaignRow[]
   agents: { agentId: string; name: string }[]
+  campaignId: string
+  agentId: string
   onTrainingUpdated: () => void
 }) {
-  const [campaignId, setCampaignId] = useState('')
-  const [agentId, setAgentId] = useState('')
   const [phase, setPhase] = useState<Phase>('idle')
   const [statusText, setStatusText] = useState('Pick a campaign and press Start to rehearse live.')
   const [lines, setLines] = useState<TranscriptLine[]>([])
   const [error, setError] = useState('')
   const [result, setResult] = useState<TrainingSessionResult | null>(null)
   const [recordingSrc, setRecordingSrc] = useState('')
+  const [savedTranscript, setSavedTranscript] = useState<TrainingTalkTurn[]>([])
+  const [playbackS, setPlaybackS] = useState(0)
+  const [audioDurationS, setAudioDurationS] = useState(0)
   const [flowSuggestions, setFlowSuggestions] = useState<string[]>([])
-  const [processText, setProcessText] = useState('')
+  const [engagementRules, setEngagementRules] = useState<EngagementRule[]>([])
+  const [ruleDraft, setRuleDraft] = useState('')
   const [processLoaded, setProcessLoaded] = useState(false)
   const [processBusy, setProcessBusy] = useState(false)
   const [processNotice, setProcessNotice] = useState('')
   const liveRef = useRef<LiveSession>(freshSession())
   const turnsRef = useRef<TrainingTalkTurn[]>([])
+  const transcriptAccRef = useRef(new TranscriptAccumulator())
   const conversationIdRef = useRef('')
   const startedAtRef = useRef(0)
-  const currentLineRef = useRef<TranscriptLine | null>(null)
+  const playerRef = useRef<SpotifyStylePlayerHandle>(null)
+
+  const playbackDurationS = audioDurationS || result?.durationS || 0
+  const playbackLines = useMemo(
+    () => buildTimedTranscript(savedTranscript, playbackDurationS),
+    [savedTranscript, playbackDurationS],
+  )
 
   const campaign = campaigns.find((c) => c.offerCampaignId === campaignId) ?? null
 
   useEffect(() => {
-    if (campaign) {
-      setAgentId((prev) => {
-        if (agents.some((a) => a.agentId === campaign.agentId)) return campaign.agentId || prev
-        return prev || campaign.agentId || (agents[0]?.agentId ?? '')
-      })
-    }
-  }, [campaignId, campaign, agents])
+    setResult(null)
+    setFlowSuggestions([])
+    setRecordingSrc('')
+    setSavedTranscript([])
+    setPlaybackS(0)
+    setAudioDurationS(0)
+  }, [campaignId])
 
   // Load the operator's saved conversation-process description for the picked
   // campaign (the intended flow the findings compare against).
   useEffect(() => {
-    setProcessText('')
+    setEngagementRules([])
+    setRuleDraft('')
     setProcessLoaded(false)
     setProcessNotice('')
     if (!campaignId) return
@@ -184,13 +175,13 @@ export function TrainingTalkConsole({
       .getConversationProcess(campaignId)
       .then((r) => {
         if (active) {
-          setProcessText(r.process ?? '')
+          setEngagementRules(parseEngagementRules(r.process ?? ''))
           setProcessLoaded(true)
         }
       })
       .catch(() => {
         if (active) {
-          setProcessText('')
+          setEngagementRules([])
           setProcessLoaded(true)
         }
       })
@@ -199,18 +190,33 @@ export function TrainingTalkConsole({
     }
   }, [campaignId])
 
-  const saveProcess = async () => {
+  const persistEngagementRules = async (nextRules: EngagementRule[], notice = 'Rule saved.') => {
     if (!campaignId) return
     setProcessBusy(true)
     setProcessNotice('')
     try {
-      await repo.saveConversationProcess(campaignId, processText)
-      setProcessNotice('Saved — the findings will compare the talk against this flow.')
+      await repo.saveConversationProcess(campaignId, formatEngagementRules(nextRules))
+      setEngagementRules(nextRules)
+      setProcessNotice(notice)
     } catch (e) {
       setProcessNotice(`Save failed: ${e instanceof Error ? e.message : String(e)}`)
     } finally {
       setProcessBusy(false)
     }
+  }
+
+  const addEngagementRule = async () => {
+    const text = ruleDraft.trim()
+    if (!text || processBusy) return
+    const next = [...engagementRules, { id: crypto.randomUUID(), text }]
+    setRuleDraft('')
+    await persistEngagementRules(next, 'Rule added — findings will compare each talk against these rules.')
+  }
+
+  const removeEngagementRule = async (ruleId: string) => {
+    if (processBusy) return
+    const next = engagementRules.filter((rule) => rule.id !== ruleId)
+    await persistEngagementRules(next, next.length ? 'Rule removed.' : 'All rules cleared.')
   }
 
   // Cleanup audio + sockets when the component unmounts mid-talk.
@@ -219,8 +225,17 @@ export function TrainingTalkConsole({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const pushTurn = useCallback((speaker: 'user' | 'agent', text: string) => {
-    turnsRef.current.push({ role: speaker, text })
+  const pushTurn = useCallback((
+    speaker: 'user' | 'agent',
+    text: string,
+    timing?: { timestampMs?: number; timestampEndMs?: number },
+  ) => {
+    const timestampMs = timing?.timestampMs ?? (startedAtRef.current ? Date.now() - startedAtRef.current : 0)
+    const turn: TrainingTalkTurn = { role: speaker, text, timestampMs }
+    if (timing?.timestampEndMs != null && timing.timestampEndMs > 0) {
+      turn.timestampEndMs = timing.timestampEndMs
+    }
+    turnsRef.current.push(turn)
   }, [])
 
   const stopEngine = useCallback(() => {
@@ -256,6 +271,17 @@ export function TrainingTalkConsole({
     live.lastCancelAt = 0
   }, [])
 
+  const syncTranscriptLines = useCallback(() => {
+    setLines(
+      transcriptAccRef.current.getLines().map((line, index) => ({
+        id: index,
+        speaker: relayRole(line.speaker),
+        text: line.text,
+        live: line.live,
+      })),
+    )
+  }, [])
+
   const handleControl = useCallback(
     (msg: { type: string; [k: string]: unknown }) => {
       const t = msg.type
@@ -266,20 +292,27 @@ export function TrainingTalkConsole({
         else if (state === 'speaking') setStatusText('Agent speaking…')
         else if (state === 'idle') setStatusText('Idle — speak now')
         else setStatusText(state)
-      } else if (t === 'transcript') {
-        const speaker = String(msg.speaker ?? '') === 'user' ? 'user' : 'agent'
+      } else if (t === 'transcript' || t === 'transcript_delta') {
+        const speaker = relaySpeaker(msg.speaker)
         const text = String(msg.text ?? '')
-        if (!text) return
-        const line: TranscriptLine = { id: nextId(), speaker, text }
-        currentLineRef.current = null
-        setLines((prev) => [...prev, line])
-        pushTurn(speaker, text)
+        const finalized = transcriptAccRef.current.push({
+          type: t,
+          speaker,
+          text,
+        })
+        syncTranscriptLines()
+        if (t === 'transcript' && finalized) {
+          pushTurn(relayRole(finalized.speaker), finalized.text, {
+            timestampMs: typeof msg.timestamp_ms === 'number' ? msg.timestamp_ms : undefined,
+            timestampEndMs: typeof msg.timestamp_end_ms === 'number' ? msg.timestamp_end_ms : undefined,
+          })
+        }
       } else if (t === 'error') {
         setError(String(msg.message ?? 'Session error'))
         setStatusText('Session error — see message below.')
       }
     },
-    [pushTurn],
+    [pushTurn, syncTranscriptLines],
   )
 
   const playPcm = useCallback((bytes: ArrayBuffer) => {
@@ -322,9 +355,13 @@ export function TrainingTalkConsole({
     setError('')
     setResult(null)
     setRecordingSrc('')
+    setSavedTranscript([])
+    setPlaybackS(0)
+    setAudioDurationS(0)
     setFlowSuggestions([])
     setLines([])
     turnsRef.current = []
+    transcriptAccRef.current.reset()
     setPhase('connecting')
     setStatusText('Connecting the realtime voice session…')
 
@@ -332,6 +369,7 @@ export function TrainingTalkConsole({
     // admin training endpoints) — best effort, never blocks the talk.
     void repo.startCampaignTraining(campaign.offerCampaignId).catch(() => undefined)
 
+    conversationIdRef.current = newConversationId()
     const proto = window.location.protocol === 'https:' ? 'wss' : 'ws'
     const wsUrl =
       `${proto}://${window.location.host}/api/agent/rtc` +
@@ -341,7 +379,6 @@ export function TrainingTalkConsole({
     const ws = new WebSocket(wsUrl)
     ws.binaryType = 'arraybuffer'
     liveRef.current.ws = ws
-    conversationIdRef.current = newConversationId()
     startedAtRef.current = Date.now()
 
     ws.onopen = () => setStatusText('Connected — waiting for the agent…')
@@ -436,13 +473,17 @@ export function TrainingTalkConsole({
   }, [agentId, campaign, handleControl, playPcm, stopEngine])
 
   const end = useCallback(async () => {
-    stopEngine()
     setPhase('grading')
-    setStatusText('Submitting the real conversation — grading the transcript…')
+    setStatusText('Saving the recording and grading the transcript…')
     const durationS = startedAtRef.current ? (Date.now() - startedAtRef.current) / 1000 : 0
     const conversationId = conversationIdRef.current || crypto.randomUUID()
     const transcript = turnsRef.current
+    const ws = liveRef.current.ws
     try {
+      await waitForTrainingWsClose(ws)
+      stopEngine()
+      // Give the relay a moment to flush trn-<conversation_id>.wav to disk.
+      await new Promise((resolve) => window.setTimeout(resolve, 250))
       const reply = await repo.completeTrainingTalk(campaign!.offerCampaignId, {
         transcript,
         agentId,
@@ -453,12 +494,9 @@ export function TrainingTalkConsole({
         // A retry of an already-recorded conversation — show the stored result.
       }
       setResult(reply.trainingSession)
-      setRecordingSrc(
-        mediaUrl((reply.trainingSession as TrainingSessionResult & { recording_url?: string }).recording_url),
-      )
-      setFlowSuggestions(
-        (reply.trainingSession as TrainingSessionResult & { flow_suggestions?: string[] }).flow_suggestions ?? [],
-      )
+      setSavedTranscript(transcript)
+      setRecordingSrc(reply.trainingSession.recordingUrl ?? '')
+      setFlowSuggestions(reply.trainingSession.flowSuggestions ?? [])
       setPhase('done')
       setStatusText(
         `Training talk recorded — the campaign's training state was updated from this real conversation.`,
@@ -497,70 +535,70 @@ export function TrainingTalkConsole({
         )}
       </div>
 
-      {/* Pick campaign + agent */}
-      <div className="mt-4 grid gap-2 sm:grid-cols-2">
-        <label className="block">
-          <span className="mb-1.5 block text-xs font-medium text-fg-secondary">Campaign to train</span>
-          <Select
-            value={campaignId}
-            onChange={(v) => {
-              setCampaignId(v)
-              setResult(null)
-            }}
-            disabled={inTalk}
-            ariaLabel="Campaign to train"
-            placeholder="Choose a campaign…"
-            options={[
-              { value: '', label: 'Choose a campaign…' },
-              ...campaigns.map((c) => ({
-                value: c.offerCampaignId,
-                label: `${c.title || c.offerCampaignId} — ${trainingLabel(c.status)}`,
-              })),
-            ]}
-            className="w-full"
-          />
-        </label>
-        <label className="block">
-          <span className="mb-1.5 block text-xs font-medium text-fg-secondary">Agent to talk to</span>
-          <Select
-            value={agentId}
-            onChange={(v) => setAgentId(v)}
-            disabled={inTalk}
-            ariaLabel="Agent to talk to"
-            placeholder={agents.length === 0 ? 'No agents yet' : 'Choose an agent…'}
-            options={agents.map((a) => ({ value: a.agentId, label: a.name || '(unnamed)' }))}
-            className="w-full"
-          />
-        </label>
-      </div>
-
-      {/* Conversation process — the operator's intended logic */}
+      {/* Rules of engagement — behaviors the operator sets for this campaign */}
       {campaignId ? (
         <div className="mt-4 rounded-md border border-line bg-surface-1 p-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div>
-              <div className="flex items-center gap-1.5 text-sm font-semibold text-fg">
-                <Workflow className="size-4 text-accent" />
-                Conversation process
-              </div>
-              <p className="mt-0.5 text-xs text-fg-muted">
-                Describe how the agent should run this conversation — the findings section will suggest behavior
-                and flow changes against it.
-              </p>
+          <div>
+            <div className="flex items-center gap-1.5 text-sm font-semibold text-fg">
+              <ListChecks className="size-4 text-accent" />
+              Rules of engagement
             </div>
-            <Button size="sm" variant="primary" disabled={processBusy || !processLoaded} onClick={() => void saveProcess()}>
-              {processBusy ? 'Saving…' : 'Save flow'}
+            <p className="mt-0.5 text-xs text-fg-muted">
+              Add one behavior at a time — opener, pitch, qualification, booking, close. After each talk,
+              findings compare what happened against these rules.
+            </p>
+          </div>
+
+          {processLoaded && engagementRules.length > 0 ? (
+            <ul className="mt-3 space-y-2">
+              {engagementRules.map((rule, index) => (
+                <li
+                  key={rule.id}
+                  className="flex items-start gap-2 rounded-md border border-line/70 bg-bg/40 px-2.5 py-2"
+                >
+                  <span className="shrink-0 pt-0.5 font-mono text-2xs tabular text-fg-muted">{index + 1})</span>
+                  <span className="min-w-0 flex-1 text-xs leading-relaxed text-fg">{rule.text}</span>
+                  <Button
+                    size="icon-sm"
+                    variant="ghost"
+                    aria-label={`Remove rule ${index + 1}`}
+                    disabled={processBusy}
+                    onClick={() => void removeEngagementRule(rule.id)}
+                    leadingIcon={<X className="size-3.5 text-danger" />}
+                  />
+                </li>
+              ))}
+            </ul>
+          ) : processLoaded ? (
+            <p className="mt-3 text-xs text-fg-faint">No rules yet — add your first one below.</p>
+          ) : null}
+
+          <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
+            <Input
+              value={ruleDraft}
+              onChange={(e) => setRuleDraft(e.target.value)}
+              disabled={processBusy || !processLoaded}
+              placeholder='e.g. If cough identified, say "bless you" in the spoken language'
+              className="text-xs"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault()
+                  void addEngagementRule()
+                }
+              }}
+            />
+            <Button
+              size="sm"
+              variant="primary"
+              disabled={processBusy || !processLoaded || !ruleDraft.trim()}
+              onClick={() => void addEngagementRule()}
+              leadingIcon={processBusy ? <Loader2 className="size-3.5 animate-spin" /> : <Plus className="size-3.5" />}
+              className="shrink-0"
+            >
+              Add rule
             </Button>
           </div>
-          <Textarea
-            value={processText}
-            onChange={(e) => setProcessText(e.target.value)}
-            rows={3}
-            disabled={processBusy}
-            placeholder="e.g. 1) Greet and confirm the person 2) Ask how they are 3) Introduce the offer in 1-2 lines 4) Ask how they bring clients today 5) Offer the AI outreach 6) Ask for email + confirm it once 7) Agree a day and time 8) End politely…"
-            className="mt-2 w-full text-xs"
-          />
-          {processNotice ? <p className="mt-1 text-2xs text-fg-secondary">{processNotice}</p> : null}
+          {processNotice ? <p className="mt-2 text-2xs text-fg-secondary">{processNotice}</p> : null}
         </div>
       ) : null}
 
@@ -587,24 +625,38 @@ export function TrainingTalkConsole({
         </span>
       </div>
 
-      {/* Live transcript */}
-      <div className="mt-4 max-h-64 min-h-32 overflow-y-auto rounded-md border border-line bg-bg/40 p-3">
-        {lines.length === 0 && !inTalk ? (
-          <p className="text-sm text-fg-faint">No conversation yet — the transcript appears live here.</p>
-        ) : (
-          <ul className="space-y-2">
-            {lines.map((l) => (
-              <li
-                key={l.id}
-                className={cn('text-sm', l.speaker === 'user' ? 'text-accent' : 'text-fg')}
-              >
-                <span className="mr-1.5 font-semibold">{l.speaker === 'user' ? 'You:' : 'Agent:'}</span>
-                {l.text}
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
+      {/* Live / replay transcript */}
+      {recordingSrc && savedTranscript.length > 0 ? (
+        <TrainingSyncedTranscript
+          className="mt-4"
+          lines={playbackLines}
+          currentS={playbackS}
+          onSeekLine={(line) => {
+            playerRef.current?.seekTo(line.startS)
+            void playerRef.current?.play().catch(() => undefined)
+            setPlaybackS(line.startS)
+          }}
+          emptyMessage="Press play on the recording — the last 10 seconds of the talk appear here."
+        />
+      ) : (
+        <div className="mt-4 max-h-64 min-h-32 overflow-y-auto rounded-md border border-line bg-bg/40 p-3">
+          {lines.length === 0 && !inTalk ? (
+            <p className="text-sm text-fg-faint">No conversation yet — the transcript appears live here.</p>
+          ) : (
+            <ul className="space-y-2">
+              {lines.map((l) => (
+                <li
+                  key={l.id}
+                  className={cn('text-sm', l.speaker === 'user' ? 'text-accent' : 'text-fg')}
+                >
+                  <span className="mr-1.5 font-semibold">{l.speaker === 'user' ? 'You:' : 'Agent:'}</span>
+                  <span className={cn(l.live && 'italic text-fg-muted')}>{l.text}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
 
       {error ? (
         <p className="mt-3 flex items-center gap-2 text-xs text-danger" role="alert">
@@ -619,7 +671,15 @@ export function TrainingTalkConsole({
             <AudioLines className="size-3.5 text-accent" />
             Recording — this talk was saved
           </div>
-          <RecordingAudio src={recordingSrc} rowKey={recordingSrc} className="max-w-xl" />
+          <SpotifyStylePlayer
+            ref={playerRef}
+            src={recordingSrc}
+            rowKey={recordingSrc}
+            title="Recording — this talk was saved"
+            className="max-w-2xl"
+            onTimeUpdate={setPlaybackS}
+            onDurationChange={setAudioDurationS}
+          />
           <p className="mt-1.5 text-2xs text-fg-faint">
             Operator on the left channel, agent on the right — replay to perfect the performance.
           </p>
@@ -648,8 +708,18 @@ export function TrainingTalkConsole({
                 for review
               </span>
             ) : null}
+            {(result.memoriesCreated ?? 0) > 0 ? (
+              <span className="text-xs text-fg-muted">
+                {result.memoriesCreated} memory candidate{result.memoriesCreated === 1 ? '' : 's'} waiting below
+              </span>
+            ) : null}
           </div>
           {result.summary ? <p className="mt-2 text-sm text-fg-secondary">{result.summary}</p> : null}
+          <ExtractedTalkReview
+            campaignId={campaignId}
+            sessionId={result.sessionId || result.conversationId}
+            extracted={result.extracted}
+          />
           {result.strengths.length > 0 ? (
             <div className="mt-3 flex flex-wrap gap-1.5">
               {result.strengths.map((s) => (
@@ -678,25 +748,31 @@ export function TrainingTalkConsole({
             <div className="mt-3 rounded-md border border-warning/20 bg-warning/5 p-3">
               <div className="flex items-center gap-1.5 text-2xs font-semibold uppercase tracking-wide text-warning">
                 <Lightbulb className="size-3.5" />
-                Suggested behavior &amp; flow changes
+                Suggested updates to your rules of engagement
               </div>
               <ul className="mt-2 space-y-1.5">
                 {flowSuggestions.map((f) => (
-                  <li key={f} className="flex items-start gap-1.5 text-xs text-fg-secondary">
-                    <span className="mt-1.5 size-1 shrink-0 rounded-full bg-warning" />
-                    {f}
+                  <li key={f} className="flex items-start justify-between gap-2 text-xs text-fg-secondary">
+                    <span className="flex items-start gap-1.5">
+                      <span className="mt-1.5 size-1 shrink-0 rounded-full bg-warning" />
+                      {f}
+                    </span>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      disabled={processBusy || !processLoaded}
+                      onClick={() =>
+                        void persistEngagementRules(
+                          [...engagementRules, { id: crypto.randomUUID(), text: f }],
+                          'Added to the conversation process — trains the next talk.',
+                        )
+                      }
+                    >
+                      Add as rule
+                    </Button>
                   </li>
                 ))}
               </ul>
-            </div>
-          ) : null}
-          {renderExtracted(result.extracted) ? (
-            <div className="mt-4 rounded-md border border-line bg-bg/40 p-3">
-              <div className="flex items-center gap-1.5 text-2xs font-semibold uppercase tracking-wide text-fg-muted">
-                <ContactRound className="size-3.5" />
-                Extracted from this talk
-              </div>
-              <div className="mt-2 flex flex-wrap gap-x-5 gap-y-2">{renderExtracted(result.extracted)}</div>
             </div>
           ) : null}
         </div>

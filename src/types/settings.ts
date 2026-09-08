@@ -24,6 +24,8 @@ export type ConnectionKey =
   | 'whatsapp'
   | 'email'
   | 'google_meet'
+  | 'zoom'
+  | 'telegram'
 
 export interface ProviderConnection {
   key: ConnectionKey

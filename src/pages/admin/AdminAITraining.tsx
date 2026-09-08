@@ -3,13 +3,30 @@ import { Loader2, MessageSquareText, RefreshCw } from 'lucide-react'
 import { PageTransition } from '@/components/motion/PageTransition'
 import { PageContainer, PageHeader, WorkspaceEyebrow } from '@/components/layout/PageHeader'
 import { Button } from '@/components/ui/Button'
+import { Select } from '@/components/ui/Select'
 import { PronunciationLexicon } from '@/components/admin/PronunciationLexicon'
 import { TrainingTalkConsole } from '@/components/admin/TrainingTalkConsole'
+import { TrainingRecordingReview } from '@/components/admin/TrainingRecordingReview'
 import { TrainingSuggestionsPanel } from '@/components/admin/TrainingSuggestionsPanel'
+import { MemoryReviewPanel } from '@/components/admin/MemoryReviewPanel'
+import { TrainingProcessOperationsPanel } from '@/components/admin/TrainingProcessOperationsPanel'
+import { ProductionCallReviewPanel } from '@/components/admin/ProductionCallReviewPanel'
+import { BehaviorVersionPanel } from '@/components/admin/BehaviorVersionPanel'
 import { Reveal } from '@/components/motion/Reveal'
 import { repo } from '@/api/repository'
 import type { TrainingCampaignRow, TrainingSuggestion } from '@/types/training'
 import type { PronunciationAgentOption } from '@/types/pronunciation'
+
+function trainingLabel(status: string): string {
+  const map: Record<string, string> = {
+    not_started: 'Not started',
+    ready: 'Ready',
+    training: 'Training…',
+    trained: 'Trained',
+    needs_improvement: 'Needs improvement',
+  }
+  return map[status] ?? status
+}
 
 export default function AdminAITraining() {
   const [campaigns, setCampaigns] = useState<TrainingCampaignRow[]>([])
@@ -18,18 +35,23 @@ export default function AdminAITraining() {
   const [errors, setErrors] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
   const [refreshToken, setRefreshToken] = useState(0)
+  const [campaignId, setCampaignId] = useState('')
+  const [agentId, setAgentId] = useState('')
 
   const reload = useCallback(() => {
     setRefreshToken((n) => n + 1)
   }, [])
 
+  const pickCampaign = (id: string) => {
+    setCampaignId(id)
+    const row = campaigns.find((item) => item.offerCampaignId === id)
+    if (row?.agentId) setAgentId(row.agentId)
+  }
+
   useEffect(() => {
     let cancelled = false
     setLoading(true)
     setErrors([])
-    // Each section loads independently so one failing endpoint (e.g. a
-    // mid-deploy backend) never blanks the campaigns/agents selectors or the
-    // whole workspace. Failures are surfaced in the banner below the header.
     const loadSection = async <T,>(
       fetchFn: () => Promise<T>,
       apply: (value: T) => void,
@@ -57,14 +79,54 @@ export default function AdminAITraining() {
     }
   }, [refreshToken])
 
+  useEffect(() => {
+    if (!campaigns.length) return
+    if (!campaignId || !campaigns.some((row) => row.offerCampaignId === campaignId)) {
+      const first = campaigns[0]
+      setCampaignId(first.offerCampaignId)
+      setAgentId(first.agentId || agents[0]?.agentId || '')
+    }
+  }, [campaigns, campaignId, agents])
+
   return (
     <PageTransition>
       <PageContainer className="space-y-6">
         <PageHeader
           eyebrow={<WorkspaceEyebrow name="Super Admin" context="AI Training" />}
           title="AI training workspace"
-          description="Talk to the agent live — the real conversation updates its training state, and new names and words land in the pronunciation lexicon for your review."
+          description="One campaign at a time: the process you save is used on the next talk. Validate and publish extra rules to pin them on live calls."
         />
+
+        <div className="surface grid gap-3 p-4 sm:grid-cols-2">
+          <label className="block">
+            <span className="mb-1.5 block text-xs font-medium text-fg-secondary">Campaign</span>
+            <Select
+              value={campaignId}
+              onChange={pickCampaign}
+              ariaLabel="Campaign for this training workspace"
+              placeholder="Choose a campaign…"
+              options={[
+                { value: '', label: 'Choose a campaign…' },
+                ...campaigns.map((row) => ({
+                  value: row.offerCampaignId,
+                  label: `${row.title || row.offerCampaignId} — ${trainingLabel(row.status)}`,
+                })),
+              ]}
+              className="w-full"
+            />
+          </label>
+          <label className="block">
+            <span className="mb-1.5 block text-xs font-medium text-fg-secondary">Agent</span>
+            <Select
+              value={agentId}
+              onChange={setAgentId}
+              ariaLabel="Agent for this training workspace"
+              placeholder={agents.length === 0 ? 'No agents yet' : 'Choose an agent…'}
+              options={agents.map((row) => ({ value: row.agentId, label: row.name || '(unnamed)' }))}
+              className="w-full"
+            />
+          </label>
+        </div>
 
         {errors.length > 0 ? (
           <div
@@ -90,8 +152,22 @@ export default function AdminAITraining() {
           <TrainingTalkConsole
             campaigns={campaigns}
             agents={agents}
+            campaignId={campaignId}
+            agentId={agentId}
             onTrainingUpdated={reload}
           />
+        </Reveal>
+
+        <Reveal>
+          <TrainingRecordingReview campaignId={campaignId} refreshToken={refreshToken} onChanged={reload} />
+        </Reveal>
+
+        <Reveal>
+          <TrainingProcessOperationsPanel campaignId={campaignId} onChanged={reload} />
+        </Reveal>
+
+        <Reveal>
+          <ProductionCallReviewPanel campaignId={campaignId} onReviewed={reload} />
         </Reveal>
 
         <Reveal>
@@ -132,7 +208,23 @@ export default function AdminAITraining() {
         </Reveal>
 
         <Reveal>
-          {/* key remounts on refresh so accepted words appear in the manual lists */}
+          <MemoryReviewPanel
+            key={`memories-${refreshToken}-${campaignId}-${agentId}`}
+            campaignId={campaignId}
+            agentId={agentId}
+            onChanged={reload}
+          />
+        </Reveal>
+
+        <Reveal>
+          <BehaviorVersionPanel
+            campaignId={campaignId}
+            agentId={agentId}
+            refreshToken={refreshToken}
+          />
+        </Reveal>
+
+        <Reveal>
           <PronunciationLexicon key={refreshToken} />
         </Reveal>
       </PageContainer>

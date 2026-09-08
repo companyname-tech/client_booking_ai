@@ -20,6 +20,8 @@ const KEY_ICONS: Record<string, LucideIcon> = {
   email: Mail,
   whatsapp: MessageSquare,
   google_meet: Video,
+  zoom: Video,
+  telegram: MessageSquare,
 }
 
 /** Caption shown next to the masked credential so the user knows what it previews. */

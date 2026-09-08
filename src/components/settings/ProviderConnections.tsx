@@ -42,13 +42,28 @@ function fieldsFor(conn: ProviderConnection): FieldSpec[] {
         { field: 'google_meet_access_token', label: 'OAuth access token', kind: 'secret' },
         { field: 'google_meet_service_account_json', label: 'Service account JSON', kind: 'textarea' },
       ]
+    case 'zoom':
+      return [
+        { field: 'zoom_account_id', label: 'Account ID', kind: 'text' },
+        { field: 'zoom_client_id', label: 'Client ID', kind: 'text' },
+        { field: 'zoom_client_secret', label: 'Client secret', kind: 'secret' },
+      ]
+    case 'telegram':
+      return [{ field: 'telegram_bot_token', label: 'Bot token', kind: 'secret' }]
     case 'email':
       return []
   }
 }
 
 // Non-secret fields whose value is always sent (even when empty), so host/port/user can be cleared.
-const ALWAYS_SEND = new Set(['smtp_host', 'smtp_port', 'smtp_user', 'google_meet_host_email'])
+const ALWAYS_SEND = new Set([
+  'smtp_host',
+  'smtp_port',
+  'smtp_user',
+  'google_meet_host_email',
+  'zoom_account_id',
+  'zoom_client_id',
+])
 
 function initialValues(conn: ProviderConnection, email: EmailConnection): Record<string, string> {
   if (conn.key === 'email') {

@@ -19,6 +19,7 @@ import { EmptyState } from '@/components/ui/EmptyState'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { CampaignStatus as CampaignStatusBadge } from '@/components/campaigns/CampaignStatus'
 import { CampaignHeader } from '@/components/campaign/CampaignHeader'
+import { hasRunnableBudget, isBudgetStopped, isTrainingCampaign, resolveOperationalStatus } from '@/lib/campaignOperationalStatus'
 
 interface Tab {
   to: string
@@ -95,9 +96,13 @@ export default function CampaignDetailLayout({ zone = 'client' }: { zone?: 'clie
 
   if (!client) return null
 
-  const effectiveStatus = statusOverride ?? campaign.status
+  const effectiveStatus = resolveOperationalStatus(campaign, statusOverride)
+  const budgetStopped = isBudgetStopped(campaign)
   const pauseCampaign = () => setStatusOverride('paused')
-  const resumeCampaign = () => setStatusOverride('active')
+  const resumeCampaign = () => {
+    if (!isTrainingCampaign(campaign) && !hasRunnableBudget(campaign.budget)) return
+    setStatusOverride('active')
+  }
 
   const runDelete = async () => {
     setDeleteBusy(true)
@@ -138,6 +143,7 @@ export default function CampaignDetailLayout({ zone = 'client' }: { zone?: 'clie
                 <CampaignHeader
                   campaign={campaign}
                   effectiveStatus={effectiveStatus}
+                  budgetStopped={budgetStopped}
                   onPause={pauseCampaign}
                   onResume={resumeCampaign}
                   onDelete={() => setConfirmDelete(true)}

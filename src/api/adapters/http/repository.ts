@@ -10,9 +10,18 @@
  *
  * See the data-contract map (t_17cd0499) for the full tier split.
  */
-import { apiClient } from './client'
+import { apiClient, ApiError } from './client'
 import { env } from '@/config/environment'
 import { ensureEntryIds, stripEntryIds } from '@/lib/pronunciation'
+import {
+  buildTrainingProcessOperation,
+  clearLocalTrainingProcessOperations,
+  loadLocalTrainingProcessOperations,
+  processRequestPath,
+  removeLocalTrainingProcessOperation,
+  updateLocalTrainingProcessOperationComment,
+  upsertLocalTrainingProcessOperation,
+} from '@/lib/trainingProcessOperationJournal'
 import type { Agent, OfferCampaign, User, Client, ClientInput, ClientPage, Lead, Call, Booking, CallDetail, LeadDetail, Recording, CallHistoryEntry, CampaignFunnelStage, CampaignInsight, CampaignAttentionAlert, CampaignPerformancePoint, CampaignHealthSnapshot, CampaignHealth, Analytics, Activity, AttentionItem, Integration, LeadStatus, Meeting, WorkspaceAnalytics } from '@/types'
 import type { AppSettings, ConnectionsState, ConnectionKey, TwilioNumber, FishVoice, SettingsSchemaField, AgentModels, AgentVoiceOption, AgentRole } from '@/types/settings'
 import type { AdminCampaignMeta, AdminLead, CampaignReviewData, AuditEvent, AdminNotification, ActivityLogEntry, ActivitySource, ReviewCampaignContent } from '@/types/admin'
@@ -21,7 +30,10 @@ import type { EnrichedLead, LeadHubMetrics, LeadHubStats, LeadSegment, LeadHubFi
 import type { AICommandOverview, AIActivityEvent, AIConversationSummary, AIConversationDetail, AIObjection, AILearningPattern, AIImprovement, AIFollowUp, AIEscalation, AIBookingConversation, AIInsight, AIHealthSnapshot, AIAgentProfile, AIPerformanceSnapshot, AICommandFilters } from '@/types/aiCommand'
 import type { CampaignDraft } from '@/types/campaignDraft'
 import type { PronunciationAgentOption, PronunciationConfigDto, PronunciationLexiconEntry, TranscribePronunciationReply } from '@/types/pronunciation'
-import type { AcceptTrainingSuggestionInput, AcceptTrainingSuggestionResult, TrainingCampaignRow, TrainingSuggestion, TrainingTalkCompleteResult, TrainingTalkTurn } from '@/types/training'
+import type { AcceptTrainingSuggestionInput, AcceptTrainingSuggestionResult, AgentMemoryRecord, BehaviorVersion, MemoryStatus, TrainingCampaignRow, TrainingExtractedData, TrainingProcessOperation, TrainingProcessOperationRunResult, TrainingRecordingComment, TrainingSessionResult, TrainingSuggestion, TrainingTalkCompleteResult, TrainingTalkSession, TrainingTalkTurn } from '@/types/training'
+import type { CampaignType } from '@/lib/campaignTypes'
+import { campaignTypeToSource, sourceToCampaignType } from '@/lib/campaignTypes'
+import { resolveOperationalStatus } from '@/lib/campaignOperationalStatus'
 import type { LeadGenerateRequest, LeadImportResult, SmartSearchRequest, SmartSearchResponse } from '@/types/leadGeneration'
 import type { CostBalance, CostEvent, CostPricing, CostSummary } from '@/types/costs'
 import type { AdminUser, AdminUserCreateInput, AdminUserUpdateInput, PermissionCatalog, PermissionDescriptor, PermissionRoleDescriptor } from '@/types/admin'
@@ -127,8 +139,10 @@ interface CallWire {
 interface RecordingWire {
   id?: string | number
   recording_id?: string | number
+  call_id?: string | number
   lead_id?: string
   offer_id?: string
+  transcript_id?: string
   agent_id?: string
   created_at?: string
   started_at?: string
@@ -142,6 +156,29 @@ interface RecordingWire {
   lead_company?: string
   phone?: string
   transcript?: string
+}
+
+/** Wire row for training-process operation log (BE may return snake_case). */
+interface TrainingProcessOperationWire {
+  operation_id?: string
+  operationId?: string
+  method?: string
+  path?: string
+  status?: number
+  status_text?: string
+  statusText?: string
+  duration_ms?: number
+  durationMs?: number
+  response_preview?: string
+  responsePreview?: string
+  response_body?: Record<string, unknown> | unknown[] | null
+  responseBody?: Record<string, unknown> | unknown[] | null
+  model_comment?: string
+  modelComment?: string
+  created_at?: string
+  createdAt?: string
+  last_run_at?: string
+  lastRunAt?: string
 }
 
 interface BookingWire {
@@ -327,7 +364,12 @@ function toAdminLead(wire: LeadWire): AdminLead {
 
 function toCampaign(wire: OfferWire): OfferCampaign {
   const leadCount = wire.lead_count ?? 0
-  const status = leadCount > 0 ? 'active' : 'draft'
+  const isTraining = sourceToCampaignType(wire.source) === 'training'
+  const baseStatus = isTraining
+    ? 'awaiting_ai_training'
+    : leadCount > 0
+      ? 'active'
+      : 'draft'
   // Admin review content (stored on the offer as campaign_content) carries the
   // targeting/budget the review screen edits; map it onto the FE campaign shape.
   const content = wire.campaign_content
@@ -341,24 +383,26 @@ function toCampaign(wire: OfferWire): OfferCampaign {
     location: targeting?.location ?? '',
     ...(targeting?.other ? { other: targeting.other } : {}),
   }
-  return {
+  const campaignBudget = {
+    total: budget?.total ?? 0,
+    used: 0,
+    daily: budget?.daily ?? 0,
+    currency: 'USD' as const,
+    expectedDurationDays: budget?.expectedDurationDays ?? 0,
+  }
+  const draft: OfferCampaign = {
     id: wire.id,
     clientId: wire.client_id ?? '',
     name: wire.name || wire.title,
     offerName: wire.title,
     valueProposition: wire.value_proposition || wire.description || '',
-    status,
-    stage: status === 'active' ? 'calling' : 'onboarding',
+    source: wire.source ?? '',
+    status: baseStatus,
+    stage: isTraining ? 'ai_training' : baseStatus === 'active' ? 'calling' : 'onboarding',
     targetAudience: targeting ? [targeting.industry, targeting.companySize].filter(Boolean).join(' · ') : '',
     geography: targeting?.location ?? '',
     criteria,
-    budget: {
-      total: budget?.total ?? 0,
-      used: 0,
-      daily: budget?.daily ?? 0,
-      currency: 'USD',
-      expectedDurationDays: budget?.expectedDurationDays ?? 0,
-    },
+    budget: campaignBudget,
     metrics: {
       leadsFound: leadCount,
       leadsContacted: wire.contacted_leads ?? 0,
@@ -373,6 +417,10 @@ function toCampaign(wire: OfferWire): OfferCampaign {
     createdAt: wire.created_at ?? '',
     lastActivityAt: wire.created_at ?? '',
     history: [],
+  }
+  return {
+    ...draft,
+    status: resolveOperationalStatus(draft),
   }
 }
 
@@ -439,7 +487,15 @@ export const httpRepository = {
     })
     return toCampaign(created)
   },
-  async createCampaign(input: { name: string; offerName?: string; description?: string; category?: string; company?: string; clientId?: string }): Promise<OfferCampaign> {
+  async createCampaign(input: {
+    name: string
+    offerName?: string
+    description?: string
+    category?: string
+    company?: string
+    clientId?: string
+    type?: CampaignType
+  }): Promise<OfferCampaign> {
     const created = await apiClient.post<OfferWire>('/offers', {
       title: input.name,
       description: input.description ?? '',
@@ -448,6 +504,7 @@ export const httpRepository = {
       company: input.company ?? '',
       client_id: input.clientId ?? '',
       agent_id: '',
+      source: campaignTypeToSource(input.type ?? 'live'),
       phone: '', // OfferIn requires phone; a campaign/offer has no phone of its own
     })
     return toCampaign(created)
@@ -793,6 +850,13 @@ export const httpRepository = {
   async getTrainingCampaigns(): Promise<TrainingCampaignRow[]> {
     return apiClient.get<TrainingCampaignRow[]>('/admin/training/campaigns')
   },
+  async getTrainingTalkSessions(offerId: string): Promise<TrainingTalkSession[]> {
+    const reply = await apiClient.get<{
+      offerCampaignId: string
+      sessions?: Record<string, unknown>[]
+    }>(`/admin/training/campaigns/${offerId}/sessions`)
+    return (reply.sessions ?? []).map(toTrainingTalkSession)
+  },
   /**
    * Submit a finished LIVE training talk. The backend grades the real
    * transcript (score is server-derived — a client score is never trusted),
@@ -808,15 +872,27 @@ export const httpRepository = {
       conversationId?: string
     },
   ): Promise<TrainingTalkCompleteResult> {
-    return apiClient.post<TrainingTalkCompleteResult>(
-      `/admin/campaigns/${id}/training/complete`,
-      {
-        transcript: input.transcript,
-        agent_id: input.agentId ?? '',
-        duration_s: input.durationS ?? 0,
-        conversation_id: input.conversationId ?? '',
-      },
-    )
+    const reply = await apiClient.post<{
+      meta: TrainingTalkCompleteResult['meta']
+      trainingSession?: Record<string, unknown>
+      duplicate?: boolean
+    }>(`/admin/campaigns/${id}/training/complete`, {
+      transcript: input.transcript.map((turn) => ({
+        role: turn.role,
+        text: turn.text,
+        timestamp_ms: turn.timestampMs ?? 0,
+        timestamp_end_ms: turn.timestampEndMs ?? 0,
+        segment_id: turn.segmentId ?? '',
+      })),
+      agent_id: input.agentId ?? '',
+      duration_s: input.durationS ?? 0,
+      conversation_id: input.conversationId ?? '',
+    })
+    return {
+      meta: reply.meta,
+      trainingSession: toTrainingSessionResult(reply.trainingSession ?? {}),
+      duplicate: Boolean(reply.duplicate),
+    }
   },
   async getTrainingSuggestions(status: 'pending' | 'accepted' | 'dismissed' = 'pending'): Promise<TrainingSuggestion[]> {
     return apiClient.get<TrainingSuggestion[]>(`/admin/training/suggestions?status=${status}`)
@@ -847,6 +923,109 @@ export const httpRepository = {
       { seconds },
     )
   },
+  /**
+   * Agent memory review queue. Training only ever produces `candidate`
+   * records; validate then publish are separate deliberate steps, so nothing
+   * here can change live behavior by itself.
+   */
+  async listAgentMemories(
+    status: MemoryStatus = 'candidate',
+    campaignId = '',
+    agentId = '',
+  ): Promise<AgentMemoryRecord[]> {
+    const query = new URLSearchParams({ status })
+    if (campaignId) query.set('campaign_id', campaignId)
+    if (agentId) query.set('agent_id', agentId)
+    const reply = await apiClient.get<{ status: string; memories?: AgentMemoryRecord[] }>(
+      `/admin/memories?${query.toString()}`,
+    )
+    return reply?.memories ?? []
+  },
+  async validateAgentMemory(
+    memoryId: string,
+    input: { reviewer: string; rationale: string },
+  ): Promise<AgentMemoryRecord> {
+    return apiClient.post<AgentMemoryRecord>(`/admin/memories/${memoryId}/validate`, {
+      reviewer: input.reviewer,
+      rationale: input.rationale,
+    })
+  },
+  async publishAgentMemory(memoryId: string): Promise<BehaviorVersion> {
+    return apiClient.post<BehaviorVersion>(`/admin/memories/${memoryId}/publish`)
+  },
+  async disableAgentMemory(memoryId: string): Promise<BehaviorVersion> {
+    return apiClient.post<BehaviorVersion>(`/admin/memories/${memoryId}/disable`)
+  },
+  async dismissAgentMemory(memoryId: string): Promise<AgentMemoryRecord> {
+    return apiClient.post<AgentMemoryRecord>(`/admin/memories/${memoryId}/dismiss`)
+  },
+  async getBehaviorVersion(campaignId: string, agentId = ''): Promise<BehaviorVersion> {
+    const query = new URLSearchParams({ campaign_id: campaignId })
+    if (agentId) query.set('agent_id', agentId)
+    return apiClient.get<BehaviorVersion>(`/admin/behavior-version?${query.toString()}`)
+  },
+  /** Promote a real call into the review pipeline as candidates only. */
+  async reviewProductionCall(input: {
+    callId: string
+    transcriptId?: string
+    recordingId?: string
+  }): Promise<{ trainingSession: Record<string, unknown>; duplicate: boolean }> {
+    return apiClient.post(`/admin/calls/review`, {
+      call_id: input.callId,
+      transcript_id: input.transcriptId ?? '',
+      recording_id: input.recordingId ?? '',
+    })
+  },
+  async listTrainingRecordingComments(
+    offerId: string,
+    sessionId: string,
+  ): Promise<TrainingRecordingComment[]> {
+    const reply = await apiClient.get<{ comments?: Record<string, unknown>[] }>(
+      `/admin/campaigns/${offerId}/training/sessions/${sessionId}/comments`,
+    )
+    return (reply?.comments ?? []).map((row) => ({
+      id: String(row.comment_id ?? row.id ?? ''),
+      timestampS: Number(row.timestamp_s ?? row.timestampS ?? 0) || 0,
+      comment: String(row.comment ?? ''),
+      transcriptSnippet: String(row.transcript_snippet ?? row.transcriptSnippet ?? ''),
+      createdAt: String(row.created_at ?? row.createdAt ?? ''),
+      memoryId: String(row.memory_id ?? row.memoryId ?? ''),
+      rule: String(row.rule ?? ''),
+    }))
+  },
+  async addTrainingRecordingComment(
+    offerId: string,
+    sessionId: string,
+    input: { comment: string; timestampS: number; transcriptSnippet: string },
+  ): Promise<TrainingRecordingComment> {
+    const reply = await apiClient.post<{ comment?: Record<string, unknown> }>(
+      `/admin/campaigns/${offerId}/training/sessions/${sessionId}/comments`,
+      {
+        comment: input.comment,
+        timestamp_s: input.timestampS,
+        transcript_snippet: input.transcriptSnippet,
+      },
+    )
+    const row = reply?.comment ?? {}
+    return {
+      id: String(row.comment_id ?? ''),
+      timestampS: Number(row.timestamp_s ?? 0) || 0,
+      comment: String(row.comment ?? input.comment),
+      transcriptSnippet: String(row.transcript_snippet ?? input.transcriptSnippet),
+      createdAt: String(row.created_at ?? ''),
+      memoryId: String(row.memory_id ?? ''),
+      rule: String(row.rule ?? ''),
+    }
+  },
+  async deleteTrainingRecordingComment(
+    offerId: string,
+    sessionId: string,
+    commentId: string,
+  ): Promise<void> {
+    await apiClient.delete(
+      `/admin/campaigns/${offerId}/training/sessions/${sessionId}/comments/${commentId}`,
+    )
+  },
   async getConversationProcess(offerId: string): Promise<{ offerCampaignId: string; process: string }> {
     return apiClient.get<{ offerCampaignId: string; process: string }>(
       `/admin/campaigns/${offerId}/training/process`,
@@ -857,6 +1036,150 @@ export const httpRepository = {
       `/admin/campaigns/${offerId}/training/process`,
       { process },
     )
+  },
+  async deleteConversationProcess(offerId: string): Promise<{ offerCampaignId: string; cleared: boolean }> {
+    return apiClient.delete<{ offerCampaignId: string; cleared: boolean }>(
+      `/admin/campaigns/${offerId}/training/process`,
+    )
+  },
+  /**
+   * Network-tab log for GET/DELETE against the training process.
+   * Uses the BE list endpoint when available; falls back to a local journal
+   * while the parallel BE work is still deploying.
+   */
+  async listTrainingProcessOperations(offerId: string): Promise<{
+    operations: TrainingProcessOperation[]
+    source: 'server' | 'local'
+  }> {
+    try {
+      const reply = await apiClient.get<{
+        offerCampaignId: string
+        operations?: TrainingProcessOperationWire[]
+      }>(`/admin/campaigns/${offerId}/training/process/operations`)
+      clearLocalTrainingProcessOperations(offerId)
+      return {
+        operations: (reply.operations ?? []).map(toTrainingProcessOperation),
+        source: 'server',
+      }
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 404) {
+        return {
+          operations: loadLocalTrainingProcessOperations(offerId),
+          source: 'local',
+        }
+      }
+      throw error
+    }
+  },
+  /** Send GET or DELETE to the process endpoint and return the logged row. */
+  async executeTrainingProcessRequest(
+    offerId: string,
+    method: 'GET' | 'DELETE',
+    operationId?: string,
+  ): Promise<TrainingProcessOperation> {
+    const started = performance.now()
+    let body: Record<string, unknown>
+    if (method === 'GET') {
+      body = await apiClient.get<{ offerCampaignId: string; process: string }>(
+        processRequestPath(offerId),
+      )
+    } else {
+      body = await apiClient.delete<{ offerCampaignId: string; cleared: boolean }>(
+        processRequestPath(offerId),
+      )
+    }
+    const durationMs = Math.round(performance.now() - started)
+    const operation = buildTrainingProcessOperation({
+      offerId,
+      method,
+      status: 200,
+      statusText: 'OK',
+      durationMs,
+      responseBody: body,
+      operationId,
+    })
+
+    try {
+      const listed = await this.listTrainingProcessOperations(offerId)
+      if (listed.source === 'server') {
+        const match = listed.operations.find((row) => row.operationId === operationId)
+          ?? listed.operations.find(
+            (row) =>
+              row.method.toUpperCase() === method && row.path === processRequestPath(offerId),
+          )
+        if (match) return match
+        if (listed.operations[0]) return listed.operations[0]
+      }
+    } catch {
+      /* fall through to local journal */
+    }
+
+    upsertLocalTrainingProcessOperation(offerId, operation)
+    return operation
+  },
+  async runTrainingProcessOperation(
+    offerId: string,
+    operationId: string,
+  ): Promise<TrainingProcessOperationRunResult> {
+    try {
+      const reply = await apiClient.post<{
+        operation: TrainingProcessOperationWire
+        response: Record<string, unknown>
+      }>(`/admin/campaigns/${offerId}/training/process/operations/${operationId}/run`)
+      return {
+        operation: toTrainingProcessOperation(reply.operation),
+        response: reply.response,
+      }
+    } catch (error) {
+      if (!(error instanceof ApiError) || error.status !== 404) throw error
+      const listed = await this.listTrainingProcessOperations(offerId)
+      const target = listed.operations.find((row) => row.operationId === operationId)
+      if (!target) throw error
+      const method = target.method.toUpperCase()
+      if (method !== 'GET' && method !== 'DELETE') {
+        throw new Error(`Only GET and DELETE operations can be replayed (got ${method})`)
+      }
+      const operation = await this.executeTrainingProcessRequest(
+        offerId,
+        method as 'GET' | 'DELETE',
+        target.operationId,
+      )
+      return {
+        operation,
+        response: (operation.responseBody as Record<string, unknown>) ?? {},
+      }
+    }
+  },
+  async deleteTrainingProcessOperation(offerId: string, operationId: string): Promise<void> {
+    try {
+      await apiClient.delete(`/admin/campaigns/${offerId}/training/process/operations/${operationId}`)
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 404) {
+        removeLocalTrainingProcessOperation(offerId, operationId)
+        return
+      }
+      throw error
+    }
+  },
+  async updateTrainingProcessOperationComment(
+    offerId: string,
+    operationId: string,
+    comment: string,
+  ): Promise<TrainingProcessOperation> {
+    try {
+      const reply = await apiClient.patch<{ operation: TrainingProcessOperationWire }>(
+        `/admin/campaigns/${offerId}/training/process/operations/${operationId}`,
+        { comment },
+      )
+      return toTrainingProcessOperation(reply.operation)
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 404) {
+        const updated = updateLocalTrainingProcessOperationComment(offerId, operationId, comment)
+        if (!updated) throw error
+        return updated
+      }
+      throw error
+    }
   },
   async updateCampaign(id: string, patch: Partial<OfferCampaign>): Promise<OfferCampaign> {
     const wire = await apiClient.put<OfferWire>(`/offers/${id}`, {
@@ -1498,11 +1821,30 @@ function toRecording(wire: RecordingWire, offerCampaignId: string): Recording {
   }
 }
 
+function toTrainingProcessOperation(wire: TrainingProcessOperationWire): TrainingProcessOperation {
+  return {
+    operationId: wire.operationId ?? wire.operation_id ?? '',
+    method: wire.method ?? 'GET',
+    path: wire.path ?? '',
+    status: wire.status ?? 0,
+    statusText: wire.statusText ?? wire.status_text ?? '',
+    durationMs: wire.durationMs ?? wire.duration_ms ?? 0,
+    responsePreview: wire.responsePreview ?? wire.response_preview ?? '',
+    responseBody: wire.responseBody ?? wire.response_body ?? null,
+    modelComment: wire.modelComment ?? wire.model_comment ?? '',
+    createdAt: wire.createdAt ?? wire.created_at ?? '',
+    lastRunAt: wire.lastRunAt ?? wire.last_run_at ?? '',
+  }
+}
+
 function toCallHistoryEntry(wire: RecordingWire): CallHistoryEntry {
   const id = String(wire.recording_id ?? wire.id ?? '')
   return {
     id,
+    callId: String(wire.call_id ?? wire.lead_id ?? ''),
     leadId: wire.lead_id ?? '',
+    offerCampaignId: wire.offer_id ?? '',
+    transcriptId: wire.transcript_id ?? '',
     agentId: wire.agent_id ?? '',
     leadName: wire.lead_name ?? '',
     phone: wire.phone ?? '',
@@ -1511,6 +1853,108 @@ function toCallHistoryEntry(wire: RecordingWire): CallHistoryEntry {
     audioUrl: mediaUrl(wire.audio_url),
     transcript: wire.transcript ?? '',
     startedAt: wire.started_at ?? wire.created_at ?? '',
+  }
+}
+
+function toTrainingExtractedData(raw: unknown): TrainingExtractedData | undefined {
+  if (!raw || typeof raw !== 'object') return undefined
+  const row = raw as Record<string, unknown>
+  const emails = ((row.emails ?? []) as unknown[])
+    .map((entry) => {
+      if (!entry || typeof entry !== 'object') return null
+      const emailRow = entry as Record<string, unknown>
+      const email = String(emailRow.email ?? '').trim()
+      if (!email) return null
+      return {
+        email,
+        confirmed: Boolean(emailRow.confirmed ?? emailRow.user_confirmed),
+      }
+    })
+    .filter((entry): entry is { email: string; confirmed: boolean } => entry !== null)
+  const phones = ((row.phones ?? []) as unknown[])
+    .map((phone) => String(phone ?? '').trim())
+    .filter(Boolean)
+  const meetingRaw = row.meeting
+  let meeting: TrainingExtractedData['meeting'] = null
+  if (meetingRaw && typeof meetingRaw === 'object') {
+    const meetingRow = meetingRaw as Record<string, unknown>
+    const day = String(meetingRow.day ?? '').trim()
+    const time = String(meetingRow.time ?? '').trim()
+    if (day || time) meeting = { day, time }
+  }
+  if (emails.length === 0 && phones.length === 0 && !meeting) return undefined
+  return { emails, phones, meeting }
+}
+
+function trainingSessionRecordingUrl(wire: Record<string, unknown>): string | undefined {
+  const direct = String(wire.recordingUrl ?? wire.recording_url ?? '').trim()
+  const recording = wire.recording
+  const nested =
+    recording && typeof recording === 'object'
+      ? String((recording as Record<string, unknown>).reference ?? '').trim()
+      : ''
+  const path = direct || nested
+  return path ? mediaUrl(path) : undefined
+}
+
+function toTrainingTalkSession(wire: Record<string, unknown>): TrainingTalkSession {
+  const transcript = ((wire.transcript ?? []) as Record<string, unknown>[]).map((turn) => ({
+    role: (String(turn.role ?? 'user') === 'agent' ? 'agent' : 'user') as 'user' | 'agent',
+    text: String(turn.text ?? ''),
+    timestampMs: Number(turn.timestamp_ms ?? turn.timestampMs ?? 0) || undefined,
+    timestampEndMs: Number(turn.timestamp_end_ms ?? turn.timestampEndMs ?? 0) || undefined,
+    segmentId: String(turn.segment_id ?? turn.segmentId ?? '') || undefined,
+  }))
+  const recording = wire.recording
+  const recordingDurationMs =
+    recording && typeof recording === 'object'
+      ? Number((recording as Record<string, unknown>).duration_ms ?? 0)
+      : Number(wire.recording_duration_ms ?? 0)
+  return {
+    sessionId: String(wire.sessionId ?? wire.session_id ?? ''),
+    conversationId: String(wire.conversationId ?? wire.conversation_id ?? ''),
+    agentId: String(wire.agentId ?? wire.agent_id ?? ''),
+    startedAt: String(wire.startedAt ?? wire.started_at ?? ''),
+    completedAt: String(wire.completedAt ?? wire.completed_at ?? ''),
+    durationS: Number(wire.durationS ?? wire.duration_s ?? 0),
+    recordingDurationS: recordingDurationMs > 0 ? recordingDurationMs / 1000 : undefined,
+    recordingUrl: trainingSessionRecordingUrl(wire),
+    transcript,
+    score: Number(wire.score ?? 0),
+    outcome: String(wire.outcome ?? 'needs_improvement'),
+    summary: String(wire.summary ?? ''),
+    extracted: toTrainingExtractedData(wire.extracted),
+  }
+}
+
+function toTrainingSessionResult(wire: Record<string, unknown>): TrainingSessionResult {
+  const evaluation = wire.evaluation
+  const extracted =
+    toTrainingExtractedData(wire.extracted)
+    ?? (evaluation && typeof evaluation === 'object'
+      ? toTrainingExtractedData((evaluation as Record<string, unknown>).extracted)
+      : undefined)
+  const strengths = (wire.strengths ?? []) as string[]
+  const gaps = (wire.gaps ?? []) as string[]
+  const flow = (wire.flowSuggestions ?? wire.flow_suggestions ?? []) as string[]
+  return {
+    sessionId: String(wire.sessionId ?? wire.session_id ?? ''),
+    conversationId: String(wire.conversationId ?? wire.conversation_id ?? ''),
+    agentId: String(wire.agentId ?? wire.agent_id ?? ''),
+    startedAt: String(wire.startedAt ?? wire.started_at ?? ''),
+    completedAt: String(wire.completedAt ?? wire.completed_at ?? ''),
+    durationS: Number(wire.durationS ?? wire.duration_s ?? 0),
+    score: Number(wire.score ?? 0),
+    outcome: String(wire.outcome ?? 'needs_improvement') === 'ready' ? 'ready' : 'needs_improvement',
+    summary: String(wire.summary ?? ''),
+    strengths,
+    gaps,
+    flowSuggestions: flow,
+    suggestionsAdded: Number(wire.suggestionsAdded ?? wire.suggestions_added ?? 0),
+    memoriesCreated: Number(wire.memoriesCreated ?? wire.memories_created ?? 0),
+    deterministic: Boolean(wire.deterministic),
+    extracted,
+    recordingUrl: trainingSessionRecordingUrl(wire),
   }
 }
 

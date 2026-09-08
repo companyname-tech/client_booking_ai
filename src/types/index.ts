@@ -121,6 +121,8 @@ export interface OfferCampaign {
   name: string
   offerName: string
   valueProposition?: string // the offer pitch/description (BE value_proposition/description)
+  /** Backend offer source (e.g. training campaigns use source=training). */
+  source?: string
   status: CampaignStatus
   stage: CampaignStage
   targetAudience: string
@@ -276,7 +278,10 @@ export interface Recording extends CallDetail {
  */
 export interface CallHistoryEntry {
   id: ID // recording_id
+  callId: ID
   leadId: ID
+  offerCampaignId: ID
+  transcriptId: ID
   agentId: ID
   leadName: string
   phone: string

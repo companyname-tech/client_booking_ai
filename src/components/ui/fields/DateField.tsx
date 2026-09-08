@@ -1,8 +1,12 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useDismiss } from '@/hooks/useDismiss'
+
+const PANEL_WIDTH = 256
+const PANEL_HEIGHT = 320
+const GAP = 4
 
 const MONTHS = [
   'January', 'February', 'March', 'April', 'May', 'June',
@@ -54,9 +58,25 @@ export function DateField({
   max,
 }: DateFieldProps) {
   const [open, setOpen] = useState(false)
+  const [panelPos, setPanelPos] = useState<{ left: number; top: number } | null>(null)
   const rootRef = useRef<HTMLDivElement>(null)
+  const triggerRef = useRef<HTMLButtonElement>(null)
   const panelRef = useRef<HTMLDivElement>(null)
   const selected = useMemo(() => parseValue(value), [value])
+
+  const updatePanelPos = useCallback(() => {
+    const el = triggerRef.current
+    if (!el) return
+    const rect = el.getBoundingClientRect()
+    const spaceBelow = window.innerHeight - rect.bottom - GAP
+    const openAbove = spaceBelow < PANEL_HEIGHT && rect.top > PANEL_HEIGHT + GAP
+    const top = openAbove ? rect.top - GAP - PANEL_HEIGHT : rect.bottom + GAP
+    const left = Math.min(
+      Math.max(GAP, rect.left),
+      window.innerWidth - PANEL_WIDTH - GAP,
+    )
+    setPanelPos({ left, top })
+  }, [])
 
   const [cursor, setCursor] = useState(() => {
     const base = selected ?? new Date()
@@ -68,6 +88,21 @@ export function DateField({
     const base = selected ?? new Date()
     setCursor({ month: base.getMonth(), year: base.getFullYear() })
   }, [open, selected])
+
+  useEffect(() => {
+    if (!open) {
+      setPanelPos(null)
+      return
+    }
+    updatePanelPos()
+    const onReflow = () => updatePanelPos()
+    window.addEventListener('resize', onReflow)
+    window.addEventListener('scroll', onReflow, true)
+    return () => {
+      window.removeEventListener('resize', onReflow)
+      window.removeEventListener('scroll', onReflow, true)
+    }
+  }, [open, updatePanelPos])
 
   useDismiss(open, () => setOpen(false), [rootRef, panelRef])
 
@@ -107,12 +142,13 @@ export function DateField({
     })
   }
 
-  const panel = open ? (
+  const panel = open && panelPos ? (
     <div
       ref={panelRef}
       role="dialog"
       aria-label="Pick a date"
-      className="absolute left-0 top-full z-50 mt-1 w-64 rounded-md border border-line bg-popover p-3 shadow-xl"
+      className="surface-overlay fixed z-[80] w-64 p-3"
+      style={{ left: panelPos.left, top: panelPos.top }}
     >
       <div className="flex items-center justify-between">
         <button
@@ -181,14 +217,21 @@ export function DateField({
     <div ref={rootRef} className={cn('relative', className)}>
       {label ? <span className="mb-1.5 block text-xs font-medium text-fg-secondary">{label}</span> : null}
       <button
+        ref={triggerRef}
         type="button"
         id={id}
         disabled={disabled}
-        onClick={() => setOpen((o) => !o)}
+        onClick={() => {
+          setOpen((o) => {
+            const next = !o
+            if (next) updatePanelPos()
+            return next
+          })
+        }}
         aria-haspopup="dialog"
         aria-expanded={open}
         className={cn(
-          'flex w-full items-center gap-2 rounded-md border border-border bg-card px-3 py-2 text-left text-sm text-fg placeholder:text-fg-muted focus:outline-none focus:ring-1 focus:ring-accent disabled:opacity-50',
+          'flex w-full items-center gap-2 rounded-md border border-line bg-surface-1 px-3 py-2 text-left text-sm text-fg placeholder:text-fg-muted focus:outline-none focus:ring-1 focus:ring-accent disabled:opacity-50',
           !value && 'text-fg-muted',
         )}
       >

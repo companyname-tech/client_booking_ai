@@ -1,3 +1,4 @@
+import type { MouseEvent } from 'react'
 import { ArrowUpRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { fmtTime } from '@/lib/calendar'
@@ -17,7 +18,7 @@ export function EventChip({
   compact,
 }: {
   meeting: CalendarMeeting
-  onClick?: () => void
+  onClick?: (e: MouseEvent<HTMLButtonElement>) => void
   compact?: boolean
 }) {
   const tone = meeting.status === 'cancelled' ? '' : TONES[meeting.status]

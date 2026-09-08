@@ -1,5 +1,6 @@
 import { Fragment, useMemo, useState } from 'react'
-import { MessageSquareText, Phone } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { BrainCircuit, MessageSquareText, Phone } from 'lucide-react'
 import { repo } from '@/data/repository'
 import { useAsyncData } from '@/hooks/useAsyncData'
 import { PageTransition } from '@/components/motion/PageTransition'
@@ -29,12 +30,37 @@ function fmtWhen(iso: string): string {
 export default function AdminCalls() {
   const { data, loading, error, reload } = useAsyncData(() => repo.getCallHistory())
   const calls = data ?? []
+  const navigate = useNavigate()
   const [search, setSearch] = useState('')
   const [outcome, setOutcome] = useState('all')
   const [confirmBulk, setConfirmBulk] = useState(false)
   const [bulkBusy, setBulkBusy] = useState(false)
   const [bulkNotice, setBulkNotice] = useState('')
+  const [reviewBusy, setReviewBusy] = useState('')
   const [transcriptOpen, setTranscriptOpen] = useState<string | null>(null)
+
+  const promoteCall = async (call: (typeof calls)[number]) => {
+    const callId = call.callId || call.leadId
+    if (!callId) return
+    setReviewBusy(call.id)
+    setBulkNotice('')
+    try {
+      const reply = await repo.reviewProductionCall({
+        callId,
+        transcriptId: call.transcriptId,
+        recordingId: call.id,
+      })
+      setBulkNotice(
+        reply.duplicate
+          ? 'That call is already in the training review queue.'
+          : 'Sent to AI training review. Open the workspace to validate and publish.',
+      )
+    } catch (e) {
+      setBulkNotice(`Review failed: ${e instanceof Error ? e.message : String(e)}`)
+    } finally {
+      setReviewBusy('')
+    }
+  }
 
   const outcomeOptions = useMemo(() => {
     const seen = new Set<string>()
@@ -126,7 +152,16 @@ export default function AdminCalls() {
               onDelete={() => setConfirmBulk(true)}
               busy={bulkBusy}
             />
-            {bulkNotice && <p aria-live="polite" className="text-xs text-fg-secondary">{bulkNotice}</p>}
+            {bulkNotice && (
+              <div className="flex flex-wrap items-center gap-2 text-xs text-fg-secondary" aria-live="polite">
+                <p>{bulkNotice}</p>
+                {bulkNotice.includes('training review') || bulkNotice.includes('AI training') ? (
+                  <Button variant="ghost" size="sm" onClick={() => navigate('/admin/ai-training')}>
+                    Open AI training
+                  </Button>
+                ) : null}
+              </div>
+            )}
 
             <div className="surface overflow-hidden">
               <div className="hidden overflow-x-auto md:block">
@@ -148,6 +183,7 @@ export default function AdminCalls() {
                       <th className="px-3 py-2.5 font-medium">Duration</th>
                       <th className="px-5 py-2.5 font-medium">Recording</th>
                       <th className="px-3 py-2.5 font-medium">Transcript</th>
+                      <th className="px-3 py-2.5 font-medium">Review</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -196,10 +232,21 @@ export default function AdminCalls() {
                                 <span className="text-fg-faint">—</span>
                               )}
                             </td>
+                            <td className="px-3 py-3">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                disabled={reviewBusy === c.id || !(c.callId || c.leadId)}
+                                leadingIcon={<BrainCircuit className="size-3.5" />}
+                                onClick={() => void promoteCall(c)}
+                              >
+                                {reviewBusy === c.id ? 'Sending…' : 'Review'}
+                              </Button>
+                            </td>
                           </tr>
                           {open ? (
                             <tr className="border-b border-line bg-surface-1/50 last:border-0">
-                              <td colSpan={8} className="px-5 py-4">
+                              <td colSpan={9} className="px-5 py-4">
                                 <h4 className="mb-2 text-2xs font-semibold uppercase tracking-wider text-fg-muted">
                                   Conversation transcript
                                 </h4>
@@ -261,6 +308,16 @@ export default function AdminCalls() {
                         {transcriptOpen === c.id && <RawTranscript transcript={c.transcript ?? ''} className="mt-2" />}
                       </div>
                     ) : null}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="mt-2"
+                      disabled={reviewBusy === c.id || !(c.callId || c.leadId)}
+                      leadingIcon={<BrainCircuit className="size-3.5" />}
+                      onClick={() => void promoteCall(c)}
+                    >
+                      {reviewBusy === c.id ? 'Sending…' : 'Send to AI training review'}
+                    </Button>
                   </div>
                 ))}
               </div>

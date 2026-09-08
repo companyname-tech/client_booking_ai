@@ -3,6 +3,7 @@ import { repo } from '@/api/repository'
 import { Modal } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
+import { SecretInput } from '@/components/ui/fields/SecretInput'
 import { FieldGroup, FieldLabel, FieldError } from '@/components/ui/Field'
 import { Select } from '@/components/ui/Select'
 import { cn } from '@/lib/utils'
@@ -117,9 +118,10 @@ export function UserFormModal({ open, onClose, user, onSaved }: UserFormModalPro
         <div className="grid grid-cols-2 gap-3">
           <FieldGroup>
             <FieldLabel htmlFor="uf-password">{user ? 'Reset password' : 'Password'} {!user && '*'}</FieldLabel>
-            <Input
+            <SecretInput
               id="uf-password"
-              type="password"
+              variant="password"
+              autoComplete="new-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder={user ? 'Leave blank to keep current' : '••••••••'}

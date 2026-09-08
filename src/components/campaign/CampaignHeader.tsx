@@ -10,6 +10,7 @@ import { Link } from 'react-router-dom'
 export function CampaignHeader({
   campaign,
   effectiveStatus,
+  budgetStopped = false,
   onPause,
   onResume,
   onDelete,
@@ -17,6 +18,8 @@ export function CampaignHeader({
 }: {
   campaign: OfferCampaign
   effectiveStatus: CampaignStatus
+  /** True when the campaign auto-paused because it has no budget and is not in training. */
+  budgetStopped?: boolean
   onPause?: () => void
   onResume?: () => void
   onDelete?: () => void
@@ -33,6 +36,13 @@ export function CampaignHeader({
       )
     }
     if (effectiveStatus === 'paused') {
+      if (budgetStopped) {
+        return (
+          <Button variant="secondary" leadingIcon={<Play />} disabled title="Add a campaign budget to resume">
+            Add budget to resume
+          </Button>
+        )
+      }
       return (
         <Button variant="primary" leadingIcon={<Play />} onClick={onResume}>
           Resume campaign
