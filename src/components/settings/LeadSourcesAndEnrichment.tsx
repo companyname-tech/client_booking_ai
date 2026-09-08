@@ -333,7 +333,7 @@ export function LeadSourcesAndEnrichment() {
         title="No lead source providers"
         description="The backend returned no provider configuration. If this is a fresh environment, start the backend from the OSINT wave so /integrations/providers responds."
         action={
-          <Button size="sm" variant="secondary" onClick={providersQ.reload}>
+          <Button size="sm" variant="secondary" onClick={() => void providersQ.reload()}>
             Retry
           </Button>
         }
@@ -355,7 +355,7 @@ export function LeadSourcesAndEnrichment() {
         <Button
           size="sm"
           variant="ghost"
-          onClick={healthQ.reload}
+          onClick={() => void healthQ.reload()}
           disabled={healthQ.loading}
           leadingIcon={<RefreshCw className={healthQ.loading ? 'animate-spin' : ''} />}
         >
