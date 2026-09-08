@@ -9,14 +9,15 @@ import { PageContainer, PageHeader, WorkspaceEyebrow } from '@/components/layout
 import { Tabs } from '@/components/ui/Tabs'
 import AgentTab from '@/components/settings/AgentTab'
 import { ConnectionSettings } from '@/components/settings/ConnectionSettings'
+import { AgentTelegramConnections } from '@/components/settings/AgentTelegramConnections'
 import { TwilioTab } from '@/components/settings/TwilioTab'
-import { SocialMediaTab } from '@/components/settings/SocialMediaTab'
+import { LeadSourcesAndEnrichment } from '@/components/settings/LeadSourcesAndEnrichment'
 import { FishVoicesTab } from '@/components/settings/FishVoicesTab'
 import { TemplatesTab } from '@/components/settings/TemplatesTab'
 import { ApplicationTab } from '@/components/settings/ApplicationTab'
 import { AutoHangupToggle } from '@/components/settings/AutoHangupToggle'
 
-type Section = 'agent' | 'connection' | 'twilio' | 'fish' | 'templates' | 'social' | 'application'
+type Section = 'agent' | 'connection' | 'twilio' | 'fish' | 'templates' | 'leadsources' | 'application'
 
 export default function AdminSettings() {
   const {
@@ -61,18 +62,23 @@ export default function AdminSettings() {
               { id: 'twilio', label: 'Twilio' },
               { id: 'fish', label: 'Fish voices' },
               { id: 'templates', label: 'Templates' },
-              { id: 'social', label: 'Social media' },
+              { id: 'leadsources', label: 'Lead sources' },
               { id: 'application', label: 'Application' },
             ]}
           />
         </PageHeader>
 
         {section === 'agent' && <AgentTab />}
-        {section === 'connection' && <ConnectionSettings />}
+        {section === 'connection' && (
+          <div className="space-y-6">
+            <ConnectionSettings />
+            <AgentTelegramConnections />
+          </div>
+        )}
         {section === 'twilio' && <TwilioTab />}
         {section === 'fish' && <FishVoicesTab />}
         {section === 'templates' && <TemplatesTab />}
-        {section === 'social' && <SocialMediaTab />}
+        {section === 'leadsources' && <LeadSourcesAndEnrichment />}
         {section === 'application' && <ApplicationTab />}
       </PageContainer>
     </PageTransition>

@@ -38,6 +38,7 @@ import type { ImportPreviewResponse, LeadGenerateRequest, LeadImportResult, Smar
 import type { CostBalance, CostEvent, CostPricing, CostSummary } from '@/types/costs'
 import type { AdminUser, AdminUserCreateInput, AdminUserUpdateInput, PermissionCatalog, PermissionDescriptor, PermissionRoleDescriptor } from '@/types/admin'
 import type { AvailabilityInstance, AvailabilityKind, AvailabilityRule, CalendarMeeting, GoogleIntegrationState, MeetingStatus as CalendarMeetingStatus } from '@/types/calendar'
+import type { IntegrationHealthRecord, IntegrationProviderPatch, IntegrationProviderRow, IntegrationProvidersWire, IntegrationsHealthWire } from '@/types/leadSources'
 
 // ---------------------------------------------------------------------------
 // Wire DTOs (snake_case) for the Tier B domains.
@@ -735,6 +736,26 @@ export const httpRepository = {
   async removeFishVoice(referenceId: string): Promise<FishVoice[]> {
     const res = await apiClient.delete<FishVoicesWire>(`/fish-voices/${referenceId}`)
     return res?.voices ?? []
+  },
+
+  // --- Lead Sources & Enrichment (OSINT provider health + masked config) -----
+  // GET /integrations/health runs REAL probes per call, so a "Test" button is
+  // just this GET again (optionally narrowed to one provider). Secrets never
+  // cross the wire — the backend masks every key to the boolean `configured`.
+  async getIntegrationHealth(provider?: string): Promise<IntegrationHealthRecord[]> {
+    const qs = provider ? `?provider=${encodeURIComponent(provider)}` : ''
+    const res = await apiClient.get<IntegrationsHealthWire>(`/integrations/health${qs}`)
+    return res?.integrations ?? []
+  },
+  async getIntegrationProviders(): Promise<IntegrationProviderRow[]> {
+    const res = await apiClient.get<IntegrationProvidersWire>('/integrations/providers')
+    return res?.providers ?? []
+  },
+  async updateIntegrationProvider(
+    provider: string,
+    patch: IntegrationProviderPatch,
+  ): Promise<IntegrationProviderRow> {
+    return apiClient.put<IntegrationProviderRow>(`/integrations/providers/${provider}`, patch)
   },
 
   // --- Pronunciation lexicon (already wired) --------------------------------

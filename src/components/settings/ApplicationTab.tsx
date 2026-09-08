@@ -3,9 +3,10 @@ import { isAgentScopedSetting, isCampaignLeadGenSetting, isTrainingSetting } fro
 
 /**
  * Settings → Application tab — runtime settings excluding Twilio (which has its
- * own tab), training/orchestrator fields (Training tab), agent voice/model
- * defaults (Agent tab), lead-generation defaults (per campaign), and
- * infrastructure paths (env/code-defined, not user settings).
+ * own tab), lead sources & enrichment provider fields (Lead sources tab),
+ * training/orchestrator fields (Training tab), agent voice/model defaults
+ * (Agent tab), lead-generation defaults (per campaign), and infrastructure
+ * paths (env/code-defined, not user settings).
  */
 export function ApplicationTab() {
   return (
@@ -16,12 +17,14 @@ export function ApplicationTab() {
         !f.restart_required &&
         !f.name.startsWith('twilio_') &&
         f.name !== 'call_transport' &&
-        !/^(facebook|instagram|telegram|reddit|google_places)_/.test(f.name) &&
+        !/^(facebook|instagram|telegram|reddit|google_places|google_maps|katana|crawlee|phoneinfoga|theharvester|maigret|spiderfoot)_/.test(
+          f.name,
+        ) &&
         !isTrainingSetting(f.name) &&
         !isAgentScopedSetting(f.name) &&
         !isCampaignLeadGenSetting(f.name)
       }
-      hiddenNote="Twilio settings live in the Twilio tab, social channels in the Social media tab, training and orchestrator settings in the AI training workspace, voice/model settings are configured per agent under the Agent tab, and lead generation params (country, industry, search model) are stored per campaign on the offer. Infrastructure paths are defined by the environment and are not editable here."
+      hiddenNote="Twilio settings live in the Twilio tab, lead source & enrichment providers (Google Places/Maps, Katana, Crawlee, PhoneInfoga, theHarvester, Maigret, SpiderFoot) live in the Lead sources tab, training and orchestrator settings in the AI training workspace, voice/model settings are configured per agent under the Agent tab, and lead generation params (country, industry, search model) are stored per campaign on the offer. Infrastructure paths are defined by the environment and are not editable here."
     />
   )
 }

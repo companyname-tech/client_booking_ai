@@ -109,7 +109,8 @@ function AgentTelegramRow({
 }
 
 /**
- * Settings → Social media — per-agent Telegram bot connections.
+ * Settings → Connection — per-agent Telegram bot connections (moved here when
+ * the former Social media tab became the Lead Sources & Enrichment page).
  */
 export function AgentTelegramConnections() {
   const { data, loading, error, reload } = useAsyncData(() => repo.getAgents())
