@@ -136,6 +136,8 @@ export interface ReviewCampaignContent {
   agentConfig?: Partial<AIAgentConfig>
   /** Booking-integration states (gmail/calendly/zoom). */
   integrations?: { gmail?: string; calendly?: string; zoom?: string }
+  /** Campaign-scoped email / WhatsApp message templates. */
+  messaging?: import('@/types/messaging').CampaignMessagingContent
 }
 
 export interface CampaignReviewData {

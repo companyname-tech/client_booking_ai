@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { repo } from '@/api/repository'
 import { useAsyncData } from '@/hooks/useAsyncData'
 import { LoadingState } from '@/components/ui/LoadingState'
@@ -13,10 +13,9 @@ import AgentTab from '@/components/settings/AgentTab'
 import { ConnectionSettings } from '@/components/settings/ConnectionSettings'
 import { TwilioTab } from '@/components/settings/TwilioTab'
 import { FishVoicesTab } from '@/components/settings/FishVoicesTab'
-import { TemplatesTab } from '@/components/settings/TemplatesTab'
 import { ApplicationTab } from '@/components/settings/ApplicationTab'
 
-type Section = 'agent' | 'connection' | 'twilio' | 'fish' | 'templates' | 'application'
+type Section = 'agent' | 'connection' | 'twilio' | 'fish' | 'application'
 
 /** Sections reachable by the `?tab=` search param (deep links from other pages). */
 const SECTION_FROM_PARAM: Record<string, Section> = {
@@ -24,7 +23,6 @@ const SECTION_FROM_PARAM: Record<string, Section> = {
   connection: 'connection',
   twilio: 'twilio',
   fish: 'fish',
-  templates: 'templates',
   application: 'application',
 }
 
@@ -60,6 +58,7 @@ function AutoHangupToggle({ on, onToggle }: { on: boolean; onToggle: () => void 
 }
 
 export default function ClientSettings() {
+  const navigate = useNavigate()
   const {
     data: client,
     loading: clientLoading,
@@ -75,6 +74,12 @@ export default function ClientSettings() {
   const [searchParams] = useSearchParams()
   const [section, setSection] = useState<Section>(() => SECTION_FROM_PARAM[searchParams.get('tab') ?? ''] ?? 'agent')
   const [autoHangup, setAutoHangup] = useState(false)
+
+  useEffect(() => {
+    if (searchParams.get('tab') === 'templates') {
+      navigate('/client/messaging/email', { replace: true })
+    }
+  }, [navigate, searchParams])
 
   useEffect(() => {
     if (settings) setAutoHangup(settings.auto_hangup === 'true')
@@ -97,7 +102,7 @@ export default function ClientSettings() {
         <PageHeader
           eyebrow={<WorkspaceEyebrow name={client.name} context="Client Workspace" />}
           title="Settings"
-          description="Agents, connections, voices, templates and runtime configuration."
+          description="Agents, connections, voices and runtime configuration."
           actions={<AutoHangupToggle on={autoHangup} onToggle={toggleAutoHangup} />}
         >
           <Tabs<Section>
@@ -109,7 +114,6 @@ export default function ClientSettings() {
               { id: 'connection', label: 'Connection' },
               { id: 'twilio', label: 'Twilio' },
               { id: 'fish', label: 'Fish voices' },
-              { id: 'templates', label: 'Templates' },
               { id: 'application', label: 'Application' },
             ]}
           />
@@ -120,8 +124,6 @@ export default function ClientSettings() {
         {section === 'twilio' && <TwilioTab />}
 
         {section === 'fish' && <FishVoicesTab />}
-
-        {section === 'templates' && <TemplatesTab />}
 
         {section === 'application' && <ApplicationTab />}
       </PageContainer>

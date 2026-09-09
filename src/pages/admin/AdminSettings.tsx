@@ -13,11 +13,10 @@ import { AgentTelegramConnections } from '@/components/settings/AgentTelegramCon
 import { TwilioTab } from '@/components/settings/TwilioTab'
 import { LeadSourcesAndEnrichment } from '@/components/settings/LeadSourcesAndEnrichment'
 import { FishVoicesTab } from '@/components/settings/FishVoicesTab'
-import { TemplatesTab } from '@/components/settings/TemplatesTab'
 import { ApplicationTab } from '@/components/settings/ApplicationTab'
 import { AutoHangupToggle } from '@/components/settings/AutoHangupToggle'
 
-type Section = 'agent' | 'connection' | 'twilio' | 'fish' | 'templates' | 'leadsources' | 'application'
+type Section = 'agent' | 'connection' | 'twilio' | 'fish' | 'leadsources' | 'application'
 
 export default function AdminSettings() {
   const {
@@ -49,7 +48,7 @@ export default function AdminSettings() {
         <PageHeader
           eyebrow={<WorkspaceEyebrow name="Super Admin" context="Internal Console" />}
           title="Settings"
-          description="Agents, connections, voices, templates and runtime configuration."
+          description="Agents, connections, voices and runtime configuration."
           actions={<AutoHangupToggle on={autoHangup} onToggle={toggleAutoHangup} />}
         >
           <Tabs<Section>
@@ -61,7 +60,6 @@ export default function AdminSettings() {
               { id: 'connection', label: 'Connection' },
               { id: 'twilio', label: 'Twilio' },
               { id: 'fish', label: 'Fish voices' },
-              { id: 'templates', label: 'Templates' },
               { id: 'leadsources', label: 'Lead sources' },
               { id: 'application', label: 'Application' },
             ]}
@@ -77,7 +75,6 @@ export default function AdminSettings() {
         )}
         {section === 'twilio' && <TwilioTab />}
         {section === 'fish' && <FishVoicesTab />}
-        {section === 'templates' && <TemplatesTab />}
         {section === 'leadsources' && <LeadSourcesAndEnrichment />}
         {section === 'application' && <ApplicationTab />}
       </PageContainer>

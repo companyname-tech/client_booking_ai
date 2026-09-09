@@ -1,9 +1,6 @@
 import { lazyRoute } from '@/lib/lazyRoute'
 import { Navigate } from 'react-router-dom'
-import {
-  MessageSquare,
-  UsersRound,
-} from 'lucide-react'
+import { UsersRound } from 'lucide-react'
 import { PermGate } from '@/components/auth/PermGate'
 import PlaceholderPage from '@/pages/PlaceholderPage'
 
@@ -31,6 +28,9 @@ const ClientBookings = lazyRoute(() => import('@/pages/client/ClientBookings'))
 const CalendarScreen = lazyRoute(() => import('@/pages/client/CalendarScreen'))
 const ClientDownloads = lazyRoute(() => import('@/pages/client/ClientDownloads'))
 const ClientAnalytics = lazyRoute(() => import('@/pages/client/ClientAnalytics'))
+const MessagingLayout = lazyRoute(() => import('@/pages/messaging/MessagingLayout'))
+const MessagingEmail = lazyRoute(() => import('@/pages/messaging/MessagingEmail'))
+const MessagingWhatsApp = lazyRoute(() => import('@/pages/messaging/MessagingWhatsApp'))
 
 /**
  * Shared per-campaign tabs for BOTH zones (client.routes spreads them under
@@ -74,7 +74,16 @@ export const clientRoutes = [
     ],
   },
   { path: 'agents', element: <Navigate to="/client/ai/agents" replace /> },
-  { path: 'messages', element: <PlaceholderPage title="Messages" description="Email and WhatsApp follow-ups sent by the AI." icon={<MessageSquare />} /> },
+  {
+    path: 'messaging',
+    element: <MessagingLayout zone="client" />,
+    children: [
+      { index: true, element: <Navigate to="/client/messaging/email" replace /> },
+      { path: 'email', element: <MessagingEmail /> },
+      { path: 'whatsapp', element: <MessagingWhatsApp /> },
+    ],
+  },
+  { path: 'messages', element: <Navigate to="/client/messaging/email" replace /> },
   { path: 'recordings', element: <PermGate perm="calls.view"><ClientRecordings /></PermGate> },
   { path: 'bookings', element: <ClientBookings /> },
   { path: 'calendar', element: <CalendarScreen /> },

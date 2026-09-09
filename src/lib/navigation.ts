@@ -9,7 +9,9 @@ import {
   GraduationCap,
   KeyRound,
   LayoutGrid,
+  Mail,
   Megaphone,
+  MessageCircle,
   MessageSquare,
   Phone,
   PhoneOff,
@@ -72,6 +74,13 @@ export const clientNavigation: NavSection[] = [
     ],
   },
   {
+    label: 'Messaging',
+    items: [
+      { label: 'Email', to: '/client/messaging/email', icon: Mail },
+      { label: 'WhatsApp', to: '/client/messaging/whatsapp', icon: MessageCircle },
+    ],
+  },
+  {
     label: 'Management',
     items: [
       { label: 'Settings', to: '/client/settings', icon: Settings, perm: 'settings.view' },
@@ -95,6 +104,13 @@ export const adminNavigation: NavSection[] = [
       { label: 'Leads', to: '/admin/leads', icon: Users, perm: 'leads.view' },
       { label: 'Calls & Recordings', to: '/admin/calls', icon: Phone, perm: 'calls.view' },
       { label: 'Activity', to: '/admin/activity', icon: Activity, perm: 'activity.view' },
+    ],
+  },
+  {
+    label: 'Messaging',
+    items: [
+      { label: 'Email', to: '/admin/messaging/email', icon: Mail },
+      { label: 'WhatsApp', to: '/admin/messaging/whatsapp', icon: MessageCircle },
     ],
   },
   {

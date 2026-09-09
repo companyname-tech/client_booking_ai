@@ -40,6 +40,7 @@ import type { AdminUser, AdminUserCreateInput, AdminUserUpdateInput, PermissionC
 import type { AvailabilityInstance, AvailabilityKind, AvailabilityRule, CalendarMeeting, GoogleIntegrationState, MeetingStatus as CalendarMeetingStatus } from '@/types/calendar'
 import type { IntegrationHealthRecord, IntegrationProviderPatch, IntegrationProviderRow, IntegrationProvidersWire, IntegrationsHealthWire } from '@/types/leadSources'
 import type { DoNotContactEntry, DoNotContactInput, DoNotContactPage, DoNotContactQuery } from '@/types/doNotContact'
+import type { CampaignMessagingContent } from '@/types/messaging'
 
 // ---------------------------------------------------------------------------
 // Wire DTOs (snake_case) for the Tier B domains.
@@ -1391,6 +1392,25 @@ export const httpRepository = {
       content: {
         ...stored,
         budget: { ...budget, currency: 'USD' },
+      },
+    })
+  },
+  /** Read campaign-scoped messaging templates from `campaign_content.messaging`. */
+  async getCampaignMessaging(id: string): Promise<CampaignMessagingContent> {
+    const wire = await apiClient.get<OfferWire>(`/offers/${id}`)
+    return wire.campaign_content?.messaging ?? {}
+  },
+  /** Persist campaign-scoped messaging templates (read-merge-write on campaign_content). */
+  async saveCampaignMessaging(id: string, messaging: CampaignMessagingContent): Promise<void> {
+    const wire = await apiClient.get<OfferWire>(`/offers/${id}`)
+    const stored = wire.campaign_content ?? {}
+    await this.updateCampaignOffer(id, {
+      content: {
+        ...stored,
+        messaging: {
+          whatsapp_templates: messaging.whatsapp_templates ?? stored.messaging?.whatsapp_templates ?? [],
+          email_templates: messaging.email_templates ?? stored.messaging?.email_templates ?? [],
+        },
       },
     })
   },

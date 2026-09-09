@@ -94,11 +94,112 @@ const COUNTRIES: { name: string; iso: string }[] = [
   { name: 'Morocco', iso: 'MA' },
 ]
 
-const GEN_SAMPLES: { label: string; text: string }[] = [
-  { label: '🏗️ Architecture firms', text: 'Israeli architecture firms with outdated websites, active on Facebook, mobile contact number' },
-  { label: '🍽️ Restaurants', text: 'Restaurants in Tel Aviv that do not take online reservations and have a landline only' },
-  { label: '🦷 Dentists', text: 'Dentists in Jerusalem who recently renovated their clinic and need a new website' },
+type GenCategory = { id: string; label: string; text: string; industry?: string }
+
+/** Optional prospect categories — only applied to the search when toggled on. */
+const GEN_CATEGORIES: GenCategory[] = [
+  {
+    id: 'architecture',
+    label: '🏗️ Architecture firms',
+    text: 'Israeli architecture firms with outdated websites, active on Facebook, mobile contact number',
+    industry: 'Architecture',
+  },
+  {
+    id: 'restaurants',
+    label: '🍽️ Restaurants',
+    text: 'Restaurants in Tel Aviv that do not take online reservations and have a landline only',
+    industry: 'Restaurants',
+  },
+  {
+    id: 'dentists',
+    label: '🦷 Dentists',
+    text: 'Dentists in Jerusalem who recently renovated their clinic and need a new website',
+    industry: 'Dentistry',
+  },
+  {
+    id: 'law',
+    label: '⚖️ Law firms',
+    text: 'Law firms with outdated websites and no online consultation booking',
+    industry: 'Legal',
+  },
+  {
+    id: 'realestate',
+    label: '🏠 Real estate',
+    text: 'Real estate agencies without modern property listing websites and mobile contact only',
+    industry: 'Real Estate',
+  },
+  {
+    id: 'salons',
+    label: '💇 Salons & beauty',
+    text: 'Hair salons and beauty studios without online booking or modern web presence',
+    industry: 'Beauty',
+  },
+  {
+    id: 'contractors',
+    label: '🔧 Contractors',
+    text: 'Home service contractors (plumbing, HVAC, electrical) with mobile contact and no online quotes',
+    industry: 'Home Services',
+  },
+  {
+    id: 'gyms',
+    label: '🏋️ Gyms & fitness',
+    text: 'Local gyms and fitness studios without member portal, app, or modern website',
+    industry: 'Fitness',
+  },
+  {
+    id: 'hotels',
+    label: '🏨 Hotels',
+    text: 'Boutique hotels without direct online booking on their own website',
+    industry: 'Hospitality',
+  },
+  {
+    id: 'photography',
+    label: '📸 Photographers',
+    text: 'Professional photographers with portfolio sites that need redesign and better lead capture',
+    industry: 'Photography',
+  },
+  {
+    id: 'retail',
+    label: '🛒 Retail stores',
+    text: 'Independent retail stores without e-commerce or a modern customer-facing website',
+    industry: 'Retail',
+  },
+  {
+    id: 'it',
+    label: '💻 IT agencies',
+    text: 'Small IT and web development agencies that could benefit from partnership or white-label services',
+    industry: 'IT Services',
+  },
 ]
+
+function toggleCategorySelection(
+  id: string,
+  selected: Set<string>,
+  query: string,
+): { selected: Set<string>; query: string } {
+  const cat = GEN_CATEGORIES.find((c) => c.id === id)
+  if (!cat) return { selected, query }
+  const next = new Set(selected)
+  if (next.has(id)) {
+    next.delete(id)
+    const stripped = query
+      .replace(cat.text, '')
+      .replace(/\.\s*\./g, '.')
+      .replace(/^\.\s+|\s+\.$/g, '')
+      .trim()
+    return { selected: next, query: stripped }
+  }
+  next.add(id)
+  const joined = query.trim() ? `${query.trim()}. ${cat.text}` : cat.text
+  return { selected: next, query: joined }
+}
+
+/** Industry filter is sent only when the user typed one or selected category chips. */
+function resolveSmartSearchIndustry(selected: Set<string>, manualIndustry: string): string {
+  if (manualIndustry.trim()) return manualIndustry.trim()
+  const fromChips = GEN_CATEGORIES.filter((c) => selected.has(c.id) && c.industry).map((c) => c.industry!)
+  return fromChips.length === 1 ? fromChips[0] : ''
+}
 
 const GEN_PLATFORMS: { value: string; label: string; disabled?: boolean; title?: string }[] = [
   { value: 'web', label: 'Web' },
@@ -163,6 +264,7 @@ export function GenerateLeadsModal({
 
   // Smart search
   const [query, setQuery] = useState('')
+  const [selectedCategories, setSelectedCategories] = useState<Set<string>>(() => new Set())
   const [country, setCountry] = useState('')
   const [countryIso, setCountryIso] = useState('')
   const [industry, setIndustry] = useState('')
@@ -184,7 +286,6 @@ export function GenerateLeadsModal({
       setClassicCountry(defaults.country)
     }
     if (defaults.industry) {
-      setIndustry(defaults.industry)
       setClassicIndustry(defaults.industry)
     }
     if (defaults.phoneType) setPhoneType(defaults.phoneType)
@@ -199,6 +300,7 @@ export function GenerateLeadsModal({
       setResult(null)
       setError(null)
       setRunning(false)
+      setSelectedCategories(new Set())
       return
     }
     setCampaignId(fixedCampaignId ?? '')
@@ -250,7 +352,7 @@ export function GenerateLeadsModal({
           query,
           country,
           countryCode: countryIso,
-          industry,
+          industry: resolveSmartSearchIndustry(selectedCategories, industry),
           phoneType,
           platforms,
           contactTypes,
@@ -435,14 +537,24 @@ export function GenerateLeadsModal({
                 placeholder="e.g. Israeli architecture firms whose websites look outdated and are active on Facebook."
               />
               <div className="mt-2 flex flex-wrap gap-1.5">
-                {GEN_SAMPLES.map((s) => (
+                {GEN_CATEGORIES.map((cat) => (
                   <button
-                    key={s.label}
+                    key={cat.id}
                     type="button"
-                    onClick={() => setQuery(s.text)}
-                    className="interactive rounded-full border border-line-strong bg-surface-2 px-2.5 py-1 text-xs text-fg-secondary hover:border-white/15 hover:text-fg"
+                    aria-pressed={selectedCategories.has(cat.id)}
+                    onClick={() => {
+                      const next = toggleCategorySelection(cat.id, selectedCategories, query)
+                      setSelectedCategories(next.selected)
+                      setQuery(next.query)
+                    }}
+                    className={cn(
+                      'interactive rounded-full border px-2.5 py-1 text-xs',
+                      selectedCategories.has(cat.id)
+                        ? 'border-accent/50 bg-accent-soft text-fg'
+                        : 'border-line-strong bg-surface-2 text-fg-secondary hover:border-white/15 hover:text-fg',
+                    )}
                   >
-                    {s.label}
+                    {cat.label}
                   </button>
                 ))}
               </div>

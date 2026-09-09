@@ -21,6 +21,9 @@ const AdminPermissions = lazyRoute(() => import('@/pages/admin/AdminPermissions'
 const AdminDoNotContact = lazyRoute(() => import('@/pages/admin/AdminDoNotContact'))
 const CampaignDetailLayout = lazyRoute(() => import('@/pages/client/CampaignDetailLayout'))
 const CampaignDetailOverview = lazyRoute(() => import('@/pages/client/CampaignDetailOverview'))
+const MessagingLayout = lazyRoute(() => import('@/pages/messaging/MessagingLayout'))
+const MessagingEmail = lazyRoute(() => import('@/pages/messaging/MessagingEmail'))
+const MessagingWhatsApp = lazyRoute(() => import('@/pages/messaging/MessagingWhatsApp'))
 
 export const adminRoutes = [
   { index: true, element: <Navigate to="/admin/overview" replace /> },
@@ -45,6 +48,15 @@ export const adminRoutes = [
   { path: 'activity', element: <PermGate perm="activity.view"><AdminActivity /></PermGate> },
   { path: 'leads', element: <PermGate perm="leads.view"><AdminLeads /></PermGate> },
   { path: 'calls', element: <PermGate perm="calls.view"><AdminCalls /></PermGate> },
+  {
+    path: 'messaging',
+    element: <MessagingLayout zone="admin" />,
+    children: [
+      { index: true, element: <Navigate to="/admin/messaging/email" replace /> },
+      { path: 'email', element: <MessagingEmail /> },
+      { path: 'whatsapp', element: <MessagingWhatsApp /> },
+    ],
+  },
   { path: 'costs', element: <PermGate perm="costs.view"><AdminCosts /></PermGate> },
   { path: 'users', element: <PermGate perm="users.manage"><AdminUsers /></PermGate> },
   { path: 'permissions', element: <PermGate perm="users.manage"><AdminPermissions /></PermGate> },
