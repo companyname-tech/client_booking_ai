@@ -19,6 +19,7 @@ import { repo } from '@/api/repository'
 import { SpotifyStylePlayer, type SpotifyStylePlayerHandle } from '@/components/recordings/SpotifyStylePlayer'
 import { TrainingSyncedTranscript } from '@/components/recordings/TrainingSyncedTranscript'
 import { ExtractedTalkReview } from '@/components/admin/ExtractedTalkReview'
+import { TrainingMockCalendar } from '@/components/admin/TrainingMockCalendar'
 import { buildTimedTranscript } from '@/lib/trainingTranscript'
 import {
   relayRole,
@@ -657,6 +658,12 @@ export function TrainingTalkConsole({
           )}
         </div>
       )}
+
+      <TrainingMockCalendar
+        texts={lines.map((row) => row.text)}
+        turns={savedTranscript}
+        extracted={result?.extracted}
+      />
 
       {error ? (
         <p className="mt-3 flex items-center gap-2 text-xs text-danger" role="alert">
