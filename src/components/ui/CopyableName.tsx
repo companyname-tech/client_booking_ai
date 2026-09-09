@@ -87,9 +87,10 @@ export function CopyableName({
           },
         ]}
         trigger={({ toggle, 'aria-expanded': expanded, ...props }) => (
-          <button
-            type="button"
+          <span
             {...props}
+            role="button"
+            tabIndex={0}
             aria-expanded={expanded}
             aria-label="Copy name or ID"
             title="Copy name or ID"
@@ -98,9 +99,16 @@ export function CopyableName({
               e.preventDefault()
               toggle()
             }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.stopPropagation()
+                e.preventDefault()
+                toggle()
+              }
+            }}
             onMouseDown={(e) => e.stopPropagation()}
             className={cn(
-              'inline-flex shrink-0 items-center justify-center rounded-full border transition-colors duration-150',
+              'inline-flex shrink-0 cursor-pointer select-none items-center justify-center rounded-full border transition-colors duration-150',
               compact ? 'size-6' : 'size-5',
               expanded ? 'border-accent/50 bg-accent/10 text-accent' : 'border-line bg-surface-2 text-fg-muted',
               rowHover && canHover
@@ -111,7 +119,7 @@ export function CopyableName({
             )}
           >
             <Copy className={compact ? 'size-3.5' : 'size-3'} />
-          </button>
+          </span>
         )}
       />
     </div>
