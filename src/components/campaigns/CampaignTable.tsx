@@ -130,7 +130,6 @@ const CardRow = memo(function CardRow({
   onOpen,
   selected,
   onToggle,
-  onCopied,
 }: {
   campaign: OfferCampaign
   onOpen: () => void
@@ -152,14 +151,7 @@ const CardRow = memo(function CardRow({
       <div className="px-4 pb-4">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
-            <CopyableName
-              name={campaign.name}
-              id={campaign.id}
-              compact
-              rowHover
-              className="text-sm font-medium text-fg"
-              onCopied={onCopied}
-            />
+            <span className="block truncate text-sm font-medium text-fg">{campaign.name}</span>
             <div className="truncate text-xs text-fg-muted">{campaign.targetAudience}</div>
           </div>
           <CampaignStatus status={displayStatus} />
