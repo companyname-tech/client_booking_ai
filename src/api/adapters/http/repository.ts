@@ -285,7 +285,7 @@ const LEAD_STATUS_TO_BE: Partial<Record<LeadStatus, string>> = {
   booked: 'MEETING_BOOKED',
   not_interested: 'LOST',
   no_response: 'CONTACTED',
-  do_not_contact: 'LOST',
+  do_not_contact: 'DO_NOT_CONTACT',
   unreachable: 'INVALID',
 }
 
@@ -294,12 +294,14 @@ const BE_TO_LEAD_STATUS: Record<string, LeadStatus> = {
   CONTACTED: 'contacted',
   MEETING_BOOKED: 'booked',
   LOST: 'not_interested',
+  DO_NOT_CONTACT: 'do_not_contact',
   INVALID: 'unreachable',
   QUALIFIED: 'interested',
   WON: 'booked',
 }
 
-function toLeadStatus(be: string | undefined): LeadStatus {
+function toLeadStatus(be: string | undefined, lastCallOutcome?: string): LeadStatus {
+  if (lastCallOutcome?.toUpperCase() === 'DO_NOT_CALL') return 'do_not_contact'
   if (!be) return 'new'
   return BE_TO_LEAD_STATUS[be.toUpperCase()] ?? 'contacted'
 }
@@ -365,7 +367,7 @@ function toLead(wire: LeadWire): Lead {
     website: wire.website_link ?? '',
     email: wire.emails?.[0]?.email ?? wire.contact_email ?? '',
     phone: wire.phone_numbers?.[0]?.phone_number ?? wire.contact_phone ?? '',
-    status: toLeadStatus(wire.lead_status),
+    status: toLeadStatus(wire.lead_status, wire.last_call_outcome),
     score: Math.round((wire.relevance_score ?? 0) * 100),
     verificationStatus: wire.verification_status ?? undefined,
     lastContactAt: wire.last_call_at || wire.created_at || undefined,
