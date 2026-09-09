@@ -1,25 +1,25 @@
-import { lazy } from 'react'
+import { lazyRoute } from '@/lib/lazyRoute'
 import { Navigate } from 'react-router-dom'
 import { PermGate } from '@/components/auth/PermGate'
 import { campaignSubRoutes } from './client.routes'
 
-const AdminOverview = lazy(() => import('@/pages/admin/AdminOverview'))
-const AdminCampaigns = lazy(() => import('@/pages/admin/AdminCampaigns'))
-const AdminCampaignReview = lazy(() => import('@/pages/admin/AdminCampaignReview'))
-const AdminAITraining = lazy(() => import('@/pages/admin/AdminAITraining'))
-const AdminTrainingSettings = lazy(() => import('@/pages/admin/AdminTrainingSettings'))
-const AdminClients = lazy(() => import('@/pages/admin/AdminClients'))
-const AdminClientDetail = lazy(() => import('@/pages/admin/AdminClientDetail'))
-const AdminClientSettings = lazy(() => import('@/pages/admin/AdminClientSettings'))
-const AdminSettings = lazy(() => import('@/pages/admin/AdminSettings'))
-const AdminActivity = lazy(() => import('@/pages/admin/AdminActivity'))
-const AdminLeads = lazy(() => import('@/pages/admin/AdminLeads'))
-const AdminCalls = lazy(() => import('@/pages/admin/AdminCalls'))
-const AdminCosts = lazy(() => import('@/pages/admin/AdminCosts'))
-const AdminUsers = lazy(() => import('@/pages/admin/AdminUsers'))
-const AdminPermissions = lazy(() => import('@/pages/admin/AdminPermissions'))
-const CampaignDetailLayout = lazy(() => import('@/pages/client/CampaignDetailLayout'))
-const CampaignDetailOverview = lazy(() => import('@/pages/client/CampaignDetailOverview'))
+const AdminOverview = lazyRoute(() => import('@/pages/admin/AdminOverview'))
+const AdminCampaigns = lazyRoute(() => import('@/pages/admin/AdminCampaigns'))
+const AdminCampaignReview = lazyRoute(() => import('@/pages/admin/AdminCampaignReview'))
+const AdminAITraining = lazyRoute(() => import('@/pages/admin/AdminAITraining'))
+const AdminTrainingSettings = lazyRoute(() => import('@/pages/admin/AdminTrainingSettings'))
+const AdminClients = lazyRoute(() => import('@/pages/admin/AdminClients'))
+const AdminClientDetail = lazyRoute(() => import('@/pages/admin/AdminClientDetail'))
+const AdminClientSettings = lazyRoute(() => import('@/pages/admin/AdminClientSettings'))
+const AdminSettings = lazyRoute(() => import('@/pages/admin/AdminSettings'))
+const AdminActivity = lazyRoute(() => import('@/pages/admin/AdminActivity'))
+const AdminLeads = lazyRoute(() => import('@/pages/admin/AdminLeads'))
+const AdminCalls = lazyRoute(() => import('@/pages/admin/AdminCalls'))
+const AdminCosts = lazyRoute(() => import('@/pages/admin/AdminCosts'))
+const AdminUsers = lazyRoute(() => import('@/pages/admin/AdminUsers'))
+const AdminPermissions = lazyRoute(() => import('@/pages/admin/AdminPermissions'))
+const CampaignDetailLayout = lazyRoute(() => import('@/pages/client/CampaignDetailLayout'))
+const CampaignDetailOverview = lazyRoute(() => import('@/pages/client/CampaignDetailOverview'))
 
 export const adminRoutes = [
   { index: true, element: <Navigate to="/admin/overview" replace /> },
