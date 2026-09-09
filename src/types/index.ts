@@ -32,6 +32,10 @@ export interface Client {
   retainerWeeklyAmount?: number
   /** DD/MM/YYYY engagement start (calendar picker). */
   engagementStart?: string
+  /** Per-client outbound sender identity (empty = use global default). */
+  whatsappFromPhone?: string
+  emailFromAddress?: string
+  emailFromName?: string
   createdAt: string
   primaryContact: PrimaryContact
 }
@@ -52,6 +56,9 @@ export interface ClientInput {
   walletBalance?: number
   retainerWeeklyAmount?: number
   engagementStart?: string
+  whatsappFromPhone?: string
+  emailFromAddress?: string
+  emailFromName?: string
   primaryContact?: Partial<PrimaryContact>
 }
 

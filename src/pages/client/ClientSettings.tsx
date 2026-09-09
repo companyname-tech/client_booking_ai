@@ -116,7 +116,7 @@ export default function ClientSettings() {
         </PageHeader>
 
         {section === 'agent' && <AgentTab />}
-        {section === 'connection' && <ConnectionSettings />}
+        {section === 'connection' && <ConnectionSettings client={client} />}
         {section === 'twilio' && <TwilioTab />}
 
         {section === 'fish' && <FishVoicesTab />}
