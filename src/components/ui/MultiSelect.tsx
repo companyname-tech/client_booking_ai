@@ -47,16 +47,23 @@ export function MultiSelect({
         {label}
       </FieldLabel>
       <div ref={wrapRef} className="relative">
-        <button
+        <div
           id={id}
-          type="button"
+          role="combobox"
           aria-expanded={open}
           aria-haspopup="listbox"
           aria-invalid={!!error}
           aria-describedby={error ? errorId : undefined}
+          tabIndex={0}
           onClick={() => setOpen((o) => !o)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault()
+              setOpen((o) => !o)
+            }
+          }}
           className={cn(
-            'interactive ring-focus flex min-h-[38px] w-full items-center justify-between gap-2 rounded-md border border-line-strong bg-surface-1 px-3 py-2 text-left text-sm outline-none hover:border-white/15',
+            'interactive ring-focus flex min-h-[38px] w-full cursor-pointer items-center justify-between gap-2 rounded-md border border-line-strong bg-surface-1 px-3 py-2 text-left text-sm outline-none hover:border-white/15',
             error && 'border-danger/50',
             open && 'border-accent/60 ring-2 ring-accent/25',
           )}
@@ -87,7 +94,7 @@ export function MultiSelect({
             )}
           </span>
           <ChevronDown className={cn('size-4 shrink-0 text-fg-muted transition-transform', open && 'rotate-180')} />
-        </button>
+        </div>
         <AnimatePresence>
           {open && (
             <motion.div
