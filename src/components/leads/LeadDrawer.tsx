@@ -36,7 +36,6 @@ type LeadForm = {
   status: LeadStatus
   phone: string
   email: string
-  location: string
 }
 
 export function LeadDrawer({
@@ -64,7 +63,6 @@ export function LeadDrawer({
     status: 'new',
     phone: '',
     email: '',
-    location: '',
   })
 
   // When opened via a row-level Edit action, enter edit mode once the detail loads.
@@ -78,7 +76,6 @@ export function LeadDrawer({
       status: lead.status,
       phone: lead.phone ?? '',
       email: lead.email ?? '',
-      location: lead.location,
     })
     setEditing(true)
   }, [open, lead, startInEdit])
@@ -94,13 +91,12 @@ export function LeadDrawer({
       status: lead.status,
       phone: lead.phone ?? '',
       email: lead.email ?? '',
-      location: lead.location,
     })
     setEditing(true)
   }
 
   const set =
-    (k: 'name' | 'title' | 'company' | 'industry' | 'phone' | 'email' | 'location') =>
+    (k: 'name' | 'title' | 'company' | 'industry' | 'phone' | 'email') =>
     (e: ChangeEvent<HTMLInputElement>) =>
       setForm((f) => ({ ...f, [k]: e.target.value }))
 
@@ -162,10 +158,6 @@ export function LeadDrawer({
             <div>
               <span className="text-fg-muted">Industry</span>
               <Input className="mt-1" value={form.industry} onChange={set('industry')} />
-            </div>
-            <div>
-              <span className="text-fg-muted">Location</span>
-              <Input className="mt-1" value={form.location} onChange={set('location')} />
             </div>
             <div>
               <span className="text-fg-muted">Phone</span>

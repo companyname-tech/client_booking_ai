@@ -1625,7 +1625,27 @@ export const httpRepository = {
     await apiClient.patch(`/leads/${leadId}/notes/${noteId}`, { text })
   },
   async updateLead(id: string, patch: Partial<Lead>): Promise<Lead> {
-    return apiClient.put<Lead>(`/leads/${id}`, patch)
+    // The BE `/leads/{id}` PUT accepts ONLY snake_case wire keys
+    // (LeadUpdate, extra='ignore') — an unmapped camelCase patch is silently
+    // dropped (HTTP 200 no-op). Reverse-map every editable Lead field to the
+    // same column toLead() reads from, and translate the response back.
+    const wire: Record<string, unknown> = {}
+    if (patch.name !== undefined) wire.lead_name = patch.name
+    if (patch.title !== undefined) wire.contact_name = patch.title
+    if (patch.company !== undefined) wire.verified_business_name = patch.company
+    if (patch.industry !== undefined) wire.industry = patch.industry
+    if (patch.website !== undefined) wire.website_link = patch.website
+    if (patch.status !== undefined) wire.lead_status = toBeLeadStatus(patch.status)
+    // phone/email are list-of-dicts on the wire; the FE form edits the primary
+    // entry, so persist exactly one entry (empty value = clear the list).
+    if (patch.phone !== undefined) {
+      wire.phone_numbers = patch.phone ? [{ phone_number: patch.phone }] : []
+    }
+    if (patch.email !== undefined) {
+      wire.emails = patch.email ? [{ email: patch.email }] : []
+    }
+    const updated = await apiClient.put<LeadWire>(`/leads/${id}`, wire)
+    return toLead(updated)
   },
   async addLead(input: {
     leadName: string
