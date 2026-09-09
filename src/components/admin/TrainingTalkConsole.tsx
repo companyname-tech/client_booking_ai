@@ -37,6 +37,12 @@ import {
   parseEngagementRules,
   type EngagementRule,
 } from '@/lib/engagementRules'
+import {
+  clearPendingTalk,
+  loadPendingTalk,
+  savePendingTalk,
+  type PendingTalk,
+} from '@/lib/pendingTrainingTalk'
 
 /** 24 kHz mono PCM16 — the codec the /agent/rtc realtime bridge expects. */
 const PCM_RATE = 24000
@@ -50,6 +56,15 @@ interface TranscriptLine {
   text: string
   live?: boolean
 }
+
+type CompletePayload = {
+  transcript: TrainingTalkTurn[]
+  agentId: string
+  durationS: number
+  conversationId: string
+}
+
+type CompleteReply = Awaited<ReturnType<typeof repo.completeTrainingTalk>>
 
 /** Stable per-talk id (idempotency key for the training-complete submit). */
 function newConversationId(): string {
@@ -139,12 +154,15 @@ export function TrainingTalkConsole({
   const [processLoaded, setProcessLoaded] = useState(false)
   const [processBusy, setProcessBusy] = useState(false)
   const [processNotice, setProcessNotice] = useState('')
+  const [pendingTalk, setPendingTalk] = useState<PendingTalk | null>(null)
+  const [submittingDraft, setSubmittingDraft] = useState(false)
   const liveRef = useRef<LiveSession>(freshSession())
   const turnsRef = useRef<TrainingTalkTurn[]>([])
   const transcriptAccRef = useRef(new TranscriptAccumulator())
   const conversationIdRef = useRef('')
   const startedAtRef = useRef(0)
   const playerRef = useRef<SpotifyStylePlayerHandle>(null)
+  const resumeConversationRef = useRef('')
 
   const playbackDurationS = audioDurationS || result?.durationS || 0
   const playbackLines = useMemo(
@@ -162,6 +180,23 @@ export function TrainingTalkConsole({
     setPlaybackS(0)
     setAudioDurationS(0)
   }, [campaignId])
+
+  // Load any talk whose final save failed earlier (sessionStorage survives a
+  // reload) — the transcript is never silently dropped.
+  useEffect(() => {
+    setPendingTalk(campaignId ? loadPendingTalk(campaignId) : null)
+  }, [campaignId])
+
+  // Quietly re-submit a kept talk when the console is idle (e.g. right after a
+  // page reload). The backend is idempotent by conversation_id, so this can
+  // never create a duplicate session.
+  useEffect(() => {
+    if (!pendingTalk || !agentId || phase !== 'idle') return
+    if (resumeConversationRef.current === pendingTalk.conversationId) return
+    resumeConversationRef.current = pendingTalk.conversationId
+    void submitDraft(pendingTalk)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingTalk, agentId, phase])
 
   // Load the operator's saved conversation-process description for the picked
   // campaign (the intended flow the findings compare against).
@@ -473,6 +508,76 @@ export function TrainingTalkConsole({
     }
   }, [agentId, campaign, handleControl, playPcm, stopEngine])
 
+  const applyCompleted = useCallback((reply: CompleteReply, transcript: TrainingTalkTurn[]) => {
+    if (reply.duplicate) {
+      // A retry of an already-recorded conversation — show the stored result.
+    }
+    setResult(reply.trainingSession)
+    setSavedTranscript(transcript)
+    setRecordingSrc(reply.trainingSession.recordingUrl ?? '')
+    setFlowSuggestions(reply.trainingSession.flowSuggestions ?? [])
+    setPhase('done')
+    setStatusText(
+      `Training talk recorded — the campaign's training state was updated from this real conversation.`,
+    )
+    onTrainingUpdated()
+  }, [onTrainingUpdated])
+
+  // A single transient network failure must not destroy a finished talk: retry
+  // briefly before surfacing the error (safe — the backend dedupes by id).
+  const saveWithRetry = useCallback(
+    async (offerId: string, payload: CompletePayload): Promise<CompleteReply> => {
+      let lastError: unknown = null
+      for (let attempt = 1; attempt <= 3; attempt += 1) {
+        try {
+          return await repo.completeTrainingTalk(offerId, payload)
+        } catch (e) {
+          lastError = e
+          if (attempt < 3) {
+            await new Promise((resolve) =>
+              window.setTimeout(resolve, attempt === 1 ? 800 : 2000),
+            )
+          }
+        }
+      }
+      throw lastError
+    },
+    [],
+  )
+
+  const submitDraft = useCallback(
+    async (draft: PendingTalk) => {
+      setError('')
+      setSubmittingDraft(true)
+      setPhase('grading')
+      setStatusText('Submitting the saved talk for grading…')
+      try {
+        const reply = await saveWithRetry(draft.campaignId, {
+          transcript: draft.transcript,
+          agentId: draft.agentId,
+          durationS: draft.durationS,
+          conversationId: draft.conversationId,
+        })
+        clearPendingTalk(draft.campaignId)
+        setPendingTalk(null)
+        applyCompleted(reply, draft.transcript)
+      } catch (e) {
+        setPhase('error')
+        setError(
+          `Could not record the training session: ${errText(e)}. The talk is still kept — retry the save below.`,
+        )
+      } finally {
+        setSubmittingDraft(false)
+      }
+    },
+    [applyCompleted, saveWithRetry],
+  )
+
+  const discardDraft = useCallback(() => {
+    if (pendingTalk) clearPendingTalk(pendingTalk.campaignId)
+    setPendingTalk(null)
+  }, [pendingTalk])
+
   const end = useCallback(async () => {
     setPhase('grading')
     setStatusText('Saving the recording and grading the transcript…')
@@ -485,29 +590,30 @@ export function TrainingTalkConsole({
       stopEngine()
       // Give the relay a moment to flush trn-<conversation_id>.wav to disk.
       await new Promise((resolve) => window.setTimeout(resolve, 250))
-      const reply = await repo.completeTrainingTalk(campaign!.offerCampaignId, {
+      const reply = await saveWithRetry(campaign!.offerCampaignId, {
         transcript,
         agentId,
         durationS,
         conversationId,
       })
-      if (reply.duplicate) {
-        // A retry of an already-recorded conversation — show the stored result.
-      }
-      setResult(reply.trainingSession)
-      setSavedTranscript(transcript)
-      setRecordingSrc(reply.trainingSession.recordingUrl ?? '')
-      setFlowSuggestions(reply.trainingSession.flowSuggestions ?? [])
-      setPhase('done')
-      setStatusText(
-        `Training talk recorded — the campaign's training state was updated from this real conversation.`,
-      )
-      onTrainingUpdated()
+      applyCompleted(reply, transcript)
     } catch (e) {
+      const draft: PendingTalk = {
+        campaignId: campaign!.offerCampaignId,
+        agentId,
+        durationS,
+        conversationId,
+        transcript: transcript.map((turn) => ({ ...turn })),
+        failedAt: Date.now(),
+      }
+      savePendingTalk(draft)
+      setPendingTalk(draft)
       setPhase('error')
-      setError(`Could not record the training session: ${errText(e)}`)
+      setError(
+        `Could not record the training session: ${errText(e)}. The talk is kept in this browser — retry the save below.`,
+      )
     }
-  }, [agentId, campaign, onTrainingUpdated, stopEngine])
+  }, [agentId, campaign, onTrainingUpdated, stopEngine, saveWithRetry, applyCompleted])
 
   const ready =
     (phase === 'idle' || phase === 'done' || phase === 'error') &&
@@ -669,6 +775,28 @@ export function TrainingTalkConsole({
         <p className="mt-3 flex items-center gap-2 text-xs text-danger" role="alert">
           <TriangleAlert className="size-3.5" /> {error}
         </p>
+      ) : null}
+
+      {pendingTalk && phase !== 'connecting' && phase !== 'live' && phase !== 'grading' ? (
+        <div className="mt-3 flex flex-wrap items-center gap-2 rounded-md border border-warning/25 bg-warning/5 px-3 py-2 text-xs text-warning">
+          <TriangleAlert className="size-3.5 shrink-0" />
+          <span className="min-w-0 flex-1">
+            An earlier talk couldn't be saved (kept at {new Date(pendingTalk.failedAt).toLocaleTimeString()})
+            — submit it to load it into this campaign's training, or discard it.
+          </span>
+          <Button
+            size="sm"
+            variant="primary"
+            disabled={submittingDraft}
+            onClick={() => void submitDraft(pendingTalk)}
+            leadingIcon={submittingDraft ? <Loader2 className="size-3.5 animate-spin" /> : <Radio className="size-3.5" />}
+          >
+            {submittingDraft ? 'Submitting…' : 'Submit saved talk'}
+          </Button>
+          <Button size="sm" variant="ghost" disabled={submittingDraft} onClick={discardDraft} leadingIcon={<X className="size-3.5" />}>
+            Discard
+          </Button>
+        </div>
       ) : null}
 
       {/* The saved recording of this talk (playback with progress) */}
