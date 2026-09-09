@@ -12,7 +12,6 @@ interface CalendarGridProps {
   onSelectMeeting: (m: CalendarMeeting) => void
   onSelectSlot: (day: Date) => void
   markBusyMode?: boolean
-  readOnly?: boolean
 }
 
 const DAYS = Array.from({ length: 7 }, (_, i) => i) // Sun..Sat
@@ -25,13 +24,13 @@ function dayBlocked(blocked: AvailabilityInstance[], day: Date): AvailabilityIns
 }
 
 /** Pure layout: month (4-6 week matrix) or week (7 columns). PURE — no data fetching. */
-export function CalendarGrid({ view, cursor, events, blocked, onSelectMeeting, onSelectSlot, markBusyMode, readOnly }: CalendarGridProps) {
+export function CalendarGrid({ view, cursor, events, blocked, onSelectMeeting, onSelectSlot, markBusyMode }: CalendarGridProps) {
   const today = new Date()
 
   const columns =
     view === 'month'
-      ? monthMatrix(cursor).map((week) => week.map((d) => <DayCell key={d.getTime()} day={d} month={cursor} meetings={inDay(events, d)} blocked={dayBlocked(blocked, d)} onSelectMeeting={onSelectMeeting} onSelectSlot={onSelectSlot} today={today} markBusyMode={markBusyMode} readOnly={readOnly} />))
-      : [weekDays(cursor).map((d) => <DayCell key={d.getTime()} day={d} month={d} meetings={inDay(events, d)} blocked={dayBlocked(blocked, d)} onSelectMeeting={onSelectMeeting} onSelectSlot={onSelectSlot} today={today} markBusyMode={markBusyMode} readOnly={readOnly} />)]
+      ? monthMatrix(cursor).map((week) => week.map((d) => <DayCell key={d.getTime()} day={d} month={cursor} meetings={inDay(events, d)} blocked={dayBlocked(blocked, d)} onSelectMeeting={onSelectMeeting} onSelectSlot={onSelectSlot} today={today} markBusyMode={markBusyMode} />))
+      : [weekDays(cursor).map((d) => <DayCell key={d.getTime()} day={d} month={d} meetings={inDay(events, d)} blocked={dayBlocked(blocked, d)} onSelectMeeting={onSelectMeeting} onSelectSlot={onSelectSlot} today={today} markBusyMode={markBusyMode} />)]
 
   return (
     <div className="surface overflow-hidden">

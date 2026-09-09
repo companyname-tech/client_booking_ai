@@ -5,7 +5,6 @@ import { Textarea } from '@/components/ui/Textarea'
 import { Select } from '@/components/ui/Select'
 import { SpotifyStylePlayer, type SpotifyStylePlayerHandle } from '@/components/recordings/SpotifyStylePlayer'
 import { TrainingSyncedTranscript } from '@/components/recordings/TrainingSyncedTranscript'
-import { TrainingMockCalendar } from '@/components/admin/TrainingMockCalendar'
 import { repo } from '@/api/repository'
 import type { TrainingRecordingComment, TrainingTalkSession } from '@/types/training'
 import {
@@ -231,10 +230,6 @@ export function TrainingRecordingReview({
             selectedLineId={selectedLineId}
             onSeekLine={seekToLine}
           />
-
-          <div className="lg:col-span-2">
-            <TrainingMockCalendar turns={session.transcript} extracted={session.extracted} />
-          </div>
 
           <div className="lg:col-span-2 rounded-xl border border-line bg-surface-1/40 p-3">
             <div className="mb-2 flex items-center gap-1.5 text-2xs font-semibold uppercase tracking-wide text-fg-muted">

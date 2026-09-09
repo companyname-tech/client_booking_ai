@@ -17,7 +17,6 @@ interface DayCellProps {
   dense?: boolean
   /** When true, clicking the day toggles an AI busy-day block. */
   markBusyMode?: boolean
-  readOnly?: boolean
 }
 
 const isBlockedDay = (blocked: AvailabilityInstance[] | undefined, day: Date): boolean =>
@@ -34,7 +33,6 @@ export function DayCell({
   today,
   dense,
   markBusyMode,
-  readOnly,
 }: DayCellProps) {
   const parts = ilParts(day)
   const monthParts = ilParts(month)
@@ -69,7 +67,6 @@ export function DayCell({
       <button
         type="button"
         onClick={(e) => {
-          if (readOnly) return
           if (markBusyMode) {
             e.stopPropagation()
             toggleBusy()
@@ -78,9 +75,7 @@ export function DayCell({
           onSelectSlot(day)
         }}
         aria-label={
-          readOnly
-            ? `${WEEKDAY_LABELS[parts.weekday]} ${fmtDateShort(day)}`
-            : markBusyMode
+          markBusyMode
             ? `${aiBusy ? 'Clear busy day' : 'Mark busy day'} on ${WEEKDAY_LABELS[parts.weekday]} ${fmtDateShort(day)}`
             : `New meeting on ${WEEKDAY_LABELS[parts.weekday]} ${fmtDateShort(day)}`
         }
