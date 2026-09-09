@@ -1,12 +1,15 @@
 import type { Budget, CampaignStatus, OfferCampaign } from '@/types'
 
-const TRAINING_STATUSES = new Set<CampaignStatus>(['ai_training', 'awaiting_ai_training'])
+/** Legacy lifecycle statuses removed from the UI — map forward for stored rows. */
+export function normalizeLegacyCampaignStatus(status: CampaignStatus): CampaignStatus {
+  if (status === 'awaiting_ai_training') return 'draft'
+  if (status === 'ai_training') return 'preparing'
+  return status
+}
 
-/** Campaigns in AI training can run without a paid budget. */
-export function isTrainingCampaign(campaign: Pick<OfferCampaign, 'status' | 'stage' | 'source'>): boolean {
-  if (TRAINING_STATUSES.has(campaign.status)) return true
-  if (campaign.stage === 'ai_training') return true
-  return campaign.source === 'training'
+/** @deprecated AI training sandbox campaigns no longer bypass budget rules. */
+export function isTrainingCampaign(_campaign: Pick<OfferCampaign, 'status' | 'stage' | 'source'>): boolean {
+  return false
 }
 
 /** Whether the campaign has any configured spend (total or daily). */
@@ -31,7 +34,7 @@ export function resolveOperationalStatus(
   // rule force paused again when there is no runnable budget.
   if (campaign.userPaused) return 'paused'
   if (isBudgetStopped(campaign)) return 'paused'
-  const base = userOverride ?? campaign.status
+  const base = normalizeLegacyCampaignStatus(userOverride ?? campaign.status)
   if (base === 'awaiting_agent_assignment') return campaign.status
   return base
 }

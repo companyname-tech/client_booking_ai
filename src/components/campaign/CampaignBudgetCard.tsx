@@ -5,8 +5,9 @@ import { repo } from '@/data/repository'
 import { useAuth } from '@/contexts/AuthContext'
 import { canUse } from '@/lib/permissions'
 import { formatCurrency, formatPercent } from '@/lib/utils'
+import { activeBudgetWarning, budgetRemainingPercent } from '@/lib/budgetWarnings'
 import { AnimatedNumber } from '@/components/motion/AnimatedNumber'
-import { ProgressBar } from '@/components/ui/ProgressBar'
+import { BudgetProgressBar } from '@/components/campaign/BudgetProgressBar'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
 import { Input } from '@/components/ui/Input'
@@ -27,6 +28,8 @@ export function CampaignBudgetCard({
   const { session } = useAuth()
   const canEditBudget = canUse(session, 'campaigns.edit')
   const budgetPct = budget.total > 0 ? (budget.used / budget.total) * 100 : 0
+  const budgetWarning = activeBudgetWarning(budget, budget.warningThresholds)
+  const remainingPct = budgetRemainingPercent(budget)
   const [open, setOpen] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
   const [summary, setSummary] = useState<ClientBudgetSummary | null>(null)
@@ -152,7 +155,16 @@ export function CampaignBudgetCard({
             )}
           </div>
         </div>
-        <ProgressBar value={budgetPct} tone="warning" size="sm" className="mt-3" label="Budget used" />
+        <BudgetProgressBar budget={budget} className="mt-3" />
+        {budgetWarning && (
+          <p
+            role="alert"
+            className={`mt-2 text-xs ${budgetWarning.tone === 'danger' ? 'text-danger' : 'text-warning'}`}
+          >
+            Budget warning: {formatPercent(remainingPct, 1)} remaining — crossed the {budgetWarning.threshold}%
+            remaining threshold.
+          </p>
+        )}
         {budget.total <= 0 && zone === 'client' && (
           <p className="mt-2 text-xs text-fg-muted">
             Allocate from your workspace balance or pay to fund this campaign.
@@ -174,6 +186,7 @@ export function CampaignBudgetCard({
               total: budget.total,
               daily: budget.daily,
               expectedDurationDays: budget.expectedDurationDays,
+              warningThresholds: budget.warningThresholds,
             }}
             saving={editBusy}
             onCancel={closeEdit}

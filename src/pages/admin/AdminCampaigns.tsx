@@ -19,7 +19,7 @@ import { EditCampaignModal } from '@/components/admin/EditCampaignModal'
 import { Button } from '@/components/ui/Button'
 import type { OfferCampaign } from '@/types'
 
-const FILTERS = ['All', 'Awaiting Review', 'Training', 'Live', 'Paused', 'Completed', 'Rejected'] as const
+const FILTERS = ['All', 'Awaiting Review', 'Live', 'Paused', 'Completed', 'Rejected'] as const
 
 export default function AdminCampaigns() {
   const [search, setSearch] = useState('')
@@ -44,7 +44,6 @@ export default function AdminCampaigns() {
       list = list.filter((c) => {
         const m = metas.find((x) => x.offerCampaignId === c.id)
         if (filter === 'Awaiting Review') return ['awaiting_approval', 'preparing'].includes(c.status) || m?.workflowStatus === 'awaiting_approval'
-        if (filter === 'Training') return c.status === 'ai_training'
         if (filter === 'Live') return c.status === 'active'
         if (filter === 'Paused') return c.status === 'paused'
         if (filter === 'Completed') return c.status === 'completed'

@@ -19,7 +19,7 @@ type Filter = 'all' | 'active' | 'setup' | 'paused' | 'completed'
 const filterMatch: Record<Filter, (s: CampaignStatus) => boolean> = {
   all: () => true,
   active: (s) => s === 'active',
-  setup: (s) => ['draft', 'preparing', 'awaiting_ai_training', 'ai_training', 'legal_review', 'awaiting_approval'].includes(s),
+  setup: (s) => ['draft', 'preparing', 'legal_review', 'awaiting_approval'].includes(s),
   paused: (s) => s === 'paused',
   completed: (s) => s === 'completed',
 }

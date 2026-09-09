@@ -130,6 +130,8 @@ export interface Budget {
   daily: number
   currency: 'USD'
   expectedDurationDays: number
+  /** Remaining-budget % thresholds that trigger warnings (default 50, 25, 5). */
+  warningThresholds?: number[]
 }
 
 export interface CampaignMetrics {

@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/Button'
 import { FieldError } from '@/components/ui/Field'
 import { Select } from '@/components/ui/Select'
 import { Input } from '@/components/ui/Input'
-import { CAMPAIGN_TYPE_OPTIONS, type CampaignType } from '@/lib/campaignTypes'
 import type { Client } from '@/types'
 
 /** Allow digits and a single decimal point while the user types. */
@@ -43,7 +42,6 @@ export function NewCampaignModal({ open, onClose, onCreated, fixedClient, client
   const [name, setName] = useState('')
   const [offerName, setOfferName] = useState('')
   const [category, setCategory] = useState('')
-  const [campaignType, setCampaignType] = useState<CampaignType>('live')
   const [budget, setBudget] = useState('')
   const [clientId, setClientId] = useState('')
   const [saving, setSaving] = useState(false)
@@ -54,7 +52,6 @@ export function NewCampaignModal({ open, onClose, onCreated, fixedClient, client
     setName('')
     setOfferName('')
     setCategory('')
-    setCampaignType('live')
     setBudget('')
     setClientId('')
     setError('')
@@ -81,7 +78,6 @@ export function NewCampaignModal({ open, onClose, onCreated, fixedClient, client
         category: category.trim(),
         company,
         clientId: effectiveClientId,
-        type: campaignType,
         budget: parsedBudget,
       })
       onCreated()
@@ -131,23 +127,6 @@ export function NewCampaignModal({ open, onClose, onCreated, fixedClient, client
             <p className="mt-1 text-2xs text-fg-muted">The campaign is attached to this client.</p>
           </div>
         )}
-        <div>
-          <span className="text-xs text-fg-muted">Campaign type *</span>
-          <Select
-            value={campaignType}
-            onChange={(v) => setCampaignType(v as CampaignType)}
-            ariaLabel="Campaign type"
-            options={CAMPAIGN_TYPE_OPTIONS.map((option) => ({
-              value: option.value,
-              label: option.label,
-              description: option.description,
-            }))}
-            className="mt-1 w-full"
-          />
-          <p className="mt-1 text-2xs text-fg-muted">
-            {CAMPAIGN_TYPE_OPTIONS.find((option) => option.value === campaignType)?.description}
-          </p>
-        </div>
         <div>
           <span className="text-xs text-fg-muted">Budget</span>
           <div className="relative mt-1">

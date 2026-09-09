@@ -47,6 +47,22 @@ export function isCampaignLeadGenSetting(name: string): boolean {
   return CAMPAIGN_LEAD_GEN_SETTINGS_FIELDS.has(name)
 }
 
+/** Lead-generation job budgets and bulk verification limits — edited from the Leads screens. */
+export const LEADS_RUNTIME_SETTINGS_FIELDS = new Set([
+  'verification_max_concurrency',
+  'lead_gen_max_candidates',
+  'lead_gen_max_provider_requests',
+  'lead_gen_max_crawl_pages',
+  'lead_gen_max_urls',
+  'lead_gen_max_depth',
+  'lead_gen_job_timeout_seconds',
+  'lead_gen_max_deep_ops',
+])
+
+export function isLeadsRuntimeSetting(name: string): boolean {
+  return LEADS_RUNTIME_SETTINGS_FIELDS.has(name)
+}
+
 export type TrainingSettingsGroup = {
   id: string
   title: string

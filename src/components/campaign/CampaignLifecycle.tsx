@@ -1,4 +1,5 @@
 import type { OfferCampaign } from '@/types'
+import { normalizeLegacyCampaignStatus } from '@/lib/campaignOperationalStatus'
 import { campaignStatusMeta, campaignStageMeta } from '@/lib/status'
 import { ProgressTimeline } from '@/components/campaigns/ProgressTimeline'
 import { SubmissionStatusTimeline } from '@/components/campaigns/SubmissionStatusTimeline'
@@ -11,7 +12,7 @@ export function CampaignLifecycle({
   campaign: OfferCampaign
   stageProgress?: number
 }) {
-  const status = campaign.status
+  const status = normalizeLegacyCampaignStatus(campaign.status)
   const meta = campaignStatusMeta[status]
   const awaitingApproval = status === 'awaiting_approval'
   const inSetup = ['draft', 'preparing', 'legal_review', 'awaiting_approval'].includes(status)

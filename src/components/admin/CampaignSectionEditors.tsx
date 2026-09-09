@@ -13,8 +13,8 @@ import { Textarea } from '@/components/ui/Textarea'
 import { Button } from '@/components/ui/Button'
 import { Select } from '@/components/ui/Select'
 import { FieldLabel } from '@/components/ui/Field'
-import type { Agent } from '@/types'
-import type { LeadCriteria } from '@/types'
+import type { Agent, CampaignLeadGenDefaults, LeadCriteria } from '@/types'
+import { DEFAULT_BUDGET_WARNING_THRESHOLDS, normalizeBudgetWarningThresholds } from '@/lib/budgetWarnings'
 
 export interface OfferDetailsDraft {
   title: string
@@ -120,6 +120,7 @@ export interface BudgetDraft {
   total: number
   daily: number
   expectedDurationDays: number
+  warningThresholds?: number[]
 }
 
 export function BudgetEditor({
@@ -133,11 +134,24 @@ export function BudgetEditor({
   onSave: (draft: BudgetDraft) => void
   onCancel: () => void
 }) {
-  const [draft, setDraft] = useState<BudgetDraft>(seed)
-  const dirty = JSON.stringify(draft) !== JSON.stringify(seed)
+  const [draft, setDraft] = useState<BudgetDraft>({
+    ...seed,
+    warningThresholds: normalizeBudgetWarningThresholds(seed.warningThresholds),
+  })
+  const thresholdSlots = normalizeBudgetWarningThresholds(draft.warningThresholds)
+  const dirty = JSON.stringify(draft) !== JSON.stringify({
+    ...seed,
+    warningThresholds: normalizeBudgetWarningThresholds(seed.warningThresholds),
+  })
   const setNum = (key: keyof BudgetDraft, raw: string) => {
     const n = Number(raw.replace(/[^0-9.]/g, ''))
     setDraft((d) => ({ ...d, [key]: Number.isFinite(n) ? n : 0 }))
+  }
+  const setThreshold = (index: number, raw: string) => {
+    const n = Number(raw.replace(/[^0-9.]/g, ''))
+    const next = [...(draft.warningThresholds ?? [...DEFAULT_BUDGET_WARNING_THRESHOLDS])]
+    next[index] = Number.isFinite(n) ? n : next[index]
+    setDraft((d) => ({ ...d, warningThresholds: next }))
   }
 
   return (
@@ -156,7 +170,43 @@ export function BudgetEditor({
           <Input id="review-budget-days" inputMode="numeric" value={draft.expectedDurationDays ? String(draft.expectedDurationDays) : ''} onChange={(e) => setNum('expectedDurationDays', e.target.value)} placeholder="0" />
         </div>
       </div>
-      <EditorActions dirty={dirty} saving={saving} onSave={() => onSave(draft)} onCancel={onCancel} />
+      <div>
+        <FieldLabel
+          hint="Alerts fire when remaining budget drops to or below each level. Defaults: 50%, 25%, 5%."
+        >
+          Budget warning thresholds (% remaining)
+        </FieldLabel>
+        <div className="mt-2 grid gap-3 sm:grid-cols-3">
+          {thresholdSlots.map((value, index) => (
+            <div key={index}>
+              <FieldLabel htmlFor={`review-budget-warn-${index}`} className="text-2xs">
+                Warning {index + 1}
+              </FieldLabel>
+              <div className="flex items-center gap-1.5">
+                <Input
+                  id={`review-budget-warn-${index}`}
+                  inputMode="numeric"
+                  value={draft.warningThresholds?.[index] ? String(draft.warningThresholds[index]) : ''}
+                  onChange={(e) => setThreshold(index, e.target.value)}
+                  placeholder={String(value)}
+                />
+                <span className="text-xs text-fg-muted">%</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+      <EditorActions
+        dirty={dirty}
+        saving={saving}
+        onSave={() =>
+          onSave({
+            ...draft,
+            warningThresholds: normalizeBudgetWarningThresholds(draft.warningThresholds),
+          })
+        }
+        onCancel={onCancel}
+      />
     </div>
   )
 }
@@ -251,6 +301,80 @@ export function AgentSelectEditor({
         )}
       </div>
       <EditorActions dirty={dirty} saving={saving} onSave={() => onSave(agentId)} onCancel={onCancel} />
+    </div>
+  )
+}
+
+export function LeadGenDefaultsEditor({
+  seed,
+  saving,
+  onSave,
+  onCancel,
+}: {
+  seed: CampaignLeadGenDefaults
+  saving: boolean
+  onSave: (draft: CampaignLeadGenDefaults) => void
+  onCancel: () => void
+}) {
+  const [draft, setDraft] = useState<CampaignLeadGenDefaults>(seed)
+  const dirty = JSON.stringify(draft) !== JSON.stringify(seed)
+  const set = <K extends keyof CampaignLeadGenDefaults>(key: K, value: CampaignLeadGenDefaults[K]) =>
+    setDraft((d) => ({ ...d, [key]: value }))
+
+  return (
+    <div className="space-y-4">
+      <div className="grid gap-4 text-sm sm:grid-cols-2">
+        <div>
+          <FieldLabel htmlFor="settings-gen-country" hint="Pre-fills the Generate leads form for this campaign.">
+            Default country
+          </FieldLabel>
+          <Input
+            id="settings-gen-country"
+            value={draft.country}
+            onChange={(e) => set('country', e.target.value)}
+            placeholder="e.g. Israel or IL"
+          />
+        </div>
+        <div>
+          <FieldLabel htmlFor="settings-gen-phone">Default phone type</FieldLabel>
+          <Select
+            id="settings-gen-phone"
+            value={draft.phoneType}
+            onChange={(v) => set('phoneType', v)}
+            ariaLabel="Default phone type"
+            placeholder="Mobile"
+            options={[
+              { value: 'mobile', label: 'Mobile' },
+              { value: 'landline', label: 'Landline' },
+              { value: '', label: 'Any' },
+            ]}
+            className="w-full"
+          />
+        </div>
+        <div>
+          <FieldLabel htmlFor="settings-gen-industry">Default industry</FieldLabel>
+          <Input
+            id="settings-gen-industry"
+            value={draft.industry}
+            onChange={(e) => set('industry', e.target.value)}
+            placeholder="e.g. Architecture"
+          />
+        </div>
+        <div>
+          <FieldLabel htmlFor="settings-gen-count">Default lead count</FieldLabel>
+          <Input
+            id="settings-gen-count"
+            inputMode="numeric"
+            value={draft.numberOfLeads ? String(draft.numberOfLeads) : ''}
+            onChange={(e) => {
+              const n = Number(e.target.value.replace(/[^0-9]/g, ''))
+              set('numberOfLeads', Number.isFinite(n) && n > 0 ? n : 10)
+            }}
+            placeholder="10"
+          />
+        </div>
+      </div>
+      <EditorActions dirty={dirty} saving={saving} onSave={() => onSave(draft)} onCancel={onCancel} />
     </div>
   )
 }

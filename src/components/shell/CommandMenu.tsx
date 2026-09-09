@@ -22,6 +22,7 @@ import { spring } from '@/lib/motion'
 import { cn } from '@/lib/utils'
 import { repo } from '@/data/repository'
 import { campaignStatusMeta } from '@/lib/status'
+import { normalizeLegacyCampaignStatus } from '@/lib/campaignOperationalStatus'
 import { Kbd } from '@/components/ui/Kbd'
 import { Modal } from '@/components/ui/Modal'
 import { StatusDot } from '@/components/ui/StatusDot'
@@ -87,15 +88,17 @@ function useCommands(): Command[] {
 
   return useMemo<Command[]>(() => {
     const base = `/${zone}`
-    const campaigns: Command[] = (data?.campaigns ?? []).map((c) => ({
+    const campaigns: Command[] = (data?.campaigns ?? []).map((c) => {
+      const status = normalizeLegacyCampaignStatus(c.status)
+      return {
       id: `c-${c.id}`,
       label: c.name,
-      hint: campaignStatusMeta[c.status].label,
-      icon: <StatusDot tone={campaignStatusMeta[c.status].tone} size={7} />,
+      hint: campaignStatusMeta[status].label,
+      icon: <StatusDot tone={campaignStatusMeta[status].tone} size={7} />,
       group: 'Campaigns',
       keywords: `${c.id} ${c.targetAudience}`,
       run: () => navigate(zone === 'admin' ? `/admin/campaigns/${c.id}/review` : `${base}/campaigns/${c.id}`),
-    }))
+    }})
     const clientCommands: Command[] = zone === 'admin'
       ? (data?.clients ?? []).map((cl) => ({
           id: `cl-${cl.id}`,

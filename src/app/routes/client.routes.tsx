@@ -14,6 +14,7 @@ const CampaignRecordings = lazyRoute(() => import('@/pages/client/CampaignRecord
 const CampaignActivity = lazyRoute(() => import('@/pages/client/CampaignActivity'))
 const CampaignAnalytics = lazyRoute(() => import('@/pages/client/CampaignAnalytics'))
 const CampaignIntegrations = lazyRoute(() => import('@/pages/client/CampaignIntegrations'))
+const CampaignSettings = lazyRoute(() => import('@/pages/client/CampaignSettings'))
 const ClientSettings = lazyRoute(() => import('@/pages/client/ClientSettings'))
 const AILayout = lazyRoute(() => import('@/pages/client/ai/AILayout'))
 const AICommandCenter = lazyRoute(() => import('@/pages/client/ai/AICommandCenter'))
@@ -46,6 +47,7 @@ export const campaignSubRoutes = [
   { path: 'activity', element: <PermGate perm="activity.view"><CampaignActivity /></PermGate> },
   { path: 'analytics', element: <CampaignAnalytics /> },
   { path: 'integrations', element: <CampaignIntegrations /> },
+  { path: 'settings', element: <CampaignSettings /> },
 ]
 
 export const clientRoutes = [

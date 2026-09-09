@@ -1,5 +1,10 @@
 import { SchemaSettingsCard } from './SchemaSettingsCard'
-import { isAgentScopedSetting, isCampaignLeadGenSetting, isTrainingSetting } from './settingsFieldGroups'
+import {
+  isAgentScopedSetting,
+  isCampaignLeadGenSetting,
+  isLeadsRuntimeSetting,
+  isTrainingSetting,
+} from './settingsFieldGroups'
 
 /**
  * Settings → Application tab — runtime settings excluding Twilio (which has its
@@ -22,9 +27,10 @@ export function ApplicationTab() {
         ) &&
         !isTrainingSetting(f.name) &&
         !isAgentScopedSetting(f.name) &&
-        !isCampaignLeadGenSetting(f.name)
+        !isCampaignLeadGenSetting(f.name) &&
+        !isLeadsRuntimeSetting(f.name)
       }
-      hiddenNote="Twilio settings live in the Twilio tab, lead source & enrichment providers (Google Places/Maps, Katana, Crawlee, PhoneInfoga, theHarvester, Maigret, SpiderFoot) live in the Lead sources tab, training and orchestrator settings in the AI training workspace, voice/model settings are configured per agent under the Agent tab, and lead generation params (country, industry, search model) are stored per campaign on the offer. Infrastructure paths are defined by the environment and are not editable here."
+      hiddenNote="Twilio settings live in the Twilio tab, lead source & enrichment providers (Google Places/Maps, Katana, Crawlee, PhoneInfoga, theHarvester, Maigret, SpiderFoot) live in the Lead sources tab, training and orchestrator settings in the AI training workspace, voice/model settings are configured per agent under the Agent tab, lead generation job limits and verification concurrency are on the Leads screen, and lead generation params (country, industry, search model) are stored per campaign on the offer. Infrastructure paths are defined by the environment and are not editable here."
     />
   )
 }

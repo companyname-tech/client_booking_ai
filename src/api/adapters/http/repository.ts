@@ -22,7 +22,7 @@ import {
   updateLocalTrainingProcessOperationComment,
   upsertLocalTrainingProcessOperation,
 } from '@/lib/trainingProcessOperationJournal'
-import type { Agent, OfferCampaign, User, Client, ClientInput, ClientPage, ClientBudgetSummary, CampaignBudgetAddResult, Lead, Call, Booking, CallDetail, LeadDetail, Recording, CallHistoryEntry, CampaignFunnelStage, CampaignInsight, CampaignAttentionAlert, CampaignPerformancePoint, CampaignHealthSnapshot, CampaignHealth, Analytics, Activity, AttentionItem, Integration, LeadStatus, Meeting, WorkspaceAnalytics } from '@/types'
+import type { Agent, OfferCampaign, CampaignLeadGenDefaults, User, Client, ClientInput, ClientPage, ClientBudgetSummary, CampaignBudgetAddResult, Lead, Call, Booking, CallDetail, LeadDetail, Recording, CallHistoryEntry, CampaignFunnelStage, CampaignInsight, CampaignAttentionAlert, CampaignPerformancePoint, CampaignHealthSnapshot, CampaignHealth, Analytics, Activity, AttentionItem, Integration, LeadStatus, Meeting, WorkspaceAnalytics } from '@/types'
 import type { AppSettings, ConnectionsState, ConnectionKey, TwilioNumber, FishVoice, SettingsSchemaField, AgentModels, AgentVoiceOption, AgentRole } from '@/types/settings'
 import type { AdminCampaignMeta, AdminLead, CampaignReviewData, AuditEvent, AdminNotification, ActivityLogEntry, ActivitySource, ReviewCampaignContent } from '@/types/admin'
 import type { CampaignAnalyticsData, AnalyticsFilters } from '@/types/campaignAnalytics'
@@ -32,8 +32,9 @@ import type { CampaignDraft } from '@/types/campaignDraft'
 import type { PronunciationAgentOption, PronunciationConfigDto, PronunciationLexiconEntry, TranscribePronunciationReply } from '@/types/pronunciation'
 import type { AcceptTrainingSuggestionInput, AcceptTrainingSuggestionResult, AgentMemoryRecord, BehaviorVersion, MemoryStatus, TrainingCampaignRow, TrainingExtractedData, TrainingProcessOperation, TrainingProcessOperationRunResult, TrainingRecordingComment, TrainingSessionResult, TrainingSuggestion, TrainingTalkCompleteResult, TrainingTalkSession, TrainingTalkTurn } from '@/types/training'
 import type { CampaignType } from '@/lib/campaignTypes'
-import { campaignTypeToSource, sourceToCampaignType } from '@/lib/campaignTypes'
+import { campaignTypeToSource } from '@/lib/campaignTypes'
 import { resolveOperationalStatus } from '@/lib/campaignOperationalStatus'
+import { normalizeBudgetWarningThresholds } from '@/lib/budgetWarnings'
 import type { ImportPreviewResponse, LeadGenerateRequest, LeadImportResult, SmartSearchRequest, SmartSearchResponse } from '@/types/leadGeneration'
 import type { CostBalance, CostEvent, CostPricing, CostSummary } from '@/types/costs'
 import type { AdminUser, AdminUserCreateInput, AdminUserUpdateInput, PermissionCatalog, PermissionDescriptor, PermissionRoleDescriptor } from '@/types/admin'
@@ -396,12 +397,7 @@ function toDoNotContactEntry(wire: DoNotContactWire): DoNotContactEntry {
 
 function toCampaign(wire: OfferWire): OfferCampaign {
   const leadCount = wire.lead_count ?? 0
-  const isTraining = sourceToCampaignType(wire.source) === 'training'
-  const baseStatus = isTraining
-    ? 'awaiting_ai_training'
-    : leadCount > 0
-      ? 'active'
-      : 'draft'
+  const baseStatus = leadCount > 0 ? 'active' : 'draft'
   // Admin review content (stored on the offer as campaign_content) carries the
   // targeting/budget the review screen edits; map it onto the FE campaign shape.
   const content = wire.campaign_content
@@ -421,6 +417,7 @@ function toCampaign(wire: OfferWire): OfferCampaign {
     daily: budget?.daily ?? 0,
     currency: 'USD' as const,
     expectedDurationDays: budget?.expectedDurationDays ?? 0,
+    warningThresholds: normalizeBudgetWarningThresholds(budget?.warningThresholds),
   }
   const draft: OfferCampaign = {
     id: wire.id,
@@ -436,7 +433,7 @@ function toCampaign(wire: OfferWire): OfferCampaign {
       numberOfLeads: wire.gen_number_of_leads ?? 10,
     },
     status: baseStatus,
-    stage: isTraining ? 'ai_training' : baseStatus === 'active' ? 'calling' : 'onboarding',
+    stage: baseStatus === 'active' ? 'calling' : 'onboarding',
     targetAudience: targeting ? [targeting.industry, targeting.companySize].filter(Boolean).join(' · ') : '',
     geography: targeting?.location ?? '',
     criteria,
@@ -1384,16 +1381,35 @@ export const httpRepository = {
    */
   async updateCampaignBudget(
     id: string,
-    budget: { total: number; daily: number; expectedDurationDays: number },
+    budget: { total: number; daily: number; expectedDurationDays: number; warningThresholds?: number[] },
   ): Promise<OfferCampaign> {
     const wire = await apiClient.get<OfferWire>(`/offers/${id}`)
     const stored = wire.campaign_content ?? {}
     return this.updateCampaignOffer(id, {
       content: {
         ...stored,
-        budget: { ...budget, currency: 'USD' },
+        budget: {
+          ...budget,
+          currency: 'USD',
+          warningThresholds: normalizeBudgetWarningThresholds(budget.warningThresholds),
+        },
       },
     })
+  },
+  /** Read the full `campaign_content` subdoc (read-merge-write before partial edits). */
+  async getCampaignContent(id: string): Promise<ReviewCampaignContent> {
+    const wire = await apiClient.get<OfferWire>(`/offers/${id}`)
+    return wire.campaign_content ?? {}
+  },
+  /** Persist per-campaign lead-generation defaults (BE gen_* fields on the offer). */
+  async updateCampaignLeadGen(id: string, leadGen: CampaignLeadGenDefaults): Promise<OfferCampaign> {
+    const wire = await apiClient.put<OfferWire>(`/offers/${id}`, {
+      gen_country: leadGen.country,
+      gen_phone_type: leadGen.phoneType || 'mobile',
+      gen_industry: leadGen.industry,
+      gen_number_of_leads: leadGen.numberOfLeads,
+    })
+    return toCampaign(wire)
   },
   /** Read campaign-scoped messaging templates from `campaign_content.messaging`. */
   async getCampaignMessaging(id: string): Promise<CampaignMessagingContent> {

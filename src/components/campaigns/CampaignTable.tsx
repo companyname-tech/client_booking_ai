@@ -2,6 +2,7 @@ import { memo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ChevronRight } from 'lucide-react'
 import type { OfferCampaign } from '@/types'
+import { resolveCampaignDisplayStatus } from '@/lib/campaignOperationalStatus'
 import { cn, formatCurrency, formatNumber, formatPercent, formatRelativeCompact } from '@/lib/utils'
 import { NOW } from '@/data/time'
 import { useIsWide } from '@/hooks/useMediaQuery'
@@ -29,8 +30,10 @@ export interface CampaignTableProps {
   onCopied?: (label: string) => void
 }
 
-const progressTone = (c: OfferCampaign) =>
-  c.status === 'paused' ? 'neutral' : c.status === 'completed' ? 'info' : c.stage === 'calling' ? 'success' : 'violet'
+const progressTone = (c: OfferCampaign) => {
+  const status = resolveCampaignDisplayStatus(c)
+  return status === 'paused' ? 'neutral' : status === 'completed' ? 'info' : c.stage === 'calling' ? 'success' : 'violet'
+}
 
 const cell = 'px-3 py-3.5 first:pl-4'
 
@@ -56,6 +59,7 @@ const Row = memo(function Row({
   onCopied?: (label: string) => void
 }) {
   const { metrics, budget } = campaign
+  const displayStatus = resolveCampaignDisplayStatus(campaign)
 
   return (
     <Reveal
@@ -88,7 +92,7 @@ const Row = memo(function Row({
         </div>
       </td>
       <td className={cell}>
-        <CampaignStatus status={campaign.status} />
+        <CampaignStatus status={displayStatus} />
       </td>
       <td className={cn(cell, 'text-right text-sm tabular text-fg-secondary')}>{formatNumber(metrics.leadsFound)}</td>
       <td className={cn(cell, 'text-right text-sm tabular text-fg-secondary')}>{formatNumber(metrics.callsCompleted)}</td>
@@ -135,6 +139,7 @@ const CardRow = memo(function CardRow({
   onCopied?: (label: string) => void
 }) {
   const { metrics, budget } = campaign
+  const displayStatus = resolveCampaignDisplayStatus(campaign)
   return (
     <Reveal as="li" className="group">
       <div className="flex items-center gap-2 px-4 pt-3">
@@ -157,7 +162,7 @@ const CardRow = memo(function CardRow({
             />
             <div className="truncate text-xs text-fg-muted">{campaign.targetAudience}</div>
           </div>
-          <CampaignStatus status={campaign.status} />
+          <CampaignStatus status={displayStatus} />
         </div>
         <button
           type="button"

@@ -158,6 +158,7 @@ export default function AdminCampaignReview() {
         total: campaign.budget.total,
         daily: campaign.budget.daily,
         expectedDurationDays: campaign.budget.expectedDurationDays,
+        warningThresholds: campaign.budget.warningThresholds,
       }
       return (
         <BudgetEditor

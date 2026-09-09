@@ -23,6 +23,7 @@ import { LeadScore } from '@/components/leads/LeadScore'
 import { LeadStatusBadge } from '@/components/leads/LeadStatusBadge'
 import { AddLeadModal } from '@/components/leads/AddLeadModal'
 import { ImportLeadsModal } from '@/components/leads/hub/ImportLeadsModal'
+import { LeadsSettingsButton, LeadsSettingsModal } from '@/components/leads/hub/LeadsSettingsModal'
 import type { OfferCampaign } from '@/types'
 import { NOW } from '@/data/time'
 import { formatRelativeCompact, initials, cn } from '@/lib/utils'
@@ -420,6 +421,7 @@ export default function AdminLeads() {
   const [confirmBulk, setConfirmBulk] = useState(false)
   const [bulkBusy, setBulkBusy] = useState(false)
   const [confirmAction, setConfirmAction] = useState<{ lead: AdminLead; action: 'dial' | 'delete' } | null>(null)
+  const [settingsOpen, setSettingsOpen] = useState(false)
 
   const openImport = () => {
     void repo.getCampaigns().then(setCampaigns).catch(() => setCampaigns([]))
@@ -563,6 +565,7 @@ export default function AdminLeads() {
           eyebrow={<WorkspaceEyebrow name="Super Admin" context="Leads" />}
           title="Leads"
           description="Platform-wide lead inventory — every lead across every campaign."
+          actions={<LeadsSettingsButton onClick={() => setSettingsOpen(true)} />}
         />
 
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
@@ -859,6 +862,7 @@ export default function AdminLeads() {
             if (pending) void runAction(pending.lead, pending.action)
           }}
         />
+        <LeadsSettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
       </PageContainer>
     </PageTransition>
   )

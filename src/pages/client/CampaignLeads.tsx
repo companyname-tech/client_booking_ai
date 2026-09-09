@@ -12,6 +12,7 @@ import { LeadDrawer } from '@/components/leads/LeadDrawer'
 import { AddLeadModal } from '@/components/leads/AddLeadModal'
 import { GenerateLeadsModal } from '@/components/leads/hub/GenerateLeadsModal'
 import { ImportLeadsModal } from '@/components/leads/hub/ImportLeadsModal'
+import { LeadsSettingsButton, LeadsSettingsModal } from '@/components/leads/hub/LeadsSettingsModal'
 import type { Lead } from '@/types'
 import { cn } from '@/lib/utils'
 import { Reveal } from '@/components/motion/Reveal'
@@ -31,6 +32,7 @@ export default function CampaignLeads() {
   const [addOpen, setAddOpen] = useState(false)
   const [genOpen, setGenOpen] = useState(false)
   const [importOpen, setImportOpen] = useState(false)
+  const [settingsOpen, setSettingsOpen] = useState(false)
   const [toast, setToast] = useState<{ text: string; isError?: boolean } | null>(null)
   const [busyLeadId, setBusyLeadId] = useState<string | null>(null)
 
@@ -101,6 +103,7 @@ export default function CampaignLeads() {
         <div className="mb-3 flex items-center justify-between">
           <h2 className="text-xl font-semibold text-fg">Leads</h2>
           <div className="flex items-center gap-2">
+            <LeadsSettingsButton onClick={() => setSettingsOpen(true)} />
             <Button variant="secondary" size="sm" leadingIcon={<Upload className="size-3.5" />} onClick={() => setImportOpen(true)}>
               Upload CSV
             </Button>
@@ -171,6 +174,7 @@ export default function CampaignLeads() {
         fixedCampaignId={campaign.id}
         onImported={refreshLeads}
       />
+      <LeadsSettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
     </>
   )
 }
