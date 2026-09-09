@@ -34,6 +34,14 @@ Logical index of domains — pages, components, and repository methods. Physical
 | Components | `src/components/admin/` |
 | Repository | `getAdminOverview`, `approveCampaign`, `rejectCampaign`, `getCampaignReview`, `getTrainingCampaigns` |
 
+## Do-not-contact (global suppression list)
+
+| | Path |
+|---|---|
+| Pages | `src/pages/admin/AdminDoNotContact.tsx` |
+| Types | `src/types/doNotContact.ts` |
+| Repository | `getDoNotContactPage`, `addDoNotContact`, `removeDoNotContact` |
+
 ## Auth & Shell
 
 | | Path |

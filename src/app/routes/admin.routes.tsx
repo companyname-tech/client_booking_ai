@@ -18,6 +18,7 @@ const AdminCalls = lazyRoute(() => import('@/pages/admin/AdminCalls'))
 const AdminCosts = lazyRoute(() => import('@/pages/admin/AdminCosts'))
 const AdminUsers = lazyRoute(() => import('@/pages/admin/AdminUsers'))
 const AdminPermissions = lazyRoute(() => import('@/pages/admin/AdminPermissions'))
+const AdminDoNotContact = lazyRoute(() => import('@/pages/admin/AdminDoNotContact'))
 const CampaignDetailLayout = lazyRoute(() => import('@/pages/client/CampaignDetailLayout'))
 const CampaignDetailOverview = lazyRoute(() => import('@/pages/client/CampaignDetailOverview'))
 
@@ -47,6 +48,7 @@ export const adminRoutes = [
   { path: 'costs', element: <PermGate perm="costs.view"><AdminCosts /></PermGate> },
   { path: 'users', element: <PermGate perm="users.manage"><AdminUsers /></PermGate> },
   { path: 'permissions', element: <PermGate perm="users.manage"><AdminPermissions /></PermGate> },
+  { path: 'do-not-contact', element: <PermGate perm="users.manage"><AdminDoNotContact /></PermGate> },
   { path: 'recordings', element: <Navigate to="/admin/calls" replace /> },
   { path: 'settings', element: <PermGate perm="settings.view"><AdminSettings /></PermGate> },
 ]

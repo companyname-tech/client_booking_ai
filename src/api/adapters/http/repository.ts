@@ -39,6 +39,7 @@ import type { CostBalance, CostEvent, CostPricing, CostSummary } from '@/types/c
 import type { AdminUser, AdminUserCreateInput, AdminUserUpdateInput, PermissionCatalog, PermissionDescriptor, PermissionRoleDescriptor } from '@/types/admin'
 import type { AvailabilityInstance, AvailabilityKind, AvailabilityRule, CalendarMeeting, GoogleIntegrationState, MeetingStatus as CalendarMeetingStatus } from '@/types/calendar'
 import type { IntegrationHealthRecord, IntegrationProviderPatch, IntegrationProviderRow, IntegrationProvidersWire, IntegrationsHealthWire } from '@/types/leadSources'
+import type { DoNotContactEntry, DoNotContactInput, DoNotContactPage, DoNotContactQuery } from '@/types/doNotContact'
 
 // ---------------------------------------------------------------------------
 // Wire DTOs (snake_case) for the Tier B domains.
@@ -260,6 +261,15 @@ interface ActivityLogWire {
   timestamp?: string
 }
 
+/** Wire row for a global do-not-contact (suppression) entry (snake_case). */
+interface DoNotContactWire {
+  id: string
+  kind?: string
+  value?: string
+  reason?: string
+  created_at?: string
+}
+
 // ---------------------------------------------------------------------------
 // Enum + shape translation helpers.
 // ---------------------------------------------------------------------------
@@ -369,6 +379,16 @@ function toAdminLead(wire: LeadWire): AdminLead {
     meetingLink: wire.meeting_link ?? '',
     notes: wire.notes ?? '',
     verificationStatus: wire.verification_status ?? 'UNVERIFIED',
+    createdAt: wire.created_at ?? '',
+  }
+}
+
+function toDoNotContactEntry(wire: DoNotContactWire): DoNotContactEntry {
+  return {
+    id: wire.id,
+    kind: wire.kind === 'email' ? 'email' : 'phone',
+    value: wire.value ?? '',
+    reason: wire.reason ?? '',
     createdAt: wire.created_at ?? '',
   }
 }
@@ -1695,6 +1715,30 @@ export const httpRepository = {
   },
   async deleteLead(leadId: string): Promise<void> {
     await apiClient.delete(`/leads/${leadId}`)
+  },
+  // --- Do-not-contact (global suppression list) ----------------------------
+  // One GLOBAL list for the whole platform — no tenant/client concept reaches
+  // the UI. Phones are stored E.164 and emails lowercased by the backend.
+  async getDoNotContactPage(query: DoNotContactQuery = {}): Promise<DoNotContactPage> {
+    const qs = new URLSearchParams({ page: String(query.page ?? 1), page_size: String(query.pageSize ?? 20) })
+    if (query.search) qs.set('search', query.search)
+    const res = await apiClient.get<{ items?: DoNotContactWire[]; total?: number }>(
+      `/admin/do-not-contact?${qs.toString()}`,
+    )
+    return {
+      items: (res?.items ?? []).map(toDoNotContactEntry),
+      total: res?.total ?? 0,
+    }
+  },
+  async addDoNotContact(input: DoNotContactInput): Promise<void> {
+    await apiClient.post('/admin/do-not-contact', {
+      kind: input.kind,
+      value: input.value.trim(),
+      ...(input.reason?.trim() ? { reason: input.reason.trim() } : {}),
+    })
+  },
+  async removeDoNotContact(id: string): Promise<void> {
+    await apiClient.delete(`/admin/do-not-contact/${id}`)
   },
   async bulkDeleteLeads(leadIds: string[]): Promise<{ affected: number }> {
     if (leadIds.length === 0) return { affected: 0 }

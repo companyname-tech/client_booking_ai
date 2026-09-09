@@ -12,6 +12,7 @@ import {
   Megaphone,
   MessageSquare,
   Phone,
+  PhoneOff,
   Settings,
   ShieldCheck,
   Users,
@@ -101,6 +102,7 @@ export const adminNavigation: NavSection[] = [
     items: [
       { label: 'Users', to: '/admin/users', icon: ShieldCheck, perm: 'users.manage' },
       { label: 'Permissions', to: '/admin/permissions', icon: KeyRound, perm: 'users.manage' },
+      { label: 'Do-not-contact', to: '/admin/do-not-contact', icon: PhoneOff, perm: 'users.manage' },
       { label: 'Costs', to: '/admin/costs', icon: DollarSign, perm: 'costs.view' },
       { label: 'Settings', to: '/admin/settings', icon: Settings, perm: 'settings.view' },
     ],
