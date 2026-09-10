@@ -126,6 +126,8 @@ export interface ComplianceItem {
  * and round-tripped through the review payload (`campaignContent`).
  */
 export interface ReviewCampaignContent {
+  /** Client or campaign website URL captured at creation. */
+  websiteUrl?: string
   /** Target-audience configuration (mirrors the FE LeadCriteria shape). */
   targeting?: Partial<LeadCriteria>
   /** Campaign budget (mirrors the FE Budget shape, minus runtime usage). */
@@ -138,6 +140,20 @@ export interface ReviewCampaignContent {
   integrations?: { gmail?: string; calendly?: string; zoom?: string }
   /** Campaign-scoped email / WhatsApp message templates. */
   messaging?: import('@/types/messaging').CampaignMessagingContent
+  /** Offer video uploaded for admin review (stored on BE, max 15 MB). */
+  video?: CampaignReviewVideo
+}
+
+export interface CampaignReviewVideo {
+  filename?: string
+  name?: string
+  size?: string
+  sizeBytes?: number
+  orientation?: string
+  durationSec?: number
+  resolution?: string
+  mimeType?: string
+  url?: string
 }
 
 export interface CampaignReviewData {
@@ -154,10 +170,21 @@ export interface CampaignReviewData {
   budgetProjection: BudgetProjection
   agentConfig: AIAgentConfig
   complianceItems: ComplianceItem[]
+  /** 0–100 score derived from applicable compliance checks. */
+  complianceScore?: number
+  /** Detected legal jurisdictions (e.g. US, IL, EU). */
+  complianceJurisdictions?: string[]
   readinessChecklist: ReadinessChecklist[]
   auditEvents: AuditEvent[]
   hasVideo: boolean
-  videoMeta?: { name: string; size: string; orientation: string }
+  videoMeta?: {
+    name: string
+    size: string
+    orientation: string
+    url?: string
+    durationSec?: number
+    resolution?: string
+  }
   bookingTitle: string
   bookingEmail: string
   integrations: { gmail: string; calendly: string; zoom: string }

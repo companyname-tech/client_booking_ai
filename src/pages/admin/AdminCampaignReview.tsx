@@ -228,7 +228,7 @@ export default function AdminCampaignReview() {
             <CopyableName
               name={campaign.name}
               id={campaign.id}
-              className="mt-2 text-2xl font-semibold text-fg"
+              className="mt-5 text-2xl font-semibold text-fg"
               onCopied={setToast}
             />
             <p className="mt-1 text-sm text-fg-muted">{client?.name} · {review.displayId}</p>
@@ -288,7 +288,47 @@ export default function AdminCampaignReview() {
                 {editing === section ? (
                   renderEditor(section)
                 ) : (
-                  <ReviewSectionContent section={section} campaign={campaign} review={review} agent={agent} />
+                  <ReviewSectionContent
+                    section={section}
+                    campaign={campaign}
+                    review={review}
+                    agent={agent}
+                    onUploadCampaignVideo={
+                      section === 'video'
+                        ? async (file, meta) => {
+                            setSaving(true)
+                            try {
+                              await repo.uploadCampaignVideo(campaign.id, file, meta)
+                              setToast('Video uploaded')
+                              void reload()
+                            } catch (e) {
+                              toastError(e)
+                              throw e
+                            } finally {
+                              setSaving(false)
+                            }
+                          }
+                        : undefined
+                    }
+                    onRemoveCampaignVideo={
+                      section === 'video'
+                        ? async () => {
+                            setSaving(true)
+                            try {
+                              await repo.deleteCampaignVideo(campaign.id)
+                              setToast('Video removed')
+                              void reload()
+                            } catch (e) {
+                              toastError(e)
+                              throw e
+                            } finally {
+                              setSaving(false)
+                            }
+                          }
+                        : undefined
+                    }
+                    videoUploading={saving}
+                  />
                 )}
               </div>
             </motion.div>

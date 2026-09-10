@@ -1,8 +1,10 @@
 import { Sparkles } from 'lucide-react'
-import type { CampaignReviewData } from '@/types/admin'
+import type { CampaignReviewData, ComplianceItem } from '@/types/admin'
 import type { OfferCampaign as CampaignType, Agent } from '@/types'
+import type { VideoAsset } from '@/types/campaignDraft'
 import { formatCurrency, formatNumber } from '@/lib/utils'
-import { RecordingPlayer } from '@/components/recordings/RecordingPlayer'
+import { mediaUrl } from '@/api/adapters/http/repository'
+import { VideoUploader } from '@/components/onboarding/VideoUploader'
 import { IntegrationCard } from '@/components/onboarding/IntegrationCard'
 import { AuditTimeline } from './AuditTimeline'
 import { ProgressBar } from '@/components/ui/ProgressBar'
@@ -55,11 +57,21 @@ const COMPLIANCE_COLORS = {
   not_applicable: 'text-fg-faint',
 }
 
+const COMPLIANCE_STATUS_LABELS: Record<ComplianceItem['status'], string> = {
+  passed: 'Passed',
+  needs_review: 'Needs review',
+  warning: 'Warning',
+  not_applicable: 'N/A',
+}
+
 export function ReviewSectionContent({
   section,
   campaign,
   review,
   agent,
+  onUploadCampaignVideo,
+  onRemoveCampaignVideo,
+  videoUploading,
 }: {
   section: ReviewSection
   campaign: CampaignType
@@ -67,6 +79,12 @@ export function ReviewSectionContent({
   /** The campaign's assigned agent (when one is set) — overlays the AI-config
    *  review snapshot with the agent's real persona fields. */
   agent?: Agent
+  onUploadCampaignVideo?: (
+    file: File,
+    meta: { durationSec: number; width: number; height: number },
+  ) => Promise<void>
+  onRemoveCampaignVideo?: () => Promise<void>
+  videoUploading?: boolean
 }) {
   const c = campaign.criteria
 
@@ -194,37 +212,100 @@ export function ReviewSectionContent({
         </div>
       )
     }
-    case 'compliance':
+    case 'compliance': {
+      const applicable = review.complianceItems.filter((item) => item.status !== 'not_applicable')
+      const unresolved = applicable.filter(
+        (item) => item.status === 'needs_review' || item.status === 'warning',
+      ).length
+      const jurisdictions = review.complianceJurisdictions?.length
+        ? review.complianceJurisdictions.join(', ')
+        : 'Universal'
       return (
         <div className="space-y-4">
           <p className="rounded-md border border-warning/20 bg-warning-soft/10 px-3 py-2 text-xs text-fg-secondary">
             AI-assisted preliminary check — human review required. This is not legal advice.
           </p>
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div className="rounded-md border border-line bg-surface-2 px-3 py-2">
+              <div className="text-2xs font-medium uppercase text-fg-muted">Compliance score</div>
+              <div className="mt-1 text-2xl font-semibold tabular text-fg">{review.complianceScore ?? 0}%</div>
+            </div>
+            <div className="rounded-md border border-line bg-surface-2 px-3 py-2 sm:col-span-2">
+              <div className="text-2xs font-medium uppercase text-fg-muted">Applicable jurisdictions</div>
+              <div className="mt-1 text-sm font-medium text-fg">{jurisdictions}</div>
+              <p className="mt-1 text-xs text-fg-muted">
+                {applicable.length} checks apply · {unresolved} need human review
+              </p>
+            </div>
+          </div>
           <ul className="space-y-2">
             {review.complianceItems.map((item) => (
-              <li key={item.id} className="flex items-start justify-between gap-4 rounded-md border border-line px-3 py-2.5 text-sm">
-                <span className="text-fg">{item.label}</span>
-                <span className={cn('shrink-0 text-xs font-medium capitalize', COMPLIANCE_COLORS[item.status])}>
-                  {item.status.replace('_', ' ')}
-                </span>
+              <li key={item.id} className="rounded-md border border-line px-3 py-2.5 text-sm">
+                <div className="flex items-start justify-between gap-4">
+                  <span className="text-fg">{item.label}</span>
+                  <span className={cn('shrink-0 text-xs font-medium', COMPLIANCE_COLORS[item.status])}>
+                    {COMPLIANCE_STATUS_LABELS[item.status]}
+                  </span>
+                </div>
+                {item.note && (
+                  <p className="mt-2 text-xs leading-relaxed text-fg-muted">{item.note}</p>
+                )}
               </li>
             ))}
           </ul>
         </div>
       )
-    case 'video':
-      return review.hasVideo ? (
+    }
+    case 'video': {
+      const storedVideo = review.campaignContent?.video
+      const videoValue: VideoAsset | undefined = review.hasVideo
+        ? {
+            name: review.videoMeta?.name ?? storedVideo?.name ?? 'Campaign video',
+            size: storedVideo?.sizeBytes ?? 0,
+            durationSec: review.videoMeta?.durationSec ?? storedVideo?.durationSec ?? 0,
+            resolution: review.videoMeta?.resolution ?? storedVideo?.resolution ?? '',
+            mimeType: storedVideo?.mimeType ?? 'video/mp4',
+            previewUrl: mediaUrl(review.videoMeta?.url ?? storedVideo?.url),
+          }
+        : undefined
+      return (
         <div className="space-y-4">
-          <RecordingPlayer durationSec={254} />
-          <dl className="grid grid-cols-3 gap-3 text-sm">
-            <div><dt className="text-fg-muted">File</dt><dd>{review.videoMeta?.name}</dd></div>
-            <div><dt className="text-fg-muted">Size</dt><dd>{review.videoMeta?.size}</dd></div>
-            <div><dt className="text-fg-muted">Orientation</dt><dd>{review.videoMeta?.orientation}</dd></div>
-          </dl>
+          <VideoUploader
+            key={review.videoMeta?.url ?? 'empty'}
+            value={videoValue}
+            disabled={videoUploading}
+            uploadFile={
+              onUploadCampaignVideo
+                ? async (file, meta) => {
+                    await onUploadCampaignVideo(file, meta)
+                    return {
+                      name: file.name,
+                      size: file.size,
+                      durationSec: meta.durationSec,
+                      resolution: `${meta.width}×${meta.height}`,
+                      mimeType: file.type,
+                      previewUrl: URL.createObjectURL(file),
+                    }
+                  }
+                : undefined
+            }
+            onChange={(video) => {
+              if (!video && onRemoveCampaignVideo) void onRemoveCampaignVideo()
+            }}
+          />
+          {review.hasVideo && review.videoMeta && (
+            <dl className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
+              <div><dt className="text-fg-muted">File</dt><dd>{review.videoMeta.name}</dd></div>
+              <div><dt className="text-fg-muted">Size</dt><dd>{review.videoMeta.size}</dd></div>
+              <div><dt className="text-fg-muted">Orientation</dt><dd className="capitalize">{review.videoMeta.orientation}</dd></div>
+              {review.videoMeta.durationSec ? (
+                <div><dt className="text-fg-muted">Duration</dt><dd>{Math.round(review.videoMeta.durationSec)}s</dd></div>
+              ) : null}
+            </dl>
+          )}
         </div>
-      ) : (
-        <p className="text-sm text-fg-muted">No video uploaded for this campaign.</p>
       )
+    }
     case 'history':
       return <AuditTimeline events={review.auditEvents} />
     default:

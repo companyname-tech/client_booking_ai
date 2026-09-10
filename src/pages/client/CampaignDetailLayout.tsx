@@ -188,9 +188,9 @@ export default function CampaignDetailLayout({ zone = 'client' }: { zone?: 'clie
   const visibleTabs = clientTabs.filter((t) => canUse(session, t.perm))
 
   return (
-    <PageTransition>
-      <PageContainer className="space-y-6 pb-8">
-        <Reveal initial="hidden" animate="show" className="space-y-5">
+    <PageTransition className="flex h-[calc(100dvh-3.5rem)] flex-col">
+      <PageContainer className="flex min-h-0 flex-1 flex-col pb-0">
+        <Reveal initial="hidden" animate="show" className="shrink-0 space-y-5 pb-6">
           <div className="min-w-0">
               <div className="mb-2 flex items-center gap-3">
                 <NavLink
@@ -283,7 +283,9 @@ export default function CampaignDetailLayout({ zone = 'client' }: { zone?: 'clie
           </nav>
         </Reveal>
 
-        <Outlet context={{ campaign, zone, effectiveStatus, pauseCampaign, resumeCampaign, refreshCampaign, updateCampaignBudget }} />
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pb-8">
+          <Outlet context={{ campaign, zone, effectiveStatus, pauseCampaign, resumeCampaign, refreshCampaign, updateCampaignBudget }} />
+        </div>
       </PageContainer>
       <ConfirmDialog
         open={confirmDelete}

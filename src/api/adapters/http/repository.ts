@@ -24,7 +24,7 @@ import {
 } from '@/lib/trainingProcessOperationJournal'
 import type { Agent, OfferCampaign, CampaignLeadGenDefaults, User, Client, ClientInput, ClientPage, ClientBudgetSummary, CampaignBudgetAddResult, Lead, Call, Booking, CallDetail, LeadDetail, Recording, CallHistoryEntry, CampaignFunnelStage, CampaignInsight, CampaignAttentionAlert, CampaignPerformancePoint, CampaignHealthSnapshot, CampaignHealth, Analytics, Activity, AttentionItem, Integration, LeadStatus, Meeting, WorkspaceAnalytics } from '@/types'
 import type { AppSettings, ConnectionsState, ConnectionKey, TwilioNumber, FishVoice, SettingsSchemaField, AgentModels, AgentVoiceOption, AgentRole } from '@/types/settings'
-import type { AdminCampaignMeta, AdminLead, CampaignReviewData, AuditEvent, AdminNotification, ActivityLogEntry, ActivitySource, ReviewCampaignContent } from '@/types/admin'
+import type { AdminCampaignMeta, AdminLead, CampaignReviewData, AuditEvent, AdminNotification, ActivityLogEntry, ActivitySource, ReviewCampaignContent, CampaignReviewVideo } from '@/types/admin'
 import type { CampaignAnalyticsData, AnalyticsFilters } from '@/types/campaignAnalytics'
 import type { EnrichedLead, LeadHubMetrics, LeadHubStats, LeadSegment, LeadHubFilters, LeadIntelligenceProfile, LeadNote } from '@/types/leadIntelligence'
 import type { AICommandOverview, AIActivityEvent, AIConversationSummary, AIConversationDetail, AIObjection, AILearningPattern, AIImprovement, AIFollowUp, AIEscalation, AIBookingConversation, AIInsight, AIHealthSnapshot, AIAgentProfile, AIPerformanceSnapshot, AICommandFilters } from '@/types/aiCommand'
@@ -600,6 +600,7 @@ export const httpRepository = {
     clientId?: string
     type?: CampaignType
     budget?: number
+    websiteUrl?: string
   }): Promise<OfferCampaign> {
     const created = await apiClient.post<OfferWire>('/offers', {
       title: input.name,
@@ -612,10 +613,16 @@ export const httpRepository = {
       source: campaignTypeToSource(input.type ?? 'live'),
       phone: '', // OfferIn requires phone; a campaign/offer has no phone of its own
     })
+    const content: ReviewCampaignContent = {}
     if (input.budget !== undefined && input.budget > 0) {
-      return this.updateCampaignOffer(created.id, {
-        content: { budget: { total: input.budget, currency: 'USD' } },
-      })
+      content.budget = { total: input.budget, currency: 'USD' }
+    }
+    const websiteUrl = input.websiteUrl?.trim()
+    if (websiteUrl) {
+      content.websiteUrl = websiteUrl
+    }
+    if (Object.keys(content).length > 0) {
+      return this.updateCampaignOffer(created.id, { content })
     }
     return toCampaign(created)
   },
@@ -1376,6 +1383,22 @@ export const httpRepository = {
     if (input.content !== undefined) body.campaign_content = input.content
     const wire = await apiClient.put<OfferWire>(`/offers/${id}`, body)
     return toCampaign(wire)
+  },
+  async uploadCampaignVideo(
+    id: string,
+    file: File,
+    meta: { durationSec: number; width: number; height: number },
+  ): Promise<CampaignReviewVideo> {
+    const form = new FormData()
+    form.append('file', file)
+    form.append('duration_sec', String(meta.durationSec))
+    form.append('width', String(meta.width))
+    form.append('height', String(meta.height))
+    const wire = await apiClient.upload<OfferWire>(`/offers/${id}/video`, form)
+    return wire.campaign_content?.video ?? {}
+  },
+  async deleteCampaignVideo(id: string): Promise<void> {
+    await apiClient.delete(`/offers/${id}/video`)
   },
   /**
    * Update campaign budget fields while preserving the rest of campaign_content

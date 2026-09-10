@@ -42,6 +42,7 @@ export function NewCampaignModal({ open, onClose, onCreated, fixedClient, client
   const [name, setName] = useState('')
   const [offerName, setOfferName] = useState('')
   const [category, setCategory] = useState('')
+  const [websiteUrl, setWebsiteUrl] = useState('')
   const [budget, setBudget] = useState('')
   const [clientId, setClientId] = useState('')
   const [saving, setSaving] = useState(false)
@@ -52,6 +53,7 @@ export function NewCampaignModal({ open, onClose, onCreated, fixedClient, client
     setName('')
     setOfferName('')
     setCategory('')
+    setWebsiteUrl('')
     setBudget('')
     setClientId('')
     setError('')
@@ -79,6 +81,7 @@ export function NewCampaignModal({ open, onClose, onCreated, fixedClient, client
         company,
         clientId: effectiveClientId,
         budget: parsedBudget,
+        websiteUrl: websiteUrl.trim() || undefined,
       })
       onCreated()
       onClose()
@@ -174,6 +177,17 @@ export function NewCampaignModal({ open, onClose, onCreated, fixedClient, client
             value={category}
             onChange={(e) => setCategory(e.target.value)}
             placeholder="e.g. Architecture"
+          />
+        </div>
+        <div>
+          <span className="text-xs text-fg-muted">Website URL</span>
+          <Input
+            className="mt-1"
+            type="url"
+            inputMode="url"
+            value={websiteUrl}
+            onChange={(e) => setWebsiteUrl(e.target.value)}
+            placeholder="e.g. https://example.com"
           />
         </div>
         {error && <FieldError>{error}</FieldError>}

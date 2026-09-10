@@ -24,6 +24,12 @@ export type VideoUploadState =
 export interface VideoUploaderProps {
   value?: VideoAsset
   onChange: (video: VideoAsset | undefined) => void
+  /** When set, uploads to the backend instead of simulating locally. */
+  uploadFile?: (
+    file: File,
+    meta: { durationSec: number; width: number; height: number },
+  ) => Promise<VideoAsset>
+  disabled?: boolean
 }
 
 function formatSize(bytes: number) {
@@ -54,7 +60,7 @@ async function readVideoMeta(file: File): Promise<{ duration: number; width: num
   })
 }
 
-export function VideoUploader({ value, onChange }: VideoUploaderProps) {
+export function VideoUploader({ value, onChange, uploadFile, disabled }: VideoUploaderProps) {
   const inputRef = useRef<HTMLInputElement>(null)
   const [state, setState] = useState<VideoUploadState>(value ? 'uploaded' : 'empty')
   const [progress, setProgress] = useState(100)
@@ -62,37 +68,59 @@ export function VideoUploader({ value, onChange }: VideoUploaderProps) {
   const [dragOver, setDragOver] = useState(false)
   const [pendingFile, setPendingFile] = useState<File | null>(null)
 
-  const simulateUpload = useCallback(
-    (file: File, meta: { duration: number; width: number; height: number }) => {
+  const runUpload = useCallback(
+    async (file: File, meta: { duration: number; width: number; height: number }) => {
       setState('uploading')
       setProgress(0)
-      let p = 0
-      const interval = window.setInterval(() => {
-        p += 8 + Math.random() * 12
-        if (p >= 100) {
-          window.clearInterval(interval)
-          setProgress(100)
-          const asset: VideoAsset = {
-            name: file.name,
-            size: file.size,
+      try {
+        if (uploadFile) {
+          setProgress(35)
+          const asset = await uploadFile(file, {
             durationSec: meta.duration,
-            resolution: `${meta.width}×${meta.height}`,
-            mimeType: file.type,
-            previewUrl: URL.createObjectURL(file),
-          }
+            width: meta.width,
+            height: meta.height,
+          })
+          setProgress(100)
           onChange(asset)
           setState('uploaded')
           setPendingFile(null)
-        } else {
-          setProgress(Math.round(p))
+          return
         }
-      }, 120)
+        let p = 0
+        await new Promise<void>((resolve) => {
+          const interval = window.setInterval(() => {
+            p += 8 + Math.random() * 12
+            if (p >= 100) {
+              window.clearInterval(interval)
+              setProgress(100)
+              const asset: VideoAsset = {
+                name: file.name,
+                size: file.size,
+                durationSec: meta.duration,
+                resolution: `${meta.width}×${meta.height}`,
+                mimeType: file.type,
+                previewUrl: URL.createObjectURL(file),
+              }
+              onChange(asset)
+              setState('uploaded')
+              setPendingFile(null)
+              resolve()
+            } else {
+              setProgress(Math.round(p))
+            }
+          }, 120)
+        })
+      } catch {
+        setState('failed')
+        setErrorMsg('Upload failed. Try again.')
+      }
     },
-    [onChange],
+    [onChange, uploadFile],
   )
 
   const processFile = useCallback(
     async (file: File) => {
+      if (disabled) return
       setErrorMsg('')
       const ext = file.name.slice(file.name.lastIndexOf('.')).toLowerCase()
       if (!ACCEPTED.includes(file.type) && !ACCEPTED_EXT.includes(ext)) {
@@ -116,13 +144,13 @@ export function VideoUploader({ value, onChange }: VideoUploaderProps) {
           return
         }
         setPendingFile(file)
-        simulateUpload(file, meta)
+        await runUpload(file, meta)
       } catch {
         setState('failed')
         setErrorMsg('Could not read this video. Try a different file.')
       }
     },
-    [simulateUpload],
+    [disabled, runUpload],
   )
 
   const onDrop = (e: React.DragEvent) => {
@@ -185,6 +213,7 @@ export function VideoUploader({ value, onChange }: VideoUploaderProps) {
                 variant="secondary"
                 size="sm"
                 leadingIcon={<RefreshCw />}
+                disabled={disabled}
                 onClick={() => {
                   setState('replacing')
                   inputRef.current?.click()
@@ -192,7 +221,7 @@ export function VideoUploader({ value, onChange }: VideoUploaderProps) {
               >
                 Replace
               </Button>
-              <Button variant="ghost" size="sm" leadingIcon={<Trash2 />} onClick={remove}>
+              <Button variant="ghost" size="sm" leadingIcon={<Trash2 />} disabled={disabled} onClick={remove}>
                 Remove
               </Button>
             </div>
@@ -229,11 +258,12 @@ export function VideoUploader({ value, onChange }: VideoUploaderProps) {
           if (!isError && state !== 'uploading') setState(value ? 'uploaded' : 'empty')
         }}
         onDrop={onDrop}
-        onClick={() => state !== 'uploading' && inputRef.current?.click()}
+        onClick={() => !disabled && state !== 'uploading' && inputRef.current?.click()}
         className={cn(
           'interactive relative flex flex-col items-center justify-center rounded-lg border-2 border-dashed px-6 py-10 text-center outline-none transition-colors',
           dragOver ? 'border-accent bg-accent-soft/30' : 'border-line-strong bg-surface-1 hover:border-accent/40',
           isError && 'border-danger/40 bg-danger-soft/20',
+          disabled && 'pointer-events-none opacity-60',
         )}
       >
         {state === 'uploading' ? (
