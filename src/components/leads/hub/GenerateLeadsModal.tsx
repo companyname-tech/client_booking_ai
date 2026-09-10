@@ -209,6 +209,11 @@ const GEN_PLATFORMS: { value: string; label: string; disabled?: boolean; title?:
   { value: 'x', label: 'X (Twitter)' },
   { value: 'google_business', label: 'Google Business/Maps' },
   { value: 'reddit', label: 'Reddit' },
+  {
+    value: 'openosint',
+    label: 'OpenOSINT (enrichment)',
+    title: 'Enriches discovered leads via dns/email/username — enable in Settings → Integrations',
+  },
   { value: 'telegram', label: 'Telegram', disabled: true, title: 'Feature-flagged off' },
 ]
 

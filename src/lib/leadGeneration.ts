@@ -154,8 +154,9 @@ export function toGenResultView(r: SmartSearchResponse | LeadImportResult): GenR
       evidence_url?: string
       duplicate_of?: string
       match_reason?: string
+      selection_summary?: string
     }[]).map((l) => {
-      const matchReason = l.match_reason ?? ''
+      const matchReason = l.selection_summary || l.match_reason || ''
       return {
         name: l.lead_name ?? '',
         rel: Math.round((l.relevance_score ?? 0) * 100),
@@ -163,7 +164,7 @@ export function toGenResultView(r: SmartSearchResponse | LeadImportResult): GenR
         url: l.evidence_url,
         duplicateOf: l.duplicate_of,
         matchReason,
-        secondBest: matchReason.startsWith('Second-best match'),
+        secondBest: (l.match_reason ?? '').startsWith('Second-best match'),
       }
     })
     return {
